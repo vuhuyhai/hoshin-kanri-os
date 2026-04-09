@@ -1,0 +1,147 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
+import { XRAY_DIMENSIONS } from '@/lib/x-ray/questions'
+import type { XRayFormState, XRayAnswers } from '@/lib/x-ray/types'
+import { XRayProgress } from './XRayProgress'
+import { QuestionStep } from './QuestionStep'
+import { EmailCaptureStep } from './EmailCaptureStep'
+import { XRayReport } from './XRayReport'
+
+const LOCALSTORAGE_KEY = 'hoshin_xray_progress'
+
+const initialState: XRayFormState = {
+  currentStep: 0,
+  answers: {},
+  email: '',
+  isLoading: false,
+  result: null,
+  error: null,
+}
+
+export function XRayForm() {
+  const [state, setState] = useState<XRayFormState>(initialState)
+
+  // Restore progress from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LOCALSTORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<XRayFormState>
+        if (parsed.answers && parsed.currentStep !== undefined) {
+          setState((prev) => ({
+            ...prev,
+            answers: parsed.answers as XRayAnswers,
+            currentStep: parsed.currentStep as number,
+          }))
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, [])
+
+  // Save progress to localStorage
+  useEffect(() => {
+    if (Object.keys(state.answers).length > 0) {
+      localStorage.setItem(
+        LOCALSTORAGE_KEY,
+        JSON.stringify({
+          answers: state.answers,
+          currentStep: state.currentStep,
+        })
+      )
+    }
+  }, [state.answers, state.currentStep])
+
+  const handleAnswer = (questionId: string, value: 1 | 2 | 3 | 4) => {
+    setState((prev) => ({
+      ...prev,
+      answers: { ...prev.answers, [questionId]: value },
+    }))
+  }
+
+  const handleNext = () => {
+    setState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBack = () => {
+    setState((prev) => ({
+      ...prev,
+      currentStep: Math.max(0, prev.currentStep - 1),
+    }))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleEmailSubmit = async (email: string) => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null, email }))
+
+    try {
+      const response = await fetch('/api/x-ray/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: state.answers, email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Có lỗi xảy ra')
+      }
+
+      localStorage.removeItem(LOCALSTORAGE_KEY)
+
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        result: data.result,
+      }))
+
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Có lỗi xảy ra'
+      setState((prev) => ({ ...prev, isLoading: false, error: message }))
+      toast.error(message)
+    }
+  }
+
+  if (state.result) {
+    return <XRayReport result={state.result} />
+  }
+
+  const isEmailStep = state.currentStep === XRAY_DIMENSIONS.length
+  const currentDimension = XRAY_DIMENSIONS[state.currentStep]
+
+  return (
+    <div className="mx-auto max-w-xl space-y-8 px-4 py-8">
+      <div className="space-y-1 text-center">
+        <h1 className="text-xl font-bold">Business X-Ray</h1>
+        <p className="text-sm text-muted-foreground">
+          Chẩn đoán sức khỏe doanh nghiệp · ~5 phút
+        </p>
+      </div>
+
+      <XRayProgress currentStep={state.currentStep} />
+
+      {isEmailStep ? (
+        <EmailCaptureStep
+          onSubmit={handleEmailSubmit}
+          onBack={handleBack}
+          isLoading={state.isLoading}
+        />
+      ) : (
+        <QuestionStep
+          dimensionId={currentDimension.id}
+          answers={state.answers}
+          onAnswer={handleAnswer}
+          onNext={handleNext}
+          onBack={handleBack}
+          isFirstStep={state.currentStep === 0}
+        />
+      )}
+    </div>
+  )
+}
