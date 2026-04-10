@@ -29,6 +29,7 @@ const initialState: XRayFormState = {
 export function XRayForm() {
   const [state, setState] = useState<XRayFormState>(initialState)
   const [showTransition, setShowTransition] = useState(false)
+  const [savedSuccessfully, setSavedSuccessfully] = useState<boolean | undefined>(undefined)
 
   // Restore progress from localStorage
   useEffect(() => {
@@ -110,6 +111,7 @@ export function XRayForm() {
       }
 
       localStorage.removeItem(LOCALSTORAGE_KEY)
+      setSavedSuccessfully(data.savedSuccessfully ?? false)
 
       setState((prev) => ({
         ...prev,
@@ -131,7 +133,7 @@ export function XRayForm() {
   }
 
   if (state.result) {
-    return <XRayReport result={state.result} />
+    return <XRayReport result={state.result} savedSuccessfully={savedSuccessfully} />
   }
 
   const isEmailStep = state.currentStep === PILLAR_ORDER.length

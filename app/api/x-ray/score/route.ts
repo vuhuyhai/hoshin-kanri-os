@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, calculatePillarScore } from '@/lib/x-ray/questions'
-import type { XRayScoreRequest, XRayResult, OpexPillar } from '@/lib/x-ray/types'
+import type { XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
 import type { Json } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/server'
 
@@ -152,12 +152,40 @@ LƯU Ý:
       generatedAt: new Date().toISOString(),
     }
 
-    // Save lead to Supabase (fire-and-forget)
-    saveLead(companyInfo, answers, result).catch((err) =>
+    // Save results (fire-and-forget, don't block response)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let orgId: string | null = null
+    if (user) {
+      const { data: membership } = await supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .single()
+      orgId = membership?.org_id ?? null
+    }
+
+    const savedResultId = await saveXRayResult(
+      supabase, orgId, user?.id ?? null, answers, result
+    )
+
+    if (orgId && user) {
+      markDiscoveryComplete(
+        supabase, orgId, user.id, savedResultId, result
+      ).catch((err) => console.error('Failed to mark discovery:', err))
+    }
+
+    // Also save lead for non-logged-in users
+    saveLead(supabase, companyInfo, answers, result).catch((err) =>
       console.error('Failed to save X-Ray lead:', err)
     )
 
-    return NextResponse.json({ result })
+    return NextResponse.json({
+      result,
+      resultId: savedResultId,
+      savedSuccessfully: !!savedResultId,
+    })
   } catch (error) {
     console.error('X-Ray scoring error:', error)
     return NextResponse.json(
@@ -167,13 +195,73 @@ LƯU Ý:
   }
 }
 
+async function saveXRayResult(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string | null,
+  userId: string | null,
+  answers: Record<string, number>,
+  result: XRayResult
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('xray_results')
+      .insert({
+        org_id: orgId,
+        user_id: userId,
+        overall_score: result.overallScore,
+        overall_level: result.overallLevel,
+        result_json: result as unknown as Json,
+        answers_json: answers as unknown as Json,
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Save xray_results error:', error)
+      return null
+    }
+    return data.id
+  } catch (err) {
+    console.error('Save xray_results exception:', err)
+    return null
+  }
+}
+
+async function markDiscoveryComplete(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  userId: string,
+  resultId: string | null,
+  result: XRayResult
+) {
+  await supabase
+    .from('discovery_sessions')
+    .upsert(
+      {
+        org_id: orgId,
+        user_id: userId,
+        step_completed: 'x-ray',
+        data_json: {
+          latestResultId: resultId,
+          latestScore: result.overallScore,
+          latestLevel: result.overallLevel,
+          completedAt: new Date().toISOString(),
+        } as unknown as Json,
+      },
+      {
+        onConflict: 'org_id,user_id,step_completed',
+        ignoreDuplicates: false,
+      }
+    )
+}
+
 async function saveLead(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   companyInfo: XRayScoreRequest['companyInfo'],
   answers: XRayScoreRequest['answers'],
   result: XRayResult
 ) {
   try {
-    const supabase = await createClient()
     await supabase.from('xray_leads').insert({
       email: companyInfo.email,
       company_name: companyInfo.companyName,

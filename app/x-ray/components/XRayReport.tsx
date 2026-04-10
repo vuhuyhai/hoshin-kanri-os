@@ -301,9 +301,10 @@ function PillarCard({ pillar }: { pillar: PillarScore }) {
 
 interface XRayReportProps {
   result: XRayResult
+  savedSuccessfully?: boolean
 }
 
-export function XRayReport({ result }: XRayReportProps) {
+export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
   const router = useRouter()
 
   const handlePrint = () => window.print()
@@ -664,6 +665,59 @@ export function XRayReport({ result }: XRayReportProps) {
               ))}
             </div>
           </div>
+
+          {/* ============ SAVE STATUS BANNER ============ */}
+          {savedSuccessfully !== undefined && (
+            <div
+              className="no-print w-full px-6 py-4"
+              style={{
+                background: savedSuccessfully ? '#f0fdf4' : '#fffbeb',
+                border: `2px solid ${savedSuccessfully ? '#16A34A' : '#D97706'}`,
+              }}
+            >
+              {savedSuccessfully ? (
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <p
+                    style={{
+                      fontFamily: '"Barlow Condensed", sans-serif',
+                      fontWeight: 500,
+                      fontSize: 15,
+                      color: '#166534',
+                    }}
+                  >
+                    ✅ Báo cáo đã được lưu vào tài khoản của bạn
+                  </p>
+                  <button
+                    onClick={() => router.push('/dashboard/discovery/xray-history')}
+                    className="text-sm font-semibold underline"
+                    style={{ color: '#166534' }}
+                  >
+                    → Vào Dashboard xem lịch sử X-Ray
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <p
+                    style={{
+                      fontFamily: '"Barlow Condensed", sans-serif',
+                      fontWeight: 500,
+                      fontSize: 15,
+                      color: '#92400e',
+                    }}
+                  >
+                    💡 Đăng nhập để lưu và theo dõi tiến độ qua từng lần chạy
+                  </p>
+                  <button
+                    onClick={handleStartPlanning}
+                    className="text-sm font-semibold underline"
+                    style={{ color: '#92400e' }}
+                  >
+                    → Tạo tài khoản miễn phí
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ============ CTA BANNER ============ */}
           <div

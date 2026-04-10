@@ -446,6 +446,54 @@ export type Database = {
         }
         Relationships: []
       }
+      xray_results: {
+        Row: {
+          id: string
+          org_id: string | null
+          user_id: string | null
+          overall_score: number
+          overall_level: string
+          result_json: Json
+          answers_json: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id?: string | null
+          user_id?: string | null
+          overall_score: number
+          overall_level: string
+          result_json: Json
+          answers_json: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string | null
+          user_id?: string | null
+          overall_score?: number
+          overall_level?: string
+          result_json?: Json
+          answers_json?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xray_results_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xray_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
