@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getSynthesisPrompt } from '@/lib/discovery/prompts'
 import type {
   SynthesisRequest,
-  SynthesisResponse,
   XMatrixPrefill,
 } from '@/lib/discovery/types'
 import type { Json } from '@/lib/supabase/types'
@@ -21,7 +20,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { orgId, orgContext } = body as SynthesisRequest
 
-    // selectedKpis comes from localStorage via the client
     const selectedKpis: Array<{
       name: string
       unit: string
@@ -29,12 +27,37 @@ export async function POST(request: NextRequest) {
       frequency: string
     }> = Array.isArray(body.selectedKpis) ? body.selectedKpis : []
 
-    // Pull all discovery data
-    const { data: swotItems } = await supabase
+    // ============================================================
+    // DATA GUARDS — check what's available before calling AI
+    // ============================================================
+
+    const dataWarnings: string[] = []
+
+    // Check swot_analyses
+    const { data: swotItems, count: swotCount } = await supabase
       .from('swot_analyses')
-      .select('quadrant, statement, implication, framework_source')
+      .select('quadrant, statement, implication, framework_source', {
+        count: 'exact',
+      })
       .eq('org_id', orgId)
 
+    if ((swotCount ?? 0) === 0) {
+      dataWarnings.push('swot_analyses')
+    }
+
+    // Check coaching data
+    const { data: coachingSession } = await supabase
+      .from('discovery_sessions')
+      .select('data_json')
+      .eq('org_id', orgId)
+      .eq('step_completed', 'swot_coaching')
+      .maybeSingle()
+
+    if (!coachingSession?.data_json) {
+      dataWarnings.push('swot_coaching')
+    }
+
+    // Check pain mapper + vision (hard requirements)
     const { data: painSession } = await supabase
       .from('discovery_sessions')
       .select('data_json')
@@ -75,9 +98,16 @@ export async function POST(request: NextRequest) {
       }>
     }
 
+    // ============================================================
+    // CALL AI
+    // ============================================================
+
     const prompt = getSynthesisPrompt(
       orgContext,
-      (swotItems ?? []).map((s) => ({ ...s, implication: s.implication ?? '' })),
+      (swotItems ?? []).map((s) => ({
+        ...s,
+        implication: s.implication ?? '',
+      })),
       painData.candidates ?? [],
       visionData,
       selectedKpis
@@ -100,31 +130,65 @@ export async function POST(request: NextRequest) {
       text.replace(/```json|```/g, '').trim()
     )
 
-    // Delete existing synthesis session to avoid duplicates
-    await supabase
-      .from('discovery_sessions')
-      .delete()
-      .eq('org_id', orgId)
-      .eq('step_completed', 'synthesis')
+    // ============================================================
+    // SAVE — with proper error handling
+    // ============================================================
 
-    // Save synthesis result with correct step_completed
-    await supabase.from('discovery_sessions').insert({
-      org_id: orgId,
-      user_id: user.id,
-      step_completed: 'synthesis',
-      data_json: {
-        prefill,
-        readyForXMatrix: true,
-        synthesisAt: new Date().toISOString(),
-      } as unknown as Json,
+    let savedSuccessfully = true
+    let saveWarning: string | null = null
+
+    try {
+      await supabase
+        .from('discovery_sessions')
+        .delete()
+        .eq('org_id', orgId)
+        .eq('step_completed', 'synthesis')
+
+      const { error: insertError } = await supabase
+        .from('discovery_sessions')
+        .insert({
+          org_id: orgId,
+          user_id: user.id,
+          step_completed: 'synthesis',
+          data_json: {
+            prefill,
+            readyForXMatrix: true,
+            synthesisAt: new Date().toISOString(),
+          } as unknown as Json,
+        })
+
+      if (insertError) {
+        savedSuccessfully = false
+        saveWarning =
+          'Khong the luu ket qua, vui long thu lai'
+        console.error('[Synthesis] Failed to save to discovery_sessions', {
+          orgId,
+          step: 'synthesis',
+          error: insertError.message,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    } catch (saveErr) {
+      savedSuccessfully = false
+      saveWarning = 'Khong the luu ket qua, vui long thu lai'
+      console.error('[Synthesis] Save threw exception', {
+        orgId,
+        step: 'synthesis',
+        error: saveErr,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
+    return NextResponse.json({
+      prefill,
+      savedSuccessfully,
+      warning: saveWarning,
+      dataWarnings,
     })
-
-    const result: SynthesisResponse = { prefill }
-    return NextResponse.json(result)
   } catch (error) {
     console.error('Synthesis error:', error)
     return NextResponse.json(
-      { error: 'Không thể tổng hợp Discovery data.' },
+      { error: 'Khong the tong hop Discovery data.' },
       { status: 500 }
     )
   }

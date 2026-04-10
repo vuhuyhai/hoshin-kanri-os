@@ -420,7 +420,24 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
         // Ignore
       }
 
-      toast.success('Discovery hoàn thành! X-Matrix sẵn sàng.')
+      // Data warnings — SWOT or coaching missing
+      const warnings = data.dataWarnings as string[] | undefined
+      if (warnings && warnings.length > 0) {
+        toast.warning(
+          `Thieu du lieu tu: ${warnings.join(', ')}. Ket qua co the chua day du.`,
+          { duration: 6000 }
+        )
+      }
+
+      // Save warning
+      if (data.savedSuccessfully === false) {
+        toast.error(
+          'Khong the luu ket qua. Vui long chup man hinh truoc khi roi trang.',
+          { duration: 8000 }
+        )
+      } else {
+        toast.success('Discovery hoan thanh! X-Matrix san sang.')
+      }
     } catch (error) {
       console.error('Synthesis error:', error)
       setStatus('error')
