@@ -36,6 +36,7 @@ export default function RootLayout({
             attribute="class"
             defaultTheme="light"
             enableSystem={false}
+            storageKey="hoshin-theme-v2"
             disableTransitionOnChange
           >
             <AuthListener />
