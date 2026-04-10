@@ -34,8 +34,8 @@ export default function RootLayout({
         <PHProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="light"
+            enableSystem={false}
             disableTransitionOnChange
           >
             <AuthListener />

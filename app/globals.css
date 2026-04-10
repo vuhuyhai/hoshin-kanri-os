@@ -74,6 +74,10 @@
   --radius-2xl: 0px;
   --radius-3xl: 0px;
   --radius-4xl: 0px;
+
+  /* Spacing — layout tokens */
+  --spacing-sidebar: 240px;
+  --spacing-header: 64px;
 }
 
 /* ============================================================
@@ -112,6 +116,31 @@
   --sidebar-accent-foreground: #2C2B2B;
   --sidebar-border: #2C2B2B;
   --sidebar-ring: #c73937;
+
+  /* ── Design System Raw Tokens ──
+     NOTE: --brand (not --accent) to avoid collision with shadcn's
+     --accent:#ECEAE6 used for hover states in menus/sidebar.
+     Use var(--brand) in utility classes, var(--primary) in components. */
+  --ink: #2C2B2B;
+  --text-2: #5A5757;
+  --text-3: #8A8787;
+  --brand: #c73937;
+  --brand-dark: #9e1f1e;
+  --bg: #F7F5F2;
+  --bg-muted: #ECEAE6;
+  --bg-dark: #2C2B2B;
+  --white: #FFFFFF;
+
+  /* Composite borders */
+  --border-heavy: 3px solid #2C2B2B;
+  --border-accent: 2px solid var(--brand);
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --sidebar-width-mobile: 0px;
+  --header-height: 64px;
+  --content-max-width: 1440px;
+  --content-padding-x: clamp(16px, 4vw, 80px);
 }
 
 /* ============================================================
@@ -159,6 +188,7 @@
     @apply border-border outline-ring/50;
     font-style: normal !important;
     border-radius: 0px !important;
+    box-sizing: border-box;
   }
   body {
     @apply bg-background text-foreground font-body;
@@ -177,10 +207,32 @@
 }
 
 /* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-muted); }
+::-webkit-scrollbar-thumb { background: var(--ink); }
+
+/* ============================================================
    NEO-BRUTALISM UTILITY CLASSES
    ============================================================ */
 
-/* Button hover animation */
+/* ── Layout ── */
+.page-container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding-left: var(--content-padding-x);
+  padding-right: var(--content-padding-x);
+}
+
+.full-width-section {
+  width: 100%;
+  padding-left: var(--content-padding-x);
+  padding-right: var(--content-padding-x);
+}
+
+/* ── Base button animation ── */
 .btn-brutal {
   transition: transform 150ms, box-shadow 150ms;
 }
@@ -191,27 +243,98 @@
   transform: translate(2px, 2px);
 }
 
-/* Card hover animation */
-.card-brutal {
+/* ── Primary button ── */
+.btn-brutal-primary {
+  background: var(--brand);
+  color: var(--white);
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-brutal-md);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 12px 24px;
+  cursor: pointer;
   transition: transform 150ms, box-shadow 150ms;
+}
+.btn-brutal-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+.btn-brutal-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.btn-brutal-primary:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Secondary button ── */
+.btn-brutal-secondary {
+  background: var(--bg);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-brutal-sm);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: transform 150ms, box-shadow 150ms;
+}
+.btn-brutal-secondary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.btn-brutal-secondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.btn-brutal-secondary:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Card ── */
+.card-brutal {
+  background: var(--bg);
+  border: var(--border-heavy);
+  box-shadow: var(--shadow-brutal-md);
+  transition: transform 150ms ease, box-shadow 150ms ease;
 }
 .card-brutal:hover {
   transform: translate(-3px, -3px);
-  box-shadow: 8px 8px 0 #2C2B2B;
+  box-shadow: 8px 8px 0 var(--ink);
 }
 
-/* Overline text style */
+/* ── Badge ── */
+.badge-brutal {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  padding: 4px 10px;
+  border: 2px solid currentColor;
+}
+
+/* ── Overline text ── */
 .overline {
-  font-family: "Montserrat", sans-serif;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.15em;
+  color: var(--brand);
 }
 
-/* Label text style */
+/* ── Label text ── */
 .label-brutal {
-  font-family: "Montserrat", sans-serif;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
@@ -220,7 +343,7 @@
 
 /* Focus state — WCAG AA */
 :focus-visible {
-  outline: 3px solid #c73937 !important;
+  outline: 3px solid var(--brand) !important;
   outline-offset: 3px;
 }
 
