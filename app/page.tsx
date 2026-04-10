@@ -329,7 +329,15 @@ export default function LandingPage() {
 
           <div className="mt-12 border-t border-white/10 pt-6 text-center">
             <p className="font-body text-sm text-white/40">
-              © 2026 Hoshin Kanri OS. Built for Vietnamese SMEs.
+              © 2026 Hoshin Kanri OS. Design by{' '}
+              <a
+                href="https://www.facebook.com/vuhai.fitness"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-white/60 underline underline-offset-2 hover:text-white transition-colors duration-150"
+              >
+                Vũ Hải | Business Consultant
+              </a>
             </p>
           </div>
         </div>
