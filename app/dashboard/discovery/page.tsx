@@ -129,7 +129,10 @@ export default async function DiscoveryPage() {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-3xl">{step.icon}</span>
-                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
+                      <span
+                        className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
+                        style={{ backgroundColor: '#d1fae5', color: '#047857', border: '1px solid #6ee7b7' }}
+                      >
                         ✓ Hoàn thành
                       </span>
                     </div>
@@ -180,17 +183,26 @@ export default async function DiscoveryPage() {
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-3xl">{step.icon}</span>
                     {done && (
-                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
+                      <span
+                        className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
+                        style={{ backgroundColor: '#d1fae5', color: '#047857', border: '1px solid #6ee7b7' }}
+                      >
                         ✓ Hoàn thành
                       </span>
                     )}
                     {isNext && (
-                      <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 border border-amber-300 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
+                      <span
+                        className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
+                        style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d' }}
+                      >
                         → Tiếp theo
                       </span>
                     )}
                     {isLocked && (
-                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 border border-gray-200 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
+                      <span
+                        className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
+                        style={{ backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }}
+                      >
                         Chưa bắt đầu
                       </span>
                     )}
@@ -216,11 +228,12 @@ export default async function DiscoveryPage() {
                         </Button>
                       ) : (
                         <Button
+                          variant="ghost"
                           size="sm"
                           className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider"
                           disabled={isLocked}
                         >
-                          {isNext ? 'Bắt đầu →' : 'Bắt đầu →'}
+                          Bắt đầu →
                         </Button>
                       )}
                     </Link>
@@ -265,7 +278,7 @@ export default async function DiscoveryPage() {
                     className="flex items-center gap-2 font-body text-sm"
                   >
                     {done ? (
-                      <span className="text-emerald-600">✓</span>
+                      <span style={{ color: '#059669' }}>✓</span>
                     ) : isLocked ? (
                       <span className="text-gray-300">○</span>
                     ) : (
@@ -300,7 +313,7 @@ export default async function DiscoveryPage() {
                   href={nextStep.href}
                   target={nextStep.external ? '_blank' : undefined}
                 >
-                  <Button className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider">
+                  <Button variant="ghost" className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider">
                     Tiếp tục →
                   </Button>
                 </Link>
@@ -309,7 +322,7 @@ export default async function DiscoveryPage() {
 
             {completedCount === DISCOVERY_STEPS.length && (
               <div className="border-t border-gray-200 pt-4">
-                <p className="font-display text-[11px] font-bold uppercase tracking-widest text-emerald-600 mb-3">
+                <p className="font-display text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#059669' }}>
                   Hoàn thành!
                 </p>
                 <Link href="/dashboard/x-matrix/new">
