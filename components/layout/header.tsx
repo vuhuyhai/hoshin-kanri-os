@@ -1,8 +1,12 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { createClient } from '@/lib/supabase/client'
+import { Logo } from '@/components/ui/logo'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { MobileSidebarContent, type SidebarProps } from '@/components/layout/sidebar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,17 +14,69 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Menu, Sun, Moon } from 'lucide-react'
 
-interface HeaderProps {
+/** Map pathname segments to Vietnamese breadcrumb labels */
+const BREADCRUMB_MAP: Record<string, string> = {
+  dashboard: 'Dashboard',
+  discovery: 'Khám phá',
+  swot: 'SWOT Analysis',
+  'pain-mapper': 'Pain Mapper',
+  'vision-workshop': 'Vision Workshop',
+  synthesis: 'Tổng hợp',
+  benchmark: 'Benchmark',
+  'xray-history': 'X-Ray History',
+  'x-matrix': 'X-Matrix',
+  kpi: 'KPI Tracker',
+  report: 'Báo cáo tháng',
+  settings: 'Cài đặt',
+  new: 'Tạo mới',
+  coaching: 'Coaching',
+  strategy: 'Chiến lược',
+}
+
+function Breadcrumb() {
+  const pathname = usePathname()
+  const segments = pathname.split('/').filter(Boolean)
+
+  // Skip "dashboard" as root, show the rest
+  const crumbs = segments.slice(1).map((seg) => BREADCRUMB_MAP[seg] || seg)
+
+  if (crumbs.length === 0) return null
+
+  return (
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5">
+      {crumbs.map((crumb, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && (
+            <span className="font-body text-sm text-text-3">/</span>
+          )}
+          <span className="font-body text-sm text-text-2">{crumb}</span>
+        </span>
+      ))}
+    </nav>
+  )
+}
+
+interface HeaderProps extends SidebarProps {
   orgName: string
   userEmail: string
 }
 
-export function Header({ orgName, userEmail }: HeaderProps) {
+export function Header({
+  orgName,
+  userEmail,
+  userRole,
+  orgIndustry,
+  userName,
+}: HeaderProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const [sheetOpen, setSheetOpen] = useState(false)
 
-  const initials = userEmail.split('@')[0].slice(0, 2).toUpperCase()
+  const initials = (userName || userEmail.split('@')[0])
+    .slice(0, 2)
+    .toUpperCase()
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -29,48 +85,45 @@ export function Header({ orgName, userEmail }: HeaderProps) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b-[3px] border-ink bg-bg-warm px-6">
-      <div className="flex items-center gap-3">
-        <h2 className="font-display text-sm font-extrabold uppercase tracking-wider text-ink md:text-base">
-          {orgName}
-        </h2>
+    <header className="sticky top-0 z-30 flex h-[var(--header-height)] shrink-0 items-center border-b-[3px] border-ink bg-bg-warm">
+      {/* Mobile: hamburger + logo + avatar */}
+      {/* Tablet/Mobile left: hamburger */}
+      <div className="flex items-center gap-3 px-4 lg:hidden">
+        <button
+          onClick={() => setSheetOpen(true)}
+          className="flex h-11 w-11 items-center justify-center border-2 border-ink bg-bg-warm shadow-brutal-sm btn-brutal hover:shadow-brutal-md"
+          aria-label="Open menu"
+        >
+          <Menu size={20} strokeWidth={2} />
+        </button>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Mobile center: logo icon only */}
+      <div className="flex flex-1 items-center justify-center lg:hidden">
+        <Logo size="sm" showText={false} />
+      </div>
+
+      {/* Desktop left: breadcrumb */}
+      <div className="hidden flex-1 items-center px-6 lg:flex">
+        <Breadcrumb />
+      </div>
+
+      {/* Right side: theme toggle + avatar */}
+      <div className="flex items-center gap-2 px-4 lg:px-6">
         {/* Dark mode toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           aria-label="Toggle dark mode"
-          className="flex h-9 w-9 items-center justify-center border-2 border-ink bg-bg-warm shadow-brutal-sm btn-brutal hover:shadow-brutal-md"
+          className="hidden h-9 w-9 items-center justify-center border-2 border-ink bg-bg-warm shadow-brutal-sm btn-brutal hover:shadow-brutal-md md:flex"
         >
-          {/* Sun icon */}
-          <svg
-            className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="square"
-              strokeLinejoin="miter"
-              d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-            />
-          </svg>
-          {/* Moon icon */}
-          <svg
-            className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="square"
-              strokeLinejoin="miter"
-              d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
-            />
-          </svg>
+          <Sun
+            size={16}
+            className="rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+          />
+          <Moon
+            size={16}
+            className="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+          />
         </button>
 
         {/* User menu */}
@@ -84,7 +137,7 @@ export function Header({ orgName, userEmail }: HeaderProps) {
           >
             <div className="px-3 py-2">
               <p className="font-display text-sm font-bold text-ink">
-                {userEmail}
+                {userName || userEmail}
               </p>
               <p className="font-body text-xs text-text-2">{orgName}</p>
             </div>
@@ -105,6 +158,24 @@ export function Header({ orgName, userEmail }: HeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Sheet sidebar for tablet/mobile */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent
+          side="left"
+          showCloseButton={false}
+          className="w-[85vw] max-w-[280px] p-0 border-r-[3px] border-ink bg-bg-warm md:max-w-[280px]"
+        >
+          <MobileSidebarContent
+            userRole={userRole}
+            orgName={orgName}
+            orgIndustry={orgIndustry}
+            userName={userName}
+            userEmail={userEmail}
+            onNavigate={() => setSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
     </header>
   )
 }

@@ -3,118 +3,171 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Logo } from '@/components/ui/logo'
-import { useState } from 'react'
+import {
+  Compass,
+  LayoutGrid,
+  BarChart3,
+  FileText,
+  Settings,
+  ExternalLink,
+  LogOut,
+} from 'lucide-react'
 
 interface NavItem {
   label: string
   href: string
-  icon: string
+  icon: React.ElementType
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Khám phá', href: '/dashboard/discovery', icon: '🔍' },
-  { label: 'X-Matrix', href: '/dashboard/x-matrix', icon: '📊' },
-  { label: 'KPI Tracker', href: '/dashboard/kpi', icon: '📈' },
-  { label: 'Báo cáo tháng', href: '/dashboard/report', icon: '📄' },
-  { label: 'Cài đặt', href: '/dashboard/settings', icon: '⚙️' },
+  { label: 'Khám phá', href: '/dashboard/discovery', icon: Compass },
+  { label: 'X-Matrix', href: '/dashboard/x-matrix', icon: LayoutGrid },
+  { label: 'KPI Tracker', href: '/dashboard/kpi', icon: BarChart3 },
+  { label: 'Báo cáo tháng', href: '/dashboard/report', icon: FileText },
+  { label: 'Cài đặt', href: '/dashboard/settings', icon: Settings },
 ]
 
-function NavLinks({ userRole }: { userRole: string }) {
+interface SidebarContentProps {
+  userRole: string
+  orgName: string
+  orgIndustry: string
+  userName: string
+  userEmail: string
+  onNavigate?: () => void
+}
+
+function SidebarContent({
+  userRole,
+  orgName,
+  orgIndustry,
+  userName,
+  userEmail,
+  onNavigate,
+}: SidebarContentProps) {
   const pathname = usePathname()
+  const initials = (userName || userEmail.split('@')[0])
+    .slice(0, 2)
+    .toUpperCase()
 
   return (
-    <nav className="flex flex-col gap-0.5 px-3">
-      {NAV_ITEMS.map((item) => {
-        const isActive =
-          pathname === item.href || pathname.startsWith(item.href + '/')
+    <div className="flex h-full flex-col">
+      {/* Logo */}
+      <div className="px-4 py-5">
+        <Link href="/dashboard" onClick={onNavigate}>
+          <Logo size="sm" showText />
+        </Link>
+      </div>
 
-        return (
-          <Link key={item.href} href={item.href}>
-            <div
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-widest transition-all duration-100 border-l-4',
-                isActive
-                  ? 'bg-ink text-white border-l-accent-brand'
-                  : 'text-ink border-l-transparent hover:bg-bg-muted-warm hover:border-l-accent-brand'
-              )}
-            >
-              <span className="text-sm">{item.icon}</span>
-              {item.label}
-            </div>
-          </Link>
-        )
-      })}
+      <div className="border-t-[3px] border-ink" />
 
-      {/* Divider */}
-      <div className="border-t-2 border-ink my-3 mx-0" />
+      {/* Org info */}
+      <div className="px-4 py-3">
+        <p className="font-display text-xs font-bold uppercase tracking-widest text-accent-brand">
+          {orgName}
+        </p>
+        <p className="font-body text-[13px] text-text-3">
+          {orgIndustry} · {userRole}
+        </p>
+      </div>
+
+      <div className="border-t-2 border-ink/10" />
+
+      {/* Navigation */}
+      <nav aria-label="Menu chính" className="mt-2 flex flex-col gap-0.5">
+        {NAV_ITEMS.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + '/')
+          const Icon = item.icon
+
+          return (
+            <Link key={item.href} href={item.href} onClick={onNavigate}>
+              <div
+                className={cn(
+                  'flex min-h-[44px] items-center gap-3 border-l-[3px] px-4 py-2.5',
+                  'font-display text-[13px] font-semibold uppercase tracking-[.08em]',
+                  'cursor-pointer transition-all duration-100',
+                  isActive
+                    ? 'border-l-accent-brand bg-bg-muted-warm text-accent-brand'
+                    : 'border-l-transparent text-ink hover:bg-bg-muted-warm'
+                )}
+              >
+                <Icon size={18} strokeWidth={2} />
+                {item.label}
+              </div>
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* Tools divider */}
+      <div className="mx-4 my-3 flex items-center gap-2">
+        <div className="h-[2px] flex-1 bg-ink/10" />
+        <span className="font-body text-[11px] uppercase tracking-widest text-text-3">
+          Tools
+        </span>
+        <div className="h-[2px] flex-1 bg-ink/10" />
+      </div>
 
       <a
         href="/x-ray"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-widest text-text-3 border-l-4 border-l-transparent hover:bg-bg-muted-warm hover:border-l-accent-brand transition-all duration-100"
+        onClick={onNavigate}
+        className={cn(
+          'flex min-h-[44px] items-center gap-3 border-l-[3px] border-l-transparent px-4 py-2.5',
+          'font-display text-[13px] font-semibold uppercase tracking-[.08em]',
+          'text-text-3 transition-all duration-100 hover:bg-bg-muted-warm'
+        )}
       >
-        <span className="text-sm">🔗</span>
+        <ExternalLink size={18} strokeWidth={2} />
         Chia sẻ X-Ray
       </a>
 
-      {userRole === 'CEO' && (
-        <p className="mt-4 px-3 font-display text-[10px] font-semibold uppercase tracking-widest text-text-3">
-          Vai trò: CEO
-        </p>
-      )}
-    </nav>
+      {/* User profile — pushed to bottom */}
+      <div className="mt-auto border-t-[3px] border-ink">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-ink bg-accent-brand font-display text-xs font-black text-white">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-[13px] font-bold text-ink">
+              {userName || userEmail.split('@')[0]}
+            </p>
+            <p className="font-body text-[11px] text-text-3">
+              {userRole} · Free Plan
+            </p>
+          </div>
+          <Link
+            href="/dashboard/settings"
+            onClick={onNavigate}
+            className="flex h-9 w-9 shrink-0 items-center justify-center text-text-3 transition-colors hover:text-ink"
+            aria-label="Settings"
+          >
+            <LogOut size={16} strokeWidth={2} />
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 }
 
-export function Sidebar({ userRole }: { userRole: string }) {
-  const [open, setOpen] = useState(false)
+export interface SidebarProps {
+  userRole: string
+  orgName: string
+  orgIndustry: string
+  userName: string
+  userEmail: string
+}
 
-  return (
-    <>
-      {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r-[3px] border-ink bg-bg-warm md:flex md:flex-col">
-        <div className="flex h-16 items-center px-4">
-          <Link href="/dashboard" className="btn-brutal">
-            <Logo size="sm" showText />
-          </Link>
-        </div>
-        <div className="border-t-2 border-ink" />
-        <div className="mt-3 flex-1">
-          <NavLinks userRole={userRole} />
-        </div>
-      </aside>
+/** Desktop sidebar — rendered inside layout's fixed aside */
+export function Sidebar(props: SidebarProps) {
+  return <SidebarContent {...props} />
+}
 
-      {/* Mobile sidebar */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger className="fixed left-4 top-4 z-40 inline-flex h-10 w-10 items-center justify-center border-2 border-ink bg-bg-warm shadow-brutal-sm btn-brutal hover:shadow-brutal-md md:hidden">
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="square"
-              strokeLinejoin="miter"
-              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-            />
-          </svg>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-60 p-0 border-r-[3px] border-ink bg-bg-warm">
-          <div className="flex h-16 items-center px-4">
-            <Logo size="sm" showText />
-          </div>
-          <div className="border-t-2 border-ink" />
-          <div className="mt-3">
-            <NavLinks userRole={userRole} />
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
-  )
+/** Mobile/Tablet sidebar content — rendered inside Sheet */
+export function MobileSidebarContent(
+  props: SidebarProps & { onNavigate: () => void }
+) {
+  return <SidebarContent {...props} onNavigate={props.onNavigate} />
 }

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { BottomNav } from '@/components/layout/bottom-nav'
 import { IdentifyUser } from '@/components/analytics/IdentifyUser'
 
 export default async function DashboardLayout({
@@ -31,28 +32,63 @@ export default async function DashboardLayout({
 
   if (!membership) redirect('/onboarding/setup-org')
 
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('id', membership.org_id)
-    .single()
+  const [{ data: org }, { data: profile }] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', membership.org_id)
+      .single(),
+    supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', user.id)
+      .single(),
+  ])
 
   const orgName = org?.name ?? 'Công ty'
+  const orgIndustry = org?.industry ?? ''
+  const userName = profile?.full_name ?? ''
+  const userEmail = user.email ?? ''
+  const userRole = membership.role ?? ''
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex min-h-screen bg-bg-warm">
       <IdentifyUser
         userId={user.id}
         orgId={membership.org_id}
         orgName={orgName}
-        role={membership.role}
-        industry={org?.industry ?? ''}
+        role={userRole}
+        industry={orgIndustry}
       />
-      <Sidebar userRole={membership.role} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header orgName={orgName} userEmail={user.email ?? ''} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+
+      {/* Sidebar — desktop only (lg+) */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)] lg:flex-col lg:border-r-[3px] lg:border-ink lg:bg-bg-warm lg:overflow-y-auto">
+        <Sidebar
+          userRole={userRole}
+          orgName={orgName}
+          orgIndustry={orgIndustry}
+          userName={userName}
+          userEmail={userEmail}
+        />
+      </aside>
+
+      {/* Main area — offset by sidebar on desktop */}
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[var(--sidebar-width)]">
+        <Header
+          orgName={orgName}
+          userEmail={userEmail}
+          userRole={userRole}
+          orgIndustry={orgIndustry}
+          userName={userName}
+        />
+
+        <main className="flex-1 overflow-y-auto pb-[76px] lg:pb-0">
+          {children}
+        </main>
       </div>
+
+      {/* Bottom nav — mobile/tablet only */}
+      <BottomNav className="lg:hidden" />
     </div>
   )
 }
