@@ -48,7 +48,7 @@ export function ChatMessage({
 
   if (isAI) {
     return (
-      <div className="flex gap-3 max-w-3xl">
+      <div className="flex gap-3 max-w-[85vw] md:max-w-xl lg:max-w-2xl">
         <div className="shrink-0 mt-1">
           <AiCoachAvatar
             size={40}
@@ -89,7 +89,7 @@ export function ChatMessage({
   }
 
   return (
-    <div className="flex gap-3 justify-end max-w-2xl ml-auto">
+    <div className="flex gap-3 justify-end max-w-[85vw] md:max-w-xl lg:max-w-2xl ml-auto">
       <div className="flex flex-col items-end gap-1">
         <div className="bg-primary text-primary-foreground border-2 border-primary px-4 py-3">
           <p className="text-sm leading-relaxed">{content}</p>

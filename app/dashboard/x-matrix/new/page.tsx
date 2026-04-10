@@ -35,10 +35,14 @@ export default async function NewXMatrixPage() {
   })
 
   return (
-    <div className="py-8 px-4">
-      <div className="max-w-2xl mx-auto mb-8 space-y-1">
-        <h1 className="text-2xl font-bold">X-Matrix Builder</h1>
-        <p className="text-muted-foreground text-sm">
+    <div className="w-full min-h-full p-6 lg:p-8">
+      {/* Page header — centered for wizard focus */}
+      <div className="max-w-4xl mx-auto mb-8 pb-6 border-b-[3px] border-ink">
+        <p className="overline mb-1">Strategy</p>
+        <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
+          X-Matrix Builder
+        </h1>
+        <p className="font-body text-text-2 mt-1 text-base">
           Kế hoạch chiến lược 1 năm · Đã pre-fill từ Discovery · Review và
           confirm
         </p>

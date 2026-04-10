@@ -31,10 +31,13 @@ export default async function VisionWorkshopPage() {
     .maybeSingle()
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="mb-8 space-y-1">
-        <h1 className="text-2xl font-bold">Vision Workshop</h1>
-        <p className="text-muted-foreground text-sm">
+    <div className="w-full min-h-full p-6 lg:p-8">
+      <div className="mb-8 pb-6 border-b-[3px] border-ink">
+        <p className="overline mb-1">Discovery</p>
+        <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
+          Vision Workshop
+        </h1>
+        <p className="font-body text-text-2 mt-1 text-base">
           Trả lời 5 câu hỏi để AI draft Vision Statement cho {org.name}.
           Mất khoảng 5 phút.
         </p>

@@ -1,13 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 const DISCOVERY_STEPS = [
@@ -67,112 +60,119 @@ export default async function DashboardPage() {
   const allDiscoveryDone = completedCount === DISCOVERY_STEPS.length
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Chào {firstName} 👋</h1>
-        <p className="mt-1 text-muted-foreground">
+    <div className="w-full min-h-full p-6 lg:p-8">
+      {/* Page header */}
+      <div className="mb-8 pb-6 border-b-[3px] border-ink">
+        <p className="overline mb-1">Dashboard</p>
+        <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
+          Chào {firstName}
+        </h1>
+        <p className="font-body text-text-2 mt-1 text-base">
           Hoshin Kanri OS giúp bạn biến chiến lược thành hành động đo được.
         </p>
       </div>
 
       {/* State B: Has X-Matrix — show quick actions */}
       {hasXMatrix && (
-        <div className="space-y-4">
-          {/* KPI alert if has KPIs */}
+        <div className="space-y-6">
+          {/* KPI alert */}
           {(kpiCount ?? 0) > 0 && (
             <Link href="/dashboard/kpi">
-              <Card className="border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <span className="text-2xl">📊</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">
-                      {kpiCount} KPIs đang theo dõi
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Cập nhật số liệu hàng tuần
-                    </p>
-                  </div>
-                  <span className="text-sm text-primary font-semibold">
-                    Xem →
-                  </span>
-                </CardContent>
-              </Card>
+              <div className="card-brutal flex min-h-[44px] items-center gap-4 p-5 cursor-pointer">
+                <span className="text-3xl">📊</span>
+                <div className="flex-1">
+                  <p className="font-display text-sm font-bold uppercase tracking-wider">
+                    {kpiCount} KPIs đang theo dõi
+                  </p>
+                  <p className="font-body text-sm text-text-3">
+                    Cập nhật số liệu hàng tuần
+                  </p>
+                </div>
+                <span className="font-display text-sm font-bold text-accent-brand uppercase tracking-wider">
+                  Xem →
+                </span>
+              </div>
             </Link>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/dashboard/kpi">
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                <CardContent className="py-4 text-center space-y-1">
-                  <span className="text-2xl">📈</span>
-                  <p className="text-sm font-semibold">KPI Tracker</p>
-                </CardContent>
-              </Card>
+              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+                <span className="text-3xl">📈</span>
+                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                  KPI Tracker
+                </p>
+              </div>
             </Link>
             <Link href="/dashboard/report">
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                <CardContent className="py-4 text-center space-y-1">
-                  <span className="text-2xl">📄</span>
-                  <p className="text-sm font-semibold">Báo cáo tháng</p>
-                </CardContent>
-              </Card>
+              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+                <span className="text-3xl">📄</span>
+                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                  Báo cáo tháng
+                </p>
+              </div>
+            </Link>
+            <Link href="/dashboard/discovery">
+              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+                <span className="text-3xl">🔍</span>
+                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                  Discovery Hub
+                </p>
+              </div>
+            </Link>
+            <Link href="/dashboard/x-matrix/new">
+              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+                <span className="text-3xl">📊</span>
+                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                  X-Matrix
+                </p>
+              </div>
             </Link>
           </div>
-
-          <Link href="/dashboard/discovery">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardContent className="flex items-center gap-3 py-4">
-                <span className="text-2xl">🔍</span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">Discovery Hub</p>
-                  <p className="text-xs text-muted-foreground">
-                    SWOT, Pain Mapper, Vision, Benchmark
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
         </div>
       )}
 
       {/* State A: No X-Matrix — show discovery checklist */}
       {!hasXMatrix && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main checklist */}
+          <div className="lg:col-span-2 card-brutal p-6">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <CardTitle>
+                <h2 className="font-display text-lg font-bold uppercase tracking-wider text-ink">
                   {completedCount === 0
                     ? 'Bắt đầu khám phá doanh nghiệp'
                     : allDiscoveryDone
                       ? 'Sẵn sàng tạo X-Matrix!'
-                      : `Tiếp tục khám phá (${completedCount}/${DISCOVERY_STEPS.length})`}
-                </CardTitle>
-                <CardDescription className="mt-1">
+                      : `Tiếp tục khám phá`}
+                </h2>
+                <p className="font-body text-sm text-text-2 mt-1">
                   {allDiscoveryDone
                     ? 'AI đã tổng hợp Discovery data — tạo X-Matrix ngay'
                     : 'Hoàn thành các bước để AI tạo chiến lược cho bạn'}
-                </CardDescription>
+                </p>
               </div>
-              <Badge variant={allDiscoveryDone ? 'default' : 'secondary'}>
+              <Badge
+                variant={allDiscoveryDone ? 'default' : 'secondary'}
+                className="badge-brutal shrink-0"
+              >
                 {completedCount}/{DISCOVERY_STEPS.length}
               </Badge>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-6 space-y-2">
+
+            <div className="space-y-2 mb-6">
               {DISCOVERY_STEPS.map((step, idx) => {
                 const done = completedSteps.has(step.key)
                 return (
                   <div
                     key={step.key}
-                    className="flex items-center gap-3 border px-4 py-3"
+                    className="flex min-h-[44px] items-center gap-3 border-2 border-ink px-4 py-3"
                   >
                     <div
                       className={
                         done
-                          ? 'flex h-6 w-6 shrink-0 items-center justify-center bg-primary text-primary-foreground text-xs'
-                          : 'flex h-6 w-6 shrink-0 items-center justify-center border-2 border-muted-foreground/30 text-xs text-muted-foreground'
+                          ? 'flex h-7 w-7 shrink-0 items-center justify-center bg-accent-brand text-white font-display text-xs font-bold'
+                          : 'flex h-7 w-7 shrink-0 items-center justify-center border-2 border-ink/30 font-display text-xs font-bold text-text-3'
                       }
                     >
                       {done ? '✓' : idx + 1}
@@ -180,8 +180,8 @@ export default async function DashboardPage() {
                     <span
                       className={
                         done
-                          ? 'text-sm line-through text-muted-foreground'
-                          : 'text-sm'
+                          ? 'font-display text-sm font-semibold uppercase tracking-wider line-through text-text-3'
+                          : 'font-display text-sm font-semibold uppercase tracking-wider text-ink'
                       }
                     >
                       {step.label}
@@ -198,7 +198,7 @@ export default async function DashboardPage() {
                   : '/dashboard/discovery'
               }
             >
-              <Button className="w-full">
+              <Button className="btn-brutal-primary w-full text-center">
                 {completedCount === 0
                   ? 'Bắt đầu khám phá →'
                   : allDiscoveryDone
@@ -206,8 +206,44 @@ export default async function DashboardPage() {
                     : 'Tiếp tục →'}
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Progress sidebar */}
+          <div className="card-brutal p-6 h-fit lg:sticky lg:top-24">
+            <h3 className="font-display text-sm font-bold uppercase tracking-widest text-accent-brand mb-4">
+              Tiến độ
+            </h3>
+            <div className="mb-4">
+              <div className="h-3 w-full border-2 border-ink bg-bg-muted-warm">
+                <div
+                  className="h-full bg-accent-brand transition-all duration-500"
+                  style={{
+                    width: `${(completedCount / DISCOVERY_STEPS.length) * 100}%`,
+                  }}
+                />
+              </div>
+              <p className="font-body text-sm text-text-2 mt-2">
+                {completedCount}/{DISCOVERY_STEPS.length} bước hoàn thành
+              </p>
+            </div>
+            <div className="space-y-2">
+              {DISCOVERY_STEPS.map((step) => {
+                const done = completedSteps.has(step.key)
+                return (
+                  <div
+                    key={step.key}
+                    className="flex items-center gap-2 font-body text-sm"
+                  >
+                    <span>{done ? '✅' : '⏳'}</span>
+                    <span className={done ? 'text-text-3' : 'text-ink'}>
+                      {step.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

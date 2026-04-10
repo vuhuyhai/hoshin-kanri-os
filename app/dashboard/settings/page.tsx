@@ -43,19 +43,27 @@ export default async function SettingsPage() {
   })
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="mb-8 space-y-1">
-        <h1 className="text-2xl font-bold">Cài đặt</h1>
-        <p className="text-muted-foreground text-sm">
+    <div className="w-full min-h-full p-6 lg:p-8">
+      {/* Page header */}
+      <div className="mb-8 pb-6 border-b-[3px] border-ink">
+        <p className="overline mb-1">Admin</p>
+        <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
+          Cài đặt
+        </h1>
+        <p className="font-body text-text-2 mt-1 text-base">
           Quản lý thông tin công ty và thành viên
         </p>
       </div>
-      <SettingsClient
-        org={org}
-        members={members}
-        currentUserId={user.id}
-        isCeo={membership.role === 'CEO'}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <SettingsClient
+            org={org}
+            members={members}
+            currentUserId={user.id}
+            isCeo={membership.role === 'CEO'}
+          />
+        </div>
+      </div>
     </div>
   )
 }

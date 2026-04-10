@@ -26,7 +26,7 @@ export default async function StrategyPage() {
   if (!org) redirect('/onboarding/setup-org')
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="w-full min-h-full p-6 lg:p-8">
       <StrategyClient
         orgId={membership.org_id}
         orgContext={{

@@ -25,7 +25,7 @@ export default async function SynthesisPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-4">
+    <div className="w-full min-h-full p-6 lg:p-8">
       <SynthesisClient
         orgId={membership.org_id}
         orgContext={{

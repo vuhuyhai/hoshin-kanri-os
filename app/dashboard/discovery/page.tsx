@@ -1,13 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 const DISCOVERY_STEPS = [
@@ -68,13 +61,6 @@ function getScoreLabel(score: number): string {
   return 'Tốt'
 }
 
-function getScoreColor(score: number): string {
-  if (score <= 25) return 'text-red-600 border-red-300'
-  if (score <= 50) return 'text-amber-600 border-amber-300'
-  if (score <= 75) return 'text-blue-600 border-blue-300'
-  return 'text-green-600 border-green-300'
-}
-
 interface XRayData {
   latestScore?: number
   latestLevel?: string
@@ -92,125 +78,226 @@ export default async function DiscoveryPage() {
     sessions?.map((s) => s.step_completed).filter(Boolean) ?? []
   )
 
+  const completedCount = DISCOVERY_STEPS.filter((s) =>
+    completedSteps.has(s.key)
+  ).length
+
   // Extract X-Ray data from discovery session
   const xraySession = sessions?.find((s) => s.step_completed === 'x-ray')
   const xrayData = xraySession?.data_json as XRayData | null
 
+  // Find next uncompleted step
+  const nextStep = DISCOVERY_STEPS.find((s) => !completedSteps.has(s.key))
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Khám phá doanh nghiệp</h1>
-        <p className="mt-1 text-muted-foreground">
+    <div className="w-full min-h-full p-6 lg:p-8">
+      {/* Page header */}
+      <div className="mb-8 pb-6 border-b-[3px] border-ink">
+        <p className="overline mb-1">Discovery</p>
+        <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
+          Khám phá doanh nghiệp
+        </h1>
+        <p className="font-body text-text-2 mt-1 text-base">
           Hoàn thành các bước để hiểu rõ doanh nghiệp trước khi lập chiến lược
         </p>
       </div>
 
-      <div className="space-y-4">
-        {DISCOVERY_STEPS.map((step, idx) => {
-          const done = completedSteps.has(step.key)
-          const isNext =
-            !done &&
-            (idx === 0 ||
-              completedSteps.has(DISCOVERY_STEPS[idx - 1].key))
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Discovery step cards — 2 col grid */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {DISCOVERY_STEPS.map((step, idx) => {
+              const done = completedSteps.has(step.key)
+              const isNext =
+                !done &&
+                (idx === 0 ||
+                  completedSteps.has(DISCOVERY_STEPS[idx - 1].key))
 
-          // Special X-Ray card with score
-          if (step.key === 'x-ray' && done && xrayData) {
-            return (
-              <Card
-                key={step.key}
-                className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/30"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{step.icon}</span>
-                      <div>
-                        <CardTitle className="text-base">{step.label}</CardTitle>
-                        <CardDescription className="text-xs">
-                          Điểm gần nhất: {xrayData.latestScore}/100 · {getScoreLabel(xrayData.latestScore ?? 0)}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className="border-green-300 text-green-600"
-                    >
-                      ✓ Hoàn thành
-                    </Badge>
-                  </div>
-                  {xrayData.completedAt && (
-                    <p className="text-xs text-muted-foreground mt-1 ml-11">
-                      Lần cuối: {new Date(xrayData.completedAt).toLocaleDateString('vi-VN')}
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex gap-2">
-                    <Link href="/dashboard/discovery/xray-history" className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full">
-                        Xem báo cáo
-                      </Button>
-                    </Link>
-                    <Link href="/x-ray" target="_blank" className="flex-1">
-                      <Button variant="default" size="sm" className="w-full">
-                        Chạy lại →
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          }
-
-          return (
-            <Card
-              key={step.key}
-              className={
-                done
-                  ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/30'
-                  : isNext
-                    ? 'border-primary/30 bg-primary/5'
-                    : ''
-              }
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{step.icon}</span>
-                    <div>
-                      <CardTitle className="text-base">{step.label}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {step.description}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  {done && (
-                    <Badge
-                      variant="outline"
-                      className="border-green-300 text-green-600"
-                    >
-                      ✓ Hoàn thành
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Link
-                  href={step.href}
-                  target={step.external ? '_blank' : undefined}
-                >
-                  <Button
-                    variant={done ? 'outline' : 'default'}
-                    size="sm"
-                    className="w-full"
+              // Special X-Ray card with score
+              if (step.key === 'x-ray' && done && xrayData) {
+                return (
+                  <div
+                    key={step.key}
+                    className="card-brutal border-green-600 p-5 flex flex-col min-h-[160px]"
                   >
-                    {done ? 'Xem lại' : 'Bắt đầu →'}
+                    <div className="flex items-start justify-between mb-3">
+                      <span className="text-3xl">{step.icon}</span>
+                      <Badge className="badge-brutal border-green-600 text-green-600">
+                        ✓ Hoàn thành
+                      </Badge>
+                    </div>
+                    <h3 className="font-display text-base font-bold uppercase tracking-wider text-ink">
+                      {step.label}
+                    </h3>
+                    <p className="font-body text-sm text-text-3 mt-1">
+                      Điểm: {xrayData.latestScore}/100 · {getScoreLabel(xrayData.latestScore ?? 0)}
+                    </p>
+                    {xrayData.completedAt && (
+                      <p className="font-body text-xs text-text-3 mt-1">
+                        Lần cuối: {new Date(xrayData.completedAt).toLocaleDateString('vi-VN')}
+                      </p>
+                    )}
+                    <div className="mt-auto pt-4 flex gap-2">
+                      <Link href="/dashboard/discovery/xray-history" className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full btn-brutal">
+                          Xem báo cáo
+                        </Button>
+                      </Link>
+                      <Link href="/x-ray" target="_blank" className="flex-1">
+                        <Button size="sm" className="w-full btn-brutal-primary text-xs py-2">
+                          Chạy lại →
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <div
+                  key={step.key}
+                  className={`card-brutal p-5 flex flex-col min-h-[160px] ${
+                    done
+                      ? 'border-green-600'
+                      : isNext
+                        ? 'border-accent-brand'
+                        : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-3xl">{step.icon}</span>
+                    {done && (
+                      <Badge className="badge-brutal border-green-600 text-green-600">
+                        ✓ Hoàn thành
+                      </Badge>
+                    )}
+                    {isNext && (
+                      <Badge className="badge-brutal border-accent-brand text-accent-brand">
+                        Tiếp theo
+                      </Badge>
+                    )}
+                  </div>
+                  <h3 className="font-display text-base font-bold uppercase tracking-wider text-ink">
+                    {step.label}
+                  </h3>
+                  <p className="font-body text-sm text-text-3 mt-1 flex-1">
+                    {step.description}
+                  </p>
+                  <div className="mt-4">
+                    <Link
+                      href={step.href}
+                      target={step.external ? '_blank' : undefined}
+                    >
+                      {done ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full btn-brutal"
+                        >
+                          Xem lại
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="w-full btn-brutal-primary text-xs py-2"
+                        >
+                          Bắt đầu →
+                        </Button>
+                      )}
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right: Progress summary — sticky */}
+        <div className="lg:col-span-1">
+          <div className="card-brutal p-6 lg:sticky lg:top-24">
+            <h3 className="font-display text-sm font-bold uppercase tracking-widest text-accent-brand mb-4">
+              Tiến độ khám phá
+            </h3>
+
+            {/* Progress bar */}
+            <div className="mb-5">
+              <div className="h-3 w-full border-2 border-ink bg-bg-muted-warm">
+                <div
+                  className="h-full bg-accent-brand transition-all duration-500"
+                  style={{
+                    width: `${(completedCount / DISCOVERY_STEPS.length) * 100}%`,
+                  }}
+                />
+              </div>
+              <p className="font-body text-sm text-text-2 mt-2">
+                {completedCount}/{DISCOVERY_STEPS.length} bước
+              </p>
+            </div>
+
+            {/* Step status list */}
+            <div className="space-y-2.5 mb-6">
+              {DISCOVERY_STEPS.map((step) => {
+                const done = completedSteps.has(step.key)
+                const isLocked =
+                  !done && step.key === 'synthesis' && completedCount < 4
+                return (
+                  <div
+                    key={step.key}
+                    className="flex items-center gap-2 font-body text-sm"
+                  >
+                    <span>
+                      {done ? '✅' : isLocked ? '🔒' : '⏳'}
+                    </span>
+                    <span
+                      className={
+                        done
+                          ? 'text-text-3 line-through'
+                          : isLocked
+                            ? 'text-text-3'
+                            : 'text-ink font-medium'
+                      }
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Next step CTA */}
+            {nextStep && (
+              <div className="border-t-2 border-ink/10 pt-4">
+                <p className="font-display text-[11px] font-bold uppercase tracking-widest text-text-3 mb-2">
+                  Bước tiếp theo
+                </p>
+                <p className="font-display text-sm font-bold text-ink mb-3">
+                  {nextStep.label}
+                </p>
+                <Link
+                  href={nextStep.href}
+                  target={nextStep.external ? '_blank' : undefined}
+                >
+                  <Button className="btn-brutal-primary w-full text-xs py-2">
+                    Tiếp tục →
                   </Button>
                 </Link>
-              </CardContent>
-            </Card>
-          )
-        })}
+              </div>
+            )}
+
+            {completedCount === DISCOVERY_STEPS.length && (
+              <div className="border-t-2 border-ink/10 pt-4">
+                <p className="font-display text-[11px] font-bold uppercase tracking-widest text-green-600 mb-3">
+                  Hoàn thành!
+                </p>
+                <Link href="/dashboard/x-matrix/new">
+                  <Button className="btn-brutal-primary w-full text-xs py-2">
+                    Tạo X-Matrix →
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
