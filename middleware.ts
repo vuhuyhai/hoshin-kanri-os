@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -46,26 +47,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    // Has session → check is_super_admin via service role
+    // Has session → check is_super_admin via service role key
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceKey) {
-      // Cannot verify admin status without service key
       const loginUrl = new URL('/admin/login', request.url)
       return NextResponse.redirect(loginUrl)
     }
 
-    const adminClient = createServerClient(supabaseUrl, serviceKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll() {
-          // No-op: we only read here
-        },
-      },
-    })
-
-    const { data: profile } = await adminClient
+    // Use plain supabase-js client (not SSR) to avoid cookie interference
+    const adminDb = createClient(supabaseUrl, serviceKey)
+    const { data: profile } = await adminDb
       .from('profiles')
       .select('is_super_admin')
       .eq('id', user.id)
