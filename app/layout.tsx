@@ -1,23 +1,13 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { PHProvider } from '@/components/providers/posthog-provider'
 import { Toaster } from 'sonner'
 import { AuthListener } from '@/components/providers/auth-listener'
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
-
 export const metadata: Metadata = {
-  title: 'Hoshin Kanri OS — Biến chiến lược thành hành động đo được trong 90 ngày',
+  title:
+    'Hoshin Kanri OS — Biến chiến lược thành hành động đo được trong 90 ngày',
   description: 'Công cụ quản lý chiến lược cho SME Việt Nam',
 }
 
@@ -28,9 +18,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-full font-sans antialiased`}
-      >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@300;400;500;600;700&subset=vietnamese&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-full font-body antialiased bg-bg-warm text-ink">
         <PHProvider>
           <ThemeProvider
             attribute="class"

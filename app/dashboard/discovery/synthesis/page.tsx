@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SynthesisRunner } from './components/SynthesisRunner'
+import { SynthesisClient } from './components/SynthesisClient'
 
 export default async function SynthesisPage() {
   const supabase = await createClient()
@@ -11,29 +11,22 @@ export default async function SynthesisPage() {
 
   const { data: membership } = await supabase
     .from('org_members')
-    .select('*')
+    .select('org_id, organizations(name, industry, city, headcount)')
     .eq('user_id', user.id)
     .single()
 
   if (!membership) redirect('/onboarding/setup-org')
 
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('id', membership.org_id)
-    .single()
-
-  if (!org) redirect('/onboarding/setup-org')
+  const org = membership.organizations as {
+    name: string
+    industry: string
+    city: string
+    headcount: string
+  }
 
   return (
-    <div className="mx-auto max-w-2xl py-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">AI Strategy Synthesis</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Tổng hợp toàn bộ Discovery data → X-Matrix pre-fill
-        </p>
-      </div>
-      <SynthesisRunner
+    <div className="max-w-xl mx-auto py-8 px-4">
+      <SynthesisClient
         orgId={membership.org_id}
         orgContext={{
           orgName: org.name,

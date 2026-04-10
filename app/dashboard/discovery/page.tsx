@@ -96,7 +96,7 @@ export default async function DiscoveryPage() {
                   ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/30'
                   : isNext
                     ? 'border-primary/30 bg-primary/5'
-                    : 'opacity-60'
+                    : ''
               }
             >
               <CardHeader className="pb-3">
@@ -120,26 +120,20 @@ export default async function DiscoveryPage() {
                   )}
                 </div>
               </CardHeader>
-              {(isNext || done) && (
-                <CardContent className="pt-0">
-                  <Link
-                    href={step.href}
-                    target={step.external ? '_blank' : undefined}
+              <CardContent className="pt-0">
+                <Link
+                  href={step.href}
+                  target={step.external ? '_blank' : undefined}
+                >
+                  <Button
+                    variant={done ? 'outline' : 'default'}
+                    size="sm"
+                    className="w-full"
                   >
-                    <Button
-                      variant={isNext ? 'default' : 'outline'}
-                      size="sm"
-                      className="w-full"
-                    >
-                      {done
-                        ? 'Xem lại'
-                        : isNext
-                          ? 'Bắt đầu →'
-                          : 'Mở'}
-                    </Button>
-                  </Link>
-                </CardContent>
-              )}
+                    {done ? 'Xem lại' : 'Bắt đầu →'}
+                  </Button>
+                </Link>
+              </CardContent>
             </Card>
           )
         })}

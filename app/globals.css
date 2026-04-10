@@ -4,12 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   NEO-BRUTALISM DESIGN SYSTEM — Hoshin Kanri OS
+   Brand: #534AB7 · Ink: #2C2B2B · Warm White: #F7F5F2
+   ============================================================ */
+
 @theme inline {
+  /* shadcn token mappings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,94 +42,192 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Neo-Brutalism colors */
+  --color-ink: #2C2B2B;
+  --color-text-2: #5A5757;
+  --color-text-3: #8A8787;
+  --color-accent-brand: #534AB7;
+  --color-accent-dark: #3d3489;
+  --color-bg-warm: #F7F5F2;
+  --color-bg-muted-warm: #ECEAE6;
+  --color-bg-dark: #2C2B2B;
+
+  /* Fonts */
+  --font-display: "Montserrat", sans-serif;
+  --font-body: "Barlow Condensed", sans-serif;
+  --font-sans: "Barlow Condensed", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --font-heading: "Montserrat", sans-serif;
+
+  /* Shadows — Neo-Brutalism hard shadows */
+  --shadow-brutal-sm: 3px 3px 0 #2C2B2B;
+  --shadow-brutal-md: 5px 5px 0 #2C2B2B;
+  --shadow-brutal-lg: 8px 8px 0 #2C2B2B;
+  --shadow-brutal-accent: 5px 5px 0 #534AB7;
+
+  /* Radii — all zero for Neo-Brutalism */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
+/* ============================================================
+   LIGHT MODE — Neo-Brutalism
+   ============================================================ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Brand: #534AB7 */
-  --primary: oklch(0.46 0.17 280);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.46 0.17 280);
-  --chart-1: oklch(0.46 0.17 280);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.46 0.17 280);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.46 0.17 280);
+  --background: #F7F5F2;
+  --foreground: #2C2B2B;
+  --card: #F7F5F2;
+  --card-foreground: #2C2B2B;
+  --popover: #F7F5F2;
+  --popover-foreground: #2C2B2B;
+  --primary: #534AB7;
+  --primary-foreground: #FFFFFF;
+  --secondary: #ECEAE6;
+  --secondary-foreground: #2C2B2B;
+  --muted: #ECEAE6;
+  --muted-foreground: #5A5757;
+  --accent: #ECEAE6;
+  --accent-foreground: #2C2B2B;
+  --destructive: #ef4444;
+  --border: #2C2B2B;
+  --input: #2C2B2B;
+  --ring: #534AB7;
+  --chart-1: #534AB7;
+  --chart-2: #5A5757;
+  --chart-3: #3d3489;
+  --chart-4: #8A8787;
+  --chart-5: #2C2B2B;
+  --radius: 0rem;
+  --sidebar: #F7F5F2;
+  --sidebar-foreground: #2C2B2B;
+  --sidebar-primary: #534AB7;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #ECEAE6;
+  --sidebar-accent-foreground: #2C2B2B;
+  --sidebar-border: #2C2B2B;
+  --sidebar-ring: #534AB7;
 }
 
+/* ============================================================
+   DARK MODE — Inverted brutalism
+   ============================================================ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  /* Brand lighter for dark mode */
-  --primary: oklch(0.62 0.17 280);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.62 0.17 280);
-  --chart-1: oklch(0.62 0.17 280);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.62 0.17 280);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.62 0.17 280);
+  --background: #1a1919;
+  --foreground: #F7F5F2;
+  --card: #2C2B2B;
+  --card-foreground: #F7F5F2;
+  --popover: #2C2B2B;
+  --popover-foreground: #F7F5F2;
+  --primary: #7B73D4;
+  --primary-foreground: #1a1919;
+  --secondary: #3a3939;
+  --secondary-foreground: #F7F5F2;
+  --muted: #3a3939;
+  --muted-foreground: #8A8787;
+  --accent: #3a3939;
+  --accent-foreground: #F7F5F2;
+  --destructive: #f87171;
+  --border: #5A5757;
+  --input: #5A5757;
+  --ring: #7B73D4;
+  --chart-1: #7B73D4;
+  --chart-2: #8A8787;
+  --chart-3: #5A5757;
+  --chart-4: #3a3939;
+  --chart-5: #2C2B2B;
+  --sidebar: #2C2B2B;
+  --sidebar-foreground: #F7F5F2;
+  --sidebar-primary: #7B73D4;
+  --sidebar-primary-foreground: #F7F5F2;
+  --sidebar-accent: #3a3939;
+  --sidebar-accent-foreground: #F7F5F2;
+  --sidebar-border: #5A5757;
+  --sidebar-ring: #7B73D4;
 }
 
+/* ============================================================
+   GLOBAL RESETS — Neo-Brutalism
+   ============================================================ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    font-style: normal !important;
+    border-radius: 0px !important;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
   html {
-    @apply font-sans;
+    @apply font-body;
+  }
+
+  /* Headings — Montserrat display font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Montserrat", sans-serif;
+  }
+  h1 { font-weight: 900; }
+  h2 { font-weight: 800; }
+  h3, h4, h5, h6 { font-weight: 700; }
+}
+
+/* ============================================================
+   NEO-BRUTALISM UTILITY CLASSES
+   ============================================================ */
+
+/* Button hover animation */
+.btn-brutal {
+  transition: transform 150ms, box-shadow 150ms;
+}
+.btn-brutal:hover {
+  transform: translate(-2px, -2px);
+}
+.btn-brutal:active {
+  transform: translate(2px, 2px);
+}
+
+/* Card hover animation */
+.card-brutal {
+  transition: transform 150ms, box-shadow 150ms;
+}
+.card-brutal:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 8px 8px 0 #2C2B2B;
+}
+
+/* Overline text style */
+.overline {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* Label text style */
+.label-brutal {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Focus state — WCAG AA */
+:focus-visible {
+  outline: 3px solid #534AB7 !important;
+  outline-offset: 3px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
   }
 }

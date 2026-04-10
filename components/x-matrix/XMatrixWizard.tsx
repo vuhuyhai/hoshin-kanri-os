@@ -1,0 +1,112 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
+import { WizardProgress } from './WizardProgress'
+import { Step1Vision } from './Step1Vision'
+import { Step2Hoshins } from './Step2Hoshins'
+import { Step3Initiatives } from './Step3Initiatives'
+import { Step4Kpis } from './Step4Kpis'
+import { XMatrixReview } from './XMatrixReview'
+import { calcCompleteness } from '@/lib/x-matrix/utils'
+import type { XMatrixData, WizardStep, OrgMember } from '@/lib/x-matrix/types'
+
+const EMPTY_DATA: XMatrixData = {
+  vision: '',
+  yearGoals: [''],
+  hoshins: [],
+}
+
+interface XMatrixWizardProps {
+  orgId: string
+  members: OrgMember[]
+}
+
+export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
+  const [step, setStep] = useState<WizardStep>(1)
+  const [data, setData] = useState<XMatrixData>(EMPTY_DATA)
+  const [isLoadingPrefill, setIsLoadingPrefill] = useState(true)
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+
+    fetch('/api/x-matrix/prefill')
+      .then((r) => r.json())
+      .then(
+        (res: {
+          data: XMatrixData | null
+          hasPrefill: boolean
+          completeness: number
+        }) => {
+          if (res.hasPrefill && res.data) {
+            setData(res.data)
+            toast.success(`X-Matrix pre-fill ${res.completeness}% từ Discovery!`)
+          }
+        }
+      )
+      .catch(() => {
+        /* Fail silently — user fills manually */
+      })
+      .finally(() => setIsLoadingPrefill(false))
+  }, [])
+
+  const goTo = (s: WizardStep) => {
+    setStep(s)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (isLoadingPrefill) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
+        <div className="text-4xl animate-pulse">📋</div>
+        <p className="text-sm text-muted-foreground">
+          Đang tải dữ liệu Discovery...
+        </p>
+      </div>
+    )
+  }
+
+  const completeness = calcCompleteness(data)
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <WizardProgress currentStep={step} completeness={completeness} />
+
+      <div className="border rounded-xl p-6">
+        {step === 1 && (
+          <Step1Vision data={data} onChange={setData} onNext={() => goTo(2)} />
+        )}
+        {step === 2 && (
+          <Step2Hoshins
+            data={data}
+            onChange={setData}
+            onNext={() => goTo(3)}
+            onBack={() => goTo(1)}
+          />
+        )}
+        {step === 3 && (
+          <Step3Initiatives
+            data={data}
+            onChange={setData}
+            onNext={() => goTo(4)}
+            onBack={() => goTo(2)}
+          />
+        )}
+        {step === 4 && (
+          <Step4Kpis
+            data={data}
+            members={members}
+            onChange={setData}
+            onNext={() => goTo(5)}
+            onBack={() => goTo(3)}
+          />
+        )}
+        {step === 5 && (
+          <XMatrixReview data={data} orgId={orgId} onBack={() => goTo(4)} />
+        )}
+      </div>
+    </div>
+  )
+}

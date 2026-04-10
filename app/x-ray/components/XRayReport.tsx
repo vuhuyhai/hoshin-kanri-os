@@ -72,7 +72,7 @@ export function XRayReport({ result }: XRayReportProps) {
   const router = useRouter()
 
   const handlePrint = () => window.print()
-  const handleSignup = () => router.push('/login?from=xray')
+  const handleStartPlanning = () => router.push('/dashboard/discovery')
 
   return (
     <>
@@ -143,7 +143,7 @@ export function XRayReport({ result }: XRayReportProps) {
 
         <div className="no-print space-y-4 rounded-xl border border-primary/20 bg-primary/10 p-6 text-center">
           <p className="font-medium leading-relaxed">{result.ctaMessage}</p>
-          <Button onClick={handleSignup} size="lg" className="w-full">
+          <Button onClick={handleStartPlanning} size="lg" className="w-full">
             Tạo tài khoản miễn phí để lập kế hoạch hành động →
           </Button>
           <p className="text-xs text-muted-foreground">
@@ -155,7 +155,7 @@ export function XRayReport({ result }: XRayReportProps) {
           <Button variant="outline" onClick={handlePrint} className="flex-1">
             🖨️ Tải PDF
           </Button>
-          <Button onClick={handleSignup} className="flex-1">
+          <Button onClick={handleStartPlanning} className="flex-1">
             Bắt đầu lập kế hoạch →
           </Button>
         </div>

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { IdentifyUser } from '@/components/analytics/IdentifyUser'
 
 export default async function DashboardLayout({
   children,
@@ -40,6 +41,13 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <IdentifyUser
+        userId={user.id}
+        orgId={membership.org_id}
+        orgName={orgName}
+        role={membership.role}
+        industry={org?.industry ?? ''}
+      />
       <Sidebar userRole={membership.role} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header orgName={orgName} userEmail={user.email ?? ''} />

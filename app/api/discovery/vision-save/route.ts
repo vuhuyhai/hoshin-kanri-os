@@ -24,6 +24,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Org not found' }, { status: 404 })
     }
 
+    // Delete existing vision session to avoid duplicates on re-save
+    await supabase
+      .from('discovery_sessions')
+      .delete()
+      .eq('org_id', membership.org_id)
+      .eq('step_completed', 'vision')
+
     await supabase.from('discovery_sessions').insert({
       org_id: membership.org_id,
       user_id: user.id,

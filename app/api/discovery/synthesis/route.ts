@@ -18,8 +18,16 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: SynthesisRequest = await request.json()
-    const { orgId, orgContext } = body
+    const body = await request.json()
+    const { orgId, orgContext } = body as SynthesisRequest
+
+    // selectedKpis comes from localStorage via the client
+    const selectedKpis: Array<{
+      name: string
+      unit: string
+      targetValue: number
+      frequency: string
+    }> = Array.isArray(body.selectedKpis) ? body.selectedKpis : []
 
     // Pull all discovery data
     const { data: swotItems } = await supabase
@@ -69,10 +77,10 @@ export async function POST(request: NextRequest) {
 
     const prompt = getSynthesisPrompt(
       orgContext,
-      (swotItems ?? []).map(s => ({ ...s, implication: s.implication ?? '' })),
+      (swotItems ?? []).map((s) => ({ ...s, implication: s.implication ?? '' })),
       painData.candidates ?? [],
       visionData,
-      []
+      selectedKpis
     )
 
     const client = new Anthropic()
@@ -92,14 +100,20 @@ export async function POST(request: NextRequest) {
       text.replace(/```json|```/g, '').trim()
     )
 
-    // Save synthesis result
+    // Delete existing synthesis session to avoid duplicates
+    await supabase
+      .from('discovery_sessions')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('step_completed', 'synthesis')
+
+    // Save synthesis result with correct step_completed
     await supabase.from('discovery_sessions').insert({
       org_id: orgId,
       user_id: user.id,
-      step_completed: 'vision',
+      step_completed: 'synthesis',
       data_json: {
-        ...visionData,
-        synthesis: prefill,
+        prefill,
         readyForXMatrix: true,
         synthesisAt: new Date().toISOString(),
       } as unknown as Json,
