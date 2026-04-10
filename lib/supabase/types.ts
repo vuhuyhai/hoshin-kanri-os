@@ -12,6 +12,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          avatar_url: string | null
+          is_super_admin: boolean
+          created_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          avatar_url?: string | null
+          is_super_admin?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          is_super_admin?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           id: string
@@ -446,6 +470,76 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          id: string
+          org_id: string
+          plan: string
+          status: string
+          stripe_customer_id: string | null
+          current_period_end: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_notes: {
+        Row: {
+          id: string
+          org_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          content?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xray_results: {
         Row: {
           id: string
@@ -495,8 +589,47 @@ export type Database = {
         ]
       }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
+    Views: {
+      admin_customers_overview: {
+        Row: {
+          org_id: string
+          org_name: string
+          owner_email: string | null
+          owner_name: string | null
+          plan: string
+          sub_status: string
+          member_count: number
+          created_at: string
+          last_active_at: string | null
+        }
+      }
+      admin_customer_detail: {
+        Row: {
+          org_id: string
+          org_name: string
+          industry: string
+          headcount: string
+          city: string
+          owner_email: string | null
+          owner_name: string | null
+          plan: string
+          sub_status: string
+          current_period_end: string | null
+          stripe_customer_id: string | null
+          member_count: number
+          total_x_matrices: number
+          total_sessions: number
+          created_at: string
+          last_active_at: string | null
+        }
+      }
+    }
+    Functions: {
+      check_is_super_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

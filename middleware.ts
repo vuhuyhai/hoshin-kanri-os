@@ -29,16 +29,71 @@ export async function middleware(request: NextRequest) {
   })
 
   // Refresh session — this keeps cookies alive
-  // Don't block on failure — let server components handle auth
-  try {
-    await supabase.auth.getUser()
-  } catch {
-    // Ignore errors — server components will handle auth
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isAdminLogin = pathname === '/admin/login'
+
+  // --- Admin route protection ---
+  if (isAdminRoute) {
+    // No session → redirect to admin login
+    if (!user) {
+      if (isAdminLogin) return supabaseResponse
+      const loginUrl = new URL('/admin/login', request.url)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    // Has session → check is_super_admin via service role
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      // Cannot verify admin status without service key
+      const loginUrl = new URL('/admin/login', request.url)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    const adminClient = createServerClient(supabaseUrl, serviceKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll() {
+          // No-op: we only read here
+        },
+      },
+    })
+
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .single()
+
+    const isSuperAdmin = profile?.is_super_admin === true
+
+    if (isSuperAdmin && isAdminLogin) {
+      // Already logged in as admin, skip login page
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
+
+    if (!isSuperAdmin && !isAdminLogin) {
+      // Not admin → back to dashboard
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    return supabaseResponse
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/login'],
+  matcher: [
+    '/dashboard/:path*',
+    '/onboarding/:path*',
+    '/login',
+    '/admin/:path*',
+  ],
 }
