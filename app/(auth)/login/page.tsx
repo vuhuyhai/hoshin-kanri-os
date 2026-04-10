@@ -8,13 +8,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 
 const ERROR_MESSAGES: Record<string, string> = {
   link_expired: 'Link đăng nhập đã hết hạn. Vui lòng gửi lại.',
@@ -48,9 +41,6 @@ function LoginForm() {
     setIsLoading(true)
     const supabase = createClient()
 
-    // Use window.location.origin so the redirect URL always matches the current
-    // deployment (works on localhost, preview deployments, and production)
-    // without relying on NEXT_PUBLIC_APP_URL being correctly set at build time.
     const redirectTo =
       typeof window !== 'undefined'
         ? `${window.location.origin}/auth/callback`
@@ -76,84 +66,96 @@ function LoginForm() {
 
   if (isEmailSent) {
     return (
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+      <div className="card-brutal w-full max-w-md p-8">
+        <div className="text-center space-y-4">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center border-2 border-ink bg-accent-brand/10">
             <svg
-              className="h-6 w-6 text-primary"
+              className="h-7 w-7 text-accent-brand"
               fill="none"
               viewBox="0 0 24 24"
-              strokeWidth={1.5}
+              strokeWidth={2}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeLinecap="square"
+                strokeLinejoin="miter"
                 d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
               />
             </svg>
           </div>
-          <CardTitle className="text-xl">Kiểm tra email của bạn</CardTitle>
-          <CardDescription>
+          <h1 className="font-display text-xl font-black uppercase tracking-wider text-ink">
+            Kiểm tra email
+          </h1>
+          <p className="font-body text-sm text-text-2">
             Chúng tôi đã gửi link đăng nhập đến{' '}
-            <span className="font-medium text-foreground">{email}</span>.
+            <span className="font-display font-bold text-ink">{email}</span>.
             Link có hiệu lực trong 1 giờ.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center">
-          <Button
-            variant="ghost"
+          </p>
+          <button
             onClick={() => setIsEmailSent(false)}
-            className="text-sm"
+            className="font-display text-xs font-semibold uppercase tracking-wider text-accent-brand hover:underline min-h-[44px]"
           >
             Gửi lại link đăng nhập
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-2">
+    <div className="card-brutal w-full max-w-md p-8">
+      <div className="text-center mb-6">
+        <div className="mx-auto mb-4">
           <Logo size="lg" showText={false} className="justify-center" />
         </div>
-        <CardTitle className="text-xl">Đăng nhập</CardTitle>
-        <CardDescription>
+        <h1 className="font-display text-xl font-black uppercase tracking-wider text-ink">
+          Đăng nhập
+        </h1>
+        <p className="font-body text-sm text-text-2 mt-1">
           Nhập email để nhận link đăng nhập
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-              required
-            />
-          </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
+        </p>
+      </div>
+
+      <form onSubmit={handleLogin} className="space-y-4">
+        <div className="space-y-2">
+          <Label
+            htmlFor="email"
+            className="font-display text-xs font-semibold uppercase tracking-wider"
           >
-            {isLoading ? 'Đang gửi...' : 'Gửi link đăng nhập'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+            required
+            autoComplete="email"
+            className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base"
+          />
+        </div>
+        <Button
+          type="submit"
+          className="btn-brutal-primary w-full min-h-[44px] text-sm"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Đang gửi...' : 'Gửi link đăng nhập'}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center font-body text-xs text-text-3">
+        Chưa có tài khoản? Link đăng nhập sẽ tự động tạo tài khoản cho bạn.
+      </p>
+    </div>
   )
 }
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg-muted-warm px-4">
       <Suspense>
         <LoginForm />
       </Suspense>

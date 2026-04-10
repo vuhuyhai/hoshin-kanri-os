@@ -343,10 +343,51 @@
   letter-spacing: 0.1em;
 }
 
+/* ── Nav item transition ── */
+[data-nav-item] {
+  transition: background 100ms, border-color 100ms, color 100ms;
+}
+
+/* ── Skeleton loading ── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 25%,
+    var(--bg) 50%,
+    var(--bg-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Page transition — fade up ── */
+main > * {
+  animation: fadeUp 200ms ease forwards;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
 /* Focus state — WCAG AA */
 :focus-visible {
   outline: 3px solid var(--brand) !important;
   outline-offset: 3px;
+}
+
+/* Prevent iOS zoom on input focus — min font-size 16px */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Reduced motion */

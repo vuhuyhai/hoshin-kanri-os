@@ -148,39 +148,16 @@ export function XRayForm() {
       return (
         <div className="flex min-h-[50vh] items-center justify-center px-4">
           <div className="space-y-4 text-center">
-            <div
-              className="text-6xl"
-              style={{ animation: 'pulse 1s ease-in-out infinite' }}
-            >
+            <div className="text-6xl animate-bounce" aria-hidden="true">
               {nextMeta.icon}
             </div>
-            <h2
-              className="text-2xl"
-              style={{
-                fontFamily: '"Montserrat", sans-serif',
-                fontWeight: 800,
-                color: '#2C2B2B',
-              }}
-            >
+            <h2 className="font-display text-2xl font-extrabold uppercase tracking-wider text-ink">
               {nextMeta.label}
             </h2>
-            <p
-              className="text-sm"
-              style={{
-                fontFamily: '"Barlow Condensed", sans-serif',
-                fontWeight: 400,
-                color: '#5A5757',
-              }}
-            >
+            <p className="font-body text-sm text-text-2">
               {nextMeta.description}
             </p>
           </div>
-          <style>{`
-            @keyframes pulse {
-              0%, 100% { transform: scale(1); opacity: 1; }
-              50% { transform: scale(1.15); opacity: 0.8; }
-            }
-          `}</style>
         </div>
       )
     }
@@ -189,8 +166,11 @@ export function XRayForm() {
   return (
     <div className="mx-auto max-w-xl space-y-8 px-4 py-8">
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-bold">Business X-Ray</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="overline mb-1">Chẩn đoán miễn phí</p>
+        <h1 className="font-display text-2xl font-black uppercase tracking-wider text-ink md:text-3xl">
+          Business X-Ray
+        </h1>
+        <p className="font-body text-sm text-text-2">
           Chẩn đoán sức khỏe doanh nghiệp theo 7 trụ cột OPEX · ~7 phút
         </p>
       </div>
