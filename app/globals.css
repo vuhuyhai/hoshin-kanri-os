@@ -6,7 +6,7 @@
 
 /* ============================================================
    NEO-BRUTALISM DESIGN SYSTEM — Hoshin Kanri OS
-   Brand: #534AB7 · Ink: #2C2B2B · Warm White: #F7F5F2
+   Brand: #c73937 · Ink: #2C2B2B · Warm White: #F7F5F2
    ============================================================ */
 
 @theme inline {
@@ -47,8 +47,8 @@
   --color-ink: #2C2B2B;
   --color-text-2: #5A5757;
   --color-text-3: #8A8787;
-  --color-accent-brand: #534AB7;
-  --color-accent-dark: #3d3489;
+  --color-accent-brand: #c73937;
+  --color-accent-dark: #9e1f1e;
   --color-bg-warm: #F7F5F2;
   --color-bg-muted-warm: #ECEAE6;
   --color-bg-dark: #2C2B2B;
@@ -64,7 +64,7 @@
   --shadow-brutal-sm: 3px 3px 0 #2C2B2B;
   --shadow-brutal-md: 5px 5px 0 #2C2B2B;
   --shadow-brutal-lg: 8px 8px 0 #2C2B2B;
-  --shadow-brutal-accent: 5px 5px 0 #534AB7;
+  --shadow-brutal-accent: 5px 5px 0 #c73937;
 
   /* Radii — all zero for Neo-Brutalism */
   --radius-sm: 0px;
@@ -86,7 +86,7 @@
   --card-foreground: #2C2B2B;
   --popover: #F7F5F2;
   --popover-foreground: #2C2B2B;
-  --primary: #534AB7;
+  --primary: #c73937;
   --primary-foreground: #FFFFFF;
   --secondary: #ECEAE6;
   --secondary-foreground: #2C2B2B;
@@ -97,21 +97,21 @@
   --destructive: #ef4444;
   --border: #2C2B2B;
   --input: #2C2B2B;
-  --ring: #534AB7;
-  --chart-1: #534AB7;
+  --ring: #c73937;
+  --chart-1: #c73937;
   --chart-2: #5A5757;
-  --chart-3: #3d3489;
+  --chart-3: #9e1f1e;
   --chart-4: #8A8787;
   --chart-5: #2C2B2B;
   --radius: 0rem;
   --sidebar: #F7F5F2;
   --sidebar-foreground: #2C2B2B;
-  --sidebar-primary: #534AB7;
+  --sidebar-primary: #c73937;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #ECEAE6;
   --sidebar-accent-foreground: #2C2B2B;
   --sidebar-border: #2C2B2B;
-  --sidebar-ring: #534AB7;
+  --sidebar-ring: #c73937;
 }
 
 /* ============================================================
@@ -124,7 +124,7 @@
   --card-foreground: #F7F5F2;
   --popover: #2C2B2B;
   --popover-foreground: #F7F5F2;
-  --primary: #7B73D4;
+  --primary: #DC5553;
   --primary-foreground: #1a1919;
   --secondary: #3a3939;
   --secondary-foreground: #F7F5F2;
@@ -135,20 +135,20 @@
   --destructive: #f87171;
   --border: #5A5757;
   --input: #5A5757;
-  --ring: #7B73D4;
-  --chart-1: #7B73D4;
+  --ring: #DC5553;
+  --chart-1: #DC5553;
   --chart-2: #8A8787;
   --chart-3: #5A5757;
   --chart-4: #3a3939;
   --chart-5: #2C2B2B;
   --sidebar: #2C2B2B;
   --sidebar-foreground: #F7F5F2;
-  --sidebar-primary: #7B73D4;
+  --sidebar-primary: #DC5553;
   --sidebar-primary-foreground: #F7F5F2;
   --sidebar-accent: #3a3939;
   --sidebar-accent-foreground: #F7F5F2;
   --sidebar-border: #5A5757;
-  --sidebar-ring: #7B73D4;
+  --sidebar-ring: #DC5553;
 }
 
 /* ============================================================
@@ -220,7 +220,7 @@
 
 /* Focus state — WCAG AA */
 :focus-visible {
-  outline: 3px solid #534AB7 !important;
+  outline: 3px solid #c73937 !important;
   outline-offset: 3px;
 }
 

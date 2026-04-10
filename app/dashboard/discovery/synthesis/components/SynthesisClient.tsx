@@ -266,7 +266,7 @@ function SynthesisResult({ prefill }: { prefill: XMatrixPrefill }) {
                             hoshin.sourceType === 'pain',
                           'border-blue-300 text-blue-600 dark:text-blue-400':
                             hoshin.sourceType === 'swot',
-                          'border-purple-300 text-purple-600 dark:text-purple-400':
+                          'border-red-300 text-red-600 dark:text-red-400':
                             hoshin.sourceType === 'ai',
                         })}
                       >
