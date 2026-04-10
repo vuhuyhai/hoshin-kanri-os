@@ -19,6 +19,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   link_expired: 'Link đăng nhập đã hết hạn. Vui lòng gửi lại.',
   missing_code: 'Link đăng nhập không hợp lệ. Vui lòng thử lại.',
   auth_failed: 'Đăng nhập thất bại. Vui lòng thử lại.',
+  wrong_browser:
+    'Vui lòng mở link đăng nhập trên cùng trình duyệt bạn đã yêu cầu. Hoặc gửi lại link mới.',
 }
 
 function LoginForm() {
@@ -45,10 +47,18 @@ function LoginForm() {
     setIsLoading(true)
     const supabase = createClient()
 
+    // Use window.location.origin so the redirect URL always matches the current
+    // deployment (works on localhost, preview deployments, and production)
+    // without relying on NEXT_PUBLIC_APP_URL being correctly set at build time.
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback`
+        : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        emailRedirectTo: redirectTo,
       },
     })
 

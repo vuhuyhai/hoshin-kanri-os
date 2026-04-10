@@ -6,9 +6,11 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
 
-  // If Supabase returns an error (e.g. expired link)
+  // Supabase returned an error in the URL (e.g. expired link)
   if (error) {
+    console.error('[auth/callback] Supabase error param:', error, errorDescription)
     return NextResponse.redirect(`${origin}/login?error=link_expired`)
   }
 
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Writable only in Route Handlers
+            // Route Handlers can always write cookies — this catch is a safety net
           }
         },
       },
@@ -43,25 +45,42 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code)
 
   if (exchangeError) {
+    console.error('[auth/callback] exchangeCodeForSession failed:', exchangeError.message, exchangeError.name)
+
+    // PKCE verifier missing = link was opened in a different browser than where login was initiated
+    if (
+      exchangeError.name === 'AuthPKCECodeVerifierMissingError' ||
+      exchangeError.message.toLowerCase().includes('pkce') ||
+      exchangeError.message.toLowerCase().includes('code verifier')
+    ) {
+      return NextResponse.redirect(`${origin}/login?error=wrong_browser`)
+    }
+
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  // Get session to upsert user and check org membership
+  // Session is now set in cookies — get the user
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser()
 
   if (!user) {
+    console.error('[auth/callback] getUser failed after exchange:', userError?.message)
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  // Upsert user record
-  await supabase.from('users').upsert(
+  // Upsert user record into public.users — non-fatal if it fails (RLS, duplicate, etc.)
+  const { error: upsertError } = await supabase.from('users').upsert(
     { id: user.id, email: user.email! },
     { onConflict: 'id' }
   )
+  if (upsertError) {
+    // Log but don't fail — session is valid, user can still access the app
+    console.error('[auth/callback] users upsert error:', upsertError.message, upsertError.code)
+  }
 
-  // Check if user has an org
+  // Check if user has an org membership
   const { data: membership } = await supabase
     .from('org_members')
     .select('org_id')
