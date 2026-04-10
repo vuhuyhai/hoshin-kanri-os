@@ -29,7 +29,12 @@ ALTER TABLE discovery_sessions
     'synthesis'
   ));
 
--- 3. Document the column
+-- 3. Migrate legacy 'swot' records to 'swot_coaching'
+UPDATE discovery_sessions
+SET step_completed = 'swot_coaching'
+WHERE step_completed = 'swot';
+
+-- 4. Document the column
 COMMENT ON COLUMN discovery_sessions.step_completed IS
   'Tracking step trong Discovery pipeline.
    swot_* = sub-steps cua SWOT module (4 phases).

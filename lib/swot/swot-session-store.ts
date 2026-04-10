@@ -198,12 +198,32 @@ function createEmptySession(orgId: string): SwotSession {
   }
 }
 
-function highestCompletedStep(session: SwotSession): string {
-  if (session.strategy.status === 'completed') return 'swot_strategy'
-  if (session.synthesis.status === 'completed') return 'swot_synthesis'
-  if (session.evidence.status === 'completed') return 'swot_evidence'
-  if (session.coaching.status === 'completed') return 'swot_coaching'
-  return 'swot'
+// Per-step upsert helper — DELETE then INSERT for a specific step key
+async function upsertStep(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string,
+  userId: string,
+  step: string,
+  data: Record<string, unknown>
+): Promise<string | null> {
+  await supabase
+    .from('discovery_sessions')
+    .delete()
+    .eq('org_id', orgId)
+    .eq('step_completed', step)
+
+  const { data: inserted } = await supabase
+    .from('discovery_sessions')
+    .insert({
+      org_id: orgId,
+      user_id: userId,
+      step_completed: step,
+      data_json: data as unknown as Json,
+    })
+    .select('id')
+    .single()
+
+  return inserted?.id ?? null
 }
 
 // ============================================================
@@ -333,26 +353,72 @@ export const useSwotStore = create<SwotStoreState>()(
         return
       }
 
-      const { data: session } = await supabase
+      // Load all SWOT step records for this org
+      const { data: rows } = await supabase
         .from('discovery_sessions')
-        .select('id, data_json')
+        .select('step_completed, data_json')
         .eq('org_id', orgId)
-        .eq('step_completed', 'swot')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        .in('step_completed', [
+          'swot_coaching',
+          'swot_evidence',
+          'swot_synthesis',
+          'swot_strategy',
+        ])
 
-      if (session?.data_json) {
-        const stored = session.data_json as unknown as SwotSession
-        set({
-          ...stored,
-          sessionId: session.id,
-          orgId,
-          isLoading: false,
-        })
-      } else {
-        set({ ...createEmptySession(orgId), isLoading: false })
+      const session = createEmptySession(orgId)
+
+      for (const row of rows ?? []) {
+        const d = row.data_json as Record<string, unknown>
+        switch (row.step_completed) {
+          case 'swot_coaching': {
+            const completedAt = d.completedAt as string | null
+            session.coaching = {
+              ...session.coaching,
+              status: completedAt ? 'completed' : 'in_progress',
+              completedAt: completedAt ?? undefined,
+            }
+            if (completedAt) {
+              session.evidence = {
+                ...session.evidence,
+                status:
+                  session.evidence.status === 'locked'
+                    ? 'not_started'
+                    : session.evidence.status,
+              }
+            }
+            break
+          }
+          case 'swot_evidence': {
+            session.evidence = {
+              status: (d.status as PhaseStatus) ?? 'not_started',
+              completedAt: (d.completedAt as string) ?? undefined,
+              batches: (d.batches as EvidenceBatch[]) ?? [],
+              allSources: (d.allSources as EvidenceSource[]) ?? [],
+            }
+            break
+          }
+          case 'swot_synthesis': {
+            session.synthesis = {
+              status: (d.status as PhaseStatus) ?? 'not_started',
+              completedAt: (d.completedAt as string) ?? undefined,
+              items: (d.items as SwotItem[]) ?? [],
+            }
+            break
+          }
+          case 'swot_strategy': {
+            session.strategy = {
+              status: (d.status as PhaseStatus) ?? 'not_started',
+              completedAt: (d.completedAt as string) ?? undefined,
+              matrix: (d.matrix as typeof session.strategy.matrix) ??
+                session.strategy.matrix,
+              candidates: (d.candidates as HoshinCandidate[]) ?? [],
+            }
+            break
+          }
+        }
       }
+
+      set({ ...session, orgId, isLoading: false })
     } catch (err) {
       console.error('[swot-store] initSession error:', err)
       set({ ...createEmptySession(orgId), isLoading: false })
@@ -374,51 +440,42 @@ export const useSwotStore = create<SwotStoreState>()(
         return
       }
 
-      const sessionData: SwotSession = {
-        sessionId: state.sessionId,
-        orgId: state.orgId,
-        lastSaved: new Date().toISOString(),
-        coaching: state.coaching,
-        evidence: state.evidence,
-        synthesis: state.synthesis,
-        strategy: state.strategy,
-        staleSince: state.staleSince,
-        staleReason: state.staleReason,
-      }
+      const now = new Date().toISOString()
 
-      const stepCompleted = highestCompletedStep(sessionData)
-
-      // Delete all swot-related sessions, then insert (safe upsert)
-      for (const key of [
-        'swot',
-        'swot_coaching',
-        'swot_evidence',
-        'swot_synthesis',
-        'swot_strategy',
-      ]) {
-        await supabase
-          .from('discovery_sessions')
-          .delete()
-          .eq('org_id', state.orgId)
-          .eq('step_completed', key)
-      }
-
-      const { data: inserted } = await supabase
-        .from('discovery_sessions')
-        .insert({
-          org_id: state.orgId,
-          user_id: user.id,
-          step_completed: stepCompleted,
-          data_json: sessionData as unknown as Json,
+      // Per-step save — only steps this store owns (NOT swot_coaching)
+      if (state.evidence.status !== 'locked') {
+        await upsertStep(supabase, state.orgId, user.id, 'swot_evidence', {
+          step: 'swot_evidence',
+          status: state.evidence.status,
+          batches: state.evidence.batches,
+          allSources: state.evidence.allSources,
+          completedAt: state.evidence.completedAt ?? null,
+          savedAt: now,
         })
-        .select('id')
-        .single()
-
-      if (inserted) {
-        set({ sessionId: inserted.id, lastSaved: sessionData.lastSaved, isSaving: false })
-      } else {
-        set({ isSaving: false })
       }
+
+      if (state.synthesis.status !== 'locked') {
+        await upsertStep(supabase, state.orgId, user.id, 'swot_synthesis', {
+          step: 'swot_synthesis',
+          status: state.synthesis.status,
+          items: state.synthesis.items,
+          completedAt: state.synthesis.completedAt ?? null,
+          savedAt: now,
+        })
+      }
+
+      if (state.strategy.status !== 'locked') {
+        await upsertStep(supabase, state.orgId, user.id, 'swot_strategy', {
+          step: 'swot_strategy',
+          status: state.strategy.status,
+          matrix: state.strategy.matrix,
+          candidates: state.strategy.candidates,
+          completedAt: state.strategy.completedAt ?? null,
+          savedAt: now,
+        })
+      }
+
+      set({ lastSaved: now, isSaving: false })
     } catch (err) {
       console.error('[swot-store] saveSession error:', err)
       set({ isSaving: false })
@@ -939,6 +996,8 @@ export const useSwotStore = create<SwotStoreState>()(
       partialize: (state) => ({
         coachingTracker: state.coachingTracker,
         coachingMessages: state.coachingMessages.slice(-20),
+        staleSince: state.staleSince,
+        staleReason: state.staleReason,
       }),
     }
   )

@@ -209,3 +209,47 @@ export interface CoachingTrackerState {
   selectedDimensions: Record<FrameworkId, string[]>
   selectedExternalFramework: ExternalFrameworkChoice
 }
+
+// ============================================================
+// Discovery session data_json shapes — 1 step = 1 interface
+// ============================================================
+
+export interface DiscoverySessionCoaching {
+  step: 'swot_coaching'
+  coachingState: CoachingTrackerState
+  messages: ChatMessage[]
+  completedAt: string | null
+  savedAt: string
+}
+
+export interface DiscoverySessionEvidence {
+  step: 'swot_evidence'
+  status: string
+  batches: EvidenceBatch[]
+  allSources: EvidenceItem[]
+  completedAt: string | null
+  savedAt: string
+}
+
+export interface DiscoverySessionSynthesis {
+  step: 'swot_synthesis'
+  status: string
+  items: SwotItem[]
+  completedAt: string | null
+  savedAt: string
+}
+
+export interface DiscoverySessionStrategy {
+  step: 'swot_strategy'
+  status: string
+  matrix: Record<string, unknown>
+  candidates: unknown[]
+  completedAt: string | null
+  savedAt: string
+}
+
+export type SwotDiscoverySession =
+  | DiscoverySessionCoaching
+  | DiscoverySessionEvidence
+  | DiscoverySessionSynthesis
+  | DiscoverySessionStrategy

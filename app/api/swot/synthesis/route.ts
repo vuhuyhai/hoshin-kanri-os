@@ -79,12 +79,8 @@ export async function POST(request: NextRequest) {
 
       await supabase.from('swot_analyses').insert(insertData)
 
-      await supabase.from('discovery_sessions').insert({
-        org_id: membership.org_id,
-        user_id: user.id,
-        step_completed: 'swot',
-        data_json: { completedAt: new Date().toISOString() },
-      })
+      // discovery_sessions for swot_synthesis is managed by
+      // swot-session-store.ts — no duplicate write here.
     }
 
     const result: SynthesisResponse = { items: parsed.items }

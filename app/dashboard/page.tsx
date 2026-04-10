@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 const DISCOVERY_STEPS = [
-  { key: 'swot', label: 'Phân tích SWOT' },
+  { key: 'swot_coaching', label: 'Phân tích SWOT' },
   { key: 'pain_mapper', label: 'Pain → Goal Mapper' },
   { key: 'vision', label: 'Vision Workshop' },
   { key: 'synthesis', label: 'AI Strategy Synthesis' },

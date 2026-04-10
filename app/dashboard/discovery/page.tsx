@@ -20,7 +20,7 @@ const DISCOVERY_STEPS = [
     external: true,
   },
   {
-    key: 'swot',
+    key: 'swot_coaching',
     label: 'Phân tích SWOT',
     description: 'AI Coach giúp phân tích 8Ms, Porter, PESTEL + nghiên cứu thị trường',
     href: '/dashboard/discovery/swot',
