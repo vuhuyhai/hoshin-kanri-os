@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Logo } from '@/components/ui/logo'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -115,8 +116,8 @@ function LoginForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-2 text-2xl font-bold text-primary">
-          Hoshin Kanri OS
+        <div className="mx-auto mb-2">
+          <Logo size="lg" showText={false} className="justify-center" />
         </div>
         <CardTitle className="text-xl">Đăng nhập</CardTitle>
         <CardDescription>

@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/ui/logo'
 
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between px-6 py-4">
-        <span className="text-xl font-bold text-primary">Hoshin Kanri OS</span>
+        <Logo size="sm" showText />
         <Link href="/login">
           <Button variant="ghost" size="sm">
             Đăng nhập

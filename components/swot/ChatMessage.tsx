@@ -2,6 +2,7 @@
 
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import { AiCoachAvatar } from './AiCoachAvatar'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant'
@@ -48,8 +49,11 @@ export function ChatMessage({
   if (isAI) {
     return (
       <div className="flex gap-3 max-w-3xl">
-        <div className="w-8 h-8 bg-primary/10 border-2 border-primary/30 flex items-center justify-center shrink-0 mt-1">
-          <span className="text-sm">🤖</span>
+        <div className="shrink-0 mt-1">
+          <AiCoachAvatar
+            size={40}
+            className="w-10 h-10 md:w-12 md:h-12 border-2 border-[#2C2B2B] shadow-[2px_2px_0_#2C2B2B] rounded-full"
+          />
         </div>
         <div className="flex flex-col gap-1 min-w-0">
           <span className="text-xs font-display font-semibold text-primary">

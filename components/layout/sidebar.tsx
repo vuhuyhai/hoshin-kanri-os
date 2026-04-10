@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Logo } from '@/components/ui/logo'
 import { useState } from 'react'
 
 interface NavItem {
@@ -77,11 +78,8 @@ export function Sidebar({ userRole }: { userRole: string }) {
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 border-r-[3px] border-ink bg-bg-warm md:flex md:flex-col">
         <div className="flex h-16 items-center px-4">
-          <Link
-            href="/dashboard"
-            className="inline-block border-2 border-ink bg-accent-brand px-3 py-1.5 font-display text-sm font-black uppercase tracking-wider text-white shadow-brutal-sm btn-brutal"
-          >
-            Hoshin Kanri OS
+          <Link href="/dashboard" className="btn-brutal">
+            <Logo size="sm" showText />
           </Link>
         </div>
         <div className="border-t-2 border-ink" />
@@ -109,9 +107,7 @@ export function Sidebar({ userRole }: { userRole: string }) {
         </SheetTrigger>
         <SheetContent side="left" className="w-60 p-0 border-r-[3px] border-ink bg-bg-warm">
           <div className="flex h-16 items-center px-4">
-            <span className="inline-block border-2 border-ink bg-accent-brand px-3 py-1.5 font-display text-sm font-black uppercase tracking-wider text-white shadow-brutal-sm">
-              Hoshin Kanri OS
-            </span>
+            <Logo size="sm" showText />
           </div>
           <div className="border-t-2 border-ink" />
           <div className="mt-3">
