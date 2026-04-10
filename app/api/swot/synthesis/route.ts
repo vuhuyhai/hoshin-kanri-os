@@ -1,127 +1,53 @@
-import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import {
-  SWOT_SYNTHESIS_SYSTEM_PROMPT,
-  buildSynthesisUserMessage,
-} from '@/lib/swot/coaching-prompts'
-import type {
-  SynthesisRequest,
-  SynthesisResponse,
-  SwotSynthesisOutput,
-  SwotQuadrant,
-} from '@/lib/swot/types'
+import { synthesizeSwot } from '@/lib/swot/synthesis-engine'
+import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
 
-const MAX_ITEMS_PER_QUADRANT = 3
+export async function POST(req: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-function parseSynthesisResponse(raw: string): SwotSynthesisOutput {
-  const cleaned = raw
-    .replace(/```json\n?/g, '')
-    .replace(/```\n?/g, '')
-    .trim()
-
-  const parsed = JSON.parse(cleaned) as SwotSynthesisOutput
-
-  return {
-    S: (parsed.S ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
-    W: (parsed.W ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
-    O: (parsed.O ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
-    T: (parsed.T ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
-    summary: parsed.summary ?? '',
+  const { org_id, coaching_items, evidence_items } = (await req.json()) as {
+    org_id: string; coaching_items: CoachingItem[]; evidence_items: EvidenceItemV2[]
   }
-}
+  if (!coaching_items?.length)
+    return Response.json({ error: 'Cần ít nhất 1 coaching item' }, { status: 400 })
 
-export async function POST(request: NextRequest) {
+  const { data: org } = await supabase.from('organizations')
+    .select('name, industry, headcount, city').eq('id', org_id).single()
+  if (!org) return Response.json({ error: 'Org not found' }, { status: 404 })
+
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const body: SynthesisRequest = await request.json()
-    const { summary, evidenceItems, orgContext } = body
-
-    const coachingText = [
-      'STRENGTHS:\n' +
-        summary.strengths.map((s) => `- [${s.source}] ${s.content}`).join('\n'),
-      'WEAKNESSES:\n' +
-        summary.weaknesses
-          .map((s) => `- [${s.source}] ${s.content}`)
-          .join('\n'),
-      'OPPORTUNITIES:\n' +
-        summary.opportunities
-          .map((s) => `- [${s.source}] ${s.content}`)
-          .join('\n'),
-      'THREATS:\n' +
-        summary.threats.map((s) => `- [${s.source}] ${s.content}`).join('\n'),
-    ].join('\n\n')
-
-    const evidenceText = evidenceItems
-      .filter((e) => e.source === 'Web')
-      .map((e) => `- ${e.content}${e.url ? ` (${e.url})` : ''}`)
-      .join('\n')
-
-    const userMessage = buildSynthesisUserMessage(
-      orgContext,
-      coachingText,
-      evidenceText
-    )
-
-    const client = new Anthropic()
-
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      system: SWOT_SYNTHESIS_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }],
+    const result = await synthesizeSwot(coaching_items, evidence_items, {
+      orgId: org_id, orgName: org.name,
+      industry: org.industry, headcount: org.headcount, city: org.city,
     })
 
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+    await supabase.from('swot_analyses').delete().eq('org_id', org_id)
+    await supabase.from('swot_analyses').insert(
+      result.swot_items.map((item) => ({
+        id: item.id,
+        org_id,
+        quadrant: item.quadrant,
+        framework_source: '',
+        statement: item.statement,
+        evidence_json: {
+          text: item.evidence, source: item.evidence_source ?? null,
+          url: item.evidence_url ?? null, year: item.evidence_year ?? null,
+          credibility_score: item.credibility_score,
+        },
+        implication: item.implication,
+      }))
+    )
 
-    const synthesis = parseSynthesisResponse(text)
+    await supabase.from('discovery_sessions').upsert({
+      org_id, user_id: user.id, step_completed: 'swot_synthesis',
+      data_json: { stats: result.stats, merge_log: result.merge_log },
+    }, { onConflict: 'org_id,step_completed' })
 
-    // Save to Supabase
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (membership) {
-      await supabase
-        .from('swot_analyses')
-        .delete()
-        .eq('org_id', membership.org_id)
-
-      const quadrants: SwotQuadrant[] = ['S', 'W', 'O', 'T']
-      const insertData = quadrants.flatMap((q) =>
-        synthesis[q].map((item) => ({
-          org_id: membership.org_id,
-          quadrant: q,
-          framework_source: item.framework_source ?? '',
-          statement: item.statement,
-          evidence_json: [],
-          implication: item.implication,
-        }))
-      )
-
-      if (insertData.length > 0) {
-        await supabase.from('swot_analyses').insert(insertData)
-      }
-    }
-
-    const result: SynthesisResponse = { synthesis }
-    return NextResponse.json(result)
+    return Response.json(result)
   } catch (error) {
     console.error('Synthesis error:', error)
-    return NextResponse.json(
-      { error: 'Không thể tổng hợp SWOT. Thử lại.' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Lỗi tổng hợp SWOT, vui lòng thử lại' }, { status: 500 })
   }
 }
