@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import type { CoachingState, ChatMessage, OrgContext } from '@/lib/swot/types'
+import { ChatMessage } from '@/components/swot/ChatMessage'
+import type { CoachingState, ChatMessage as ChatMsg, OrgContext } from '@/lib/swot/types'
 
 interface Phase1CoachingProps {
   orgContext: OrgContext
@@ -20,12 +20,14 @@ export function Phase1Coaching({
   onPhaseComplete,
 }: Phase1CoachingProps) {
   const [inputText, setInputText] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const initialSent = useRef(false)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [state.messages])
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [state.messages, state.isLoading])
 
   useEffect(() => {
     if (state.messages.length === 0 && !initialSent.current) {
@@ -35,7 +37,7 @@ export function Phase1Coaching({
   }, [])
 
   const sendMessage = async (userInput: string) => {
-    const newMessages: ChatMessage[] = userInput
+    const newMessages: ChatMsg[] = userInput
       ? [...state.messages, { role: 'user', content: userInput }]
       : state.messages
 
@@ -47,7 +49,15 @@ export function Phase1Coaching({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: newMessages.length > 0 ? newMessages : [{ role: 'user', content: 'Xin chào, hãy bắt đầu phân tích.' }],
+          messages:
+            newMessages.length > 0
+              ? newMessages
+              : [
+                  {
+                    role: 'user',
+                    content: 'Xin chào, hãy bắt đầu phân tích.',
+                  },
+                ],
           orgContext,
           currentFramework: state.currentFramework,
         }),
@@ -56,7 +66,7 @@ export function Phase1Coaching({
       if (!response.ok) throw new Error('API error')
       const data = await response.json()
 
-      const updatedMessages: ChatMessage[] = [...newMessages, data.message]
+      const updatedMessages: ChatMsg[] = [...newMessages, data.message]
 
       if (data.isCoachingComplete) {
         if (state.currentFramework === 'sw') {
@@ -93,76 +103,89 @@ export function Phase1Coaching({
     sendMessage(inputText.trim())
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   const frameworkLabel =
     state.currentFramework === 'sw'
-      ? '🔍 Phân tích nội tại (8Ms)'
-      : '🌐 Phân tích ngoại cảnh (Porter + PESTEL)'
+      ? 'Phân tích nội tại (8Ms)'
+      : 'Phân tích ngoại cảnh (Porter + PESTEL)'
+
+  const totalDimensions = state.currentFramework === 'sw' ? 8 : 11
+  const messageCount = state.messages.filter((m) => m.role === 'user').length
+  const progress = Math.min(messageCount / totalDimensions, 1)
 
   return (
-    <div className="flex h-full max-h-[600px] flex-col">
-      <div className="border-b bg-muted/50 px-4 py-2 text-sm font-medium text-muted-foreground">
-        {frameworkLabel}
+    <div className="flex h-full max-h-[650px] flex-col">
+      {/* Header — framework indicator */}
+      <div className="px-4 py-3 border-b bg-primary/5">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-primary animate-pulse" />
+          <span className="text-sm font-display font-semibold text-primary">
+            {frameworkLabel}
+          </span>
+          <span className="text-xs text-muted-foreground ml-auto">
+            {messageCount}/{totalDimensions} dimensions
+          </span>
+        </div>
+        <div className="mt-2 h-1 bg-muted overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all duration-500"
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      {/* Messages area */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+      >
         {state.messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'rounded-tr-sm bg-primary text-primary-foreground'
-                  : 'rounded-tl-sm bg-muted'
-              }`}
-            >
-              {msg.content}
-            </div>
-          </div>
+          <ChatMessage key={idx} role={msg.role} content={msg.content} />
         ))}
 
         {state.isLoading && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-3">
-              <div className="flex gap-1">
-                <span
-                  className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50"
-                  style={{ animationDelay: '0ms' }}
-                />
-                <span
-                  className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50"
-                  style={{ animationDelay: '150ms' }}
-                />
-                <span
-                  className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50"
-                  style={{ animationDelay: '300ms' }}
-                />
-              </div>
-            </div>
-          </div>
+          <ChatMessage role="assistant" content="" isStreaming />
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex gap-2 border-t p-4">
-        <Input
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) =>
-            e.key === 'Enter' && !e.shiftKey && handleSend()
-          }
-          placeholder="Nhập câu trả lời của bạn..."
-          disabled={state.isLoading || state.isComplete}
-          className="flex-1"
-        />
-        <Button
-          onClick={handleSend}
-          disabled={!inputText.trim() || state.isLoading || state.isComplete}
-        >
-          Gửi
-        </Button>
+      {/* Input area */}
+      <div className="px-4 py-3 border-t bg-background">
+        <div className="flex gap-2">
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Nhập câu trả lời của bạn..."
+            disabled={state.isLoading || state.isComplete}
+            rows={1}
+            className="flex-1 px-4 py-2.5 text-sm border border-border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+          />
+          <Button
+            onClick={handleSend}
+            disabled={
+              !inputText.trim() || state.isLoading || state.isComplete
+            }
+            className="font-display text-xs font-semibold uppercase tracking-wider px-4"
+          >
+            {state.isLoading ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
+                Gửi
+              </span>
+            ) : (
+              'Gửi'
+            )}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5 pl-1">
+          Enter để gửi · Shift+Enter xuống dòng
+        </p>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { WizardProgress } from './WizardProgress'
 import { Step1Vision } from './Step1Vision'
@@ -23,9 +24,11 @@ interface XMatrixWizardProps {
 }
 
 export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<WizardStep>(1)
   const [data, setData] = useState<XMatrixData>(EMPTY_DATA)
   const [isLoadingPrefill, setIsLoadingPrefill] = useState(true)
+  const [showPrefillBanner, setShowPrefillBanner] = useState(false)
   const started = useRef(false)
 
   useEffect(() => {
@@ -42,6 +45,13 @@ export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
         }) => {
           if (res.hasPrefill && res.data) {
             setData(res.data)
+            const isPrefilled = searchParams.get('prefilled') === 'true'
+            if (isPrefilled) {
+              setShowPrefillBanner(true)
+              setTimeout(() => setShowPrefillBanner(false), 10000)
+              // Jump to Step 2 (Hoshins) when coming from SWOT sync
+              setStep(2)
+            }
             toast.success(`X-Matrix pre-fill ${res.completeness}% từ Discovery!`)
           }
         }
@@ -72,6 +82,21 @@ export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {showPrefillBanner && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 border-2 border-green-500 bg-green-50 dark:bg-green-950/40">
+          <span className="text-lg shrink-0">✨</span>
+          <p className="text-sm text-green-800 dark:text-green-200 flex-1">
+            X-Matrix đã được pre-fill từ phân tích SWOT. Review và xác nhận
+            từng Hoshin bên dưới.
+          </p>
+          <button
+            onClick={() => setShowPrefillBanner(false)}
+            className="text-green-600 hover:text-green-800 text-sm shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <WizardProgress currentStep={step} completeness={completeness} />
 
       <div className="border rounded-xl p-6">

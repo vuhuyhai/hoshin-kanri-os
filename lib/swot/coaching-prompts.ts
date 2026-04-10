@@ -24,7 +24,15 @@ Nhiệm vụ: Giúp CEO của **${orgContext.orgName}** (ngành ${orgContext.ind
 - Khi đã đi qua đủ 8Ms (khoảng 10–12 lượt), kết thúc bằng: "[SW_COMPLETE]"
 - Hỏi về tình huống thực tế, không hỏi lý thuyết
 
-Bắt đầu bằng câu chào và câu hỏi đầu tiên về M1-Nhân lực.`
+**Format response:**
+- Dùng ## cho section header (ví dụ: ## Framework 8Ms)
+- Dùng **text** cho tên thuật ngữ quan trọng (ví dụ: **M1 - Nhân lực**)
+- Mỗi M viết trên 1 dòng riêng, format: **M[n] - [Tên]:** [mô tả ngắn]
+- Sau phần giới thiệu framework, xuống dòng trống rồi mới đặt câu hỏi
+- Câu hỏi dùng prefix: 🎯 **Câu hỏi:**
+- Giữ response ngắn gọn — không giới thiệu tất cả 8Ms cùng lúc
+
+Bắt đầu bằng câu chào ngắn và câu hỏi đầu tiên về **M1 - Nhân lực**.`
 }
 
 export function getOtCoachingSystemPrompt(orgContext: OrgContext): string {
@@ -49,7 +57,12 @@ Nhiệm vụ: Giúp CEO của **${orgContext.orgName}** (ngành ${orgContext.ind
 - Tập trung vào các factor thực sự ảnh hưởng đến ngành ${orgContext.industry} tại Việt Nam
 - Khi đã đủ 8–10 lượt hỏi, kết thúc bằng: "[OT_COMPLETE]"
 
-Bắt đầu bằng câu chuyển tiếp từ phần SW sang OT, sau đó hỏi về P1.`
+**Format response:**
+- Dùng **text** cho tên thuật ngữ quan trọng
+- Câu hỏi dùng prefix: 🎯 **Câu hỏi:**
+- Giữ response ngắn gọn
+
+Bắt đầu bằng câu chuyển tiếp ngắn từ phần SW sang OT, sau đó hỏi về **P1 - Cạnh tranh hiện tại**.`
 }
 
 export function getSynthesisPrompt(

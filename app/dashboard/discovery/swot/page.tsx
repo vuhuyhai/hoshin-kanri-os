@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SwotContainer } from './components/SwotContainer'
-import type { OrgContext } from '@/lib/swot/types'
+import { SwotHubClient } from './components/SwotHubClient'
 
 export default async function SwotPage() {
   const supabase = await createClient()
@@ -12,38 +11,15 @@ export default async function SwotPage() {
 
   const { data: membership } = await supabase
     .from('org_members')
-    .select('*')
+    .select('org_id')
     .eq('user_id', user.id)
     .single()
 
   if (!membership) redirect('/onboarding/setup-org')
 
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('id', membership.org_id)
-    .single()
-
-  if (!org) redirect('/onboarding/setup-org')
-
-  const orgContext: OrgContext = {
-    orgId: membership.org_id,
-    orgName: org.name,
-    industry: org.industry,
-    city: org.city,
-    headcount: org.headcount,
-  }
-
   return (
-    <div className="py-4">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold">Phân tích SWOT</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          AI Coach sẽ giúp bạn phân tích điểm mạnh, điểm yếu, cơ hội và thách
-          thức
-        </p>
-      </div>
-      <SwotContainer orgContext={orgContext} />
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <SwotHubClient orgId={membership.org_id} />
     </div>
   )
 }

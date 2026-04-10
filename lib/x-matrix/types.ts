@@ -33,12 +33,18 @@ export interface XMatrixInitiative {
   timeframe: '30d' | '60d' | '90d'
 }
 
+export type HoshinStatus = 'ai_suggested' | 'confirmed' | 'manual'
+export type SwotCellSource = 'SO' | 'ST' | 'WO' | 'WT'
+
 export interface XMatrixHoshin {
   id: string
   title: string
   description: string
   initiatives: XMatrixInitiative[]
   kpis: XMatrixKpi[]
+  sourceSwotCellType?: SwotCellSource
+  suggestedKpis?: string[]
+  status?: HoshinStatus
 }
 
 export interface XMatrixData {
