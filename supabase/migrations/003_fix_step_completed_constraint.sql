@@ -13,7 +13,7 @@
 ALTER TABLE discovery_sessions
   DROP CONSTRAINT IF EXISTS discovery_sessions_step_completed_check;
 
--- 2. Add new constraint with all 10 values
+-- 2. Add new constraint with all 11 values
 ALTER TABLE discovery_sessions
   ADD CONSTRAINT discovery_sessions_step_completed_check
   CHECK (step_completed IN (
@@ -26,7 +26,8 @@ ALTER TABLE discovery_sessions
     'swot_strategy',
     'pain_mapper',
     'vision',
-    'synthesis'
+    'synthesis',
+    'xray_history'
   ));
 
 -- 3. Migrate legacy 'swot' records to 'swot_coaching'

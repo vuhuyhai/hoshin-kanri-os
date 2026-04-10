@@ -298,3 +298,134 @@ export type SwotDiscoverySession =
   | DiscoverySessionEvidence
   | DiscoverySessionSynthesis
   | DiscoverySessionStrategy
+
+// ─── INPUT TYPES ─────────────────────────────────────────────────
+
+export interface CoachingItem {
+  id: string
+  quadrant: 'S' | 'W' | 'O' | 'T'
+  text: string
+  source: 'ai_extracted' | 'user_added' | 'ai_extracted_edited'
+  framework_source?: string
+  ai_confidence?: 'high' | 'medium' | 'low'
+}
+
+export interface EvidenceItemV2 {
+  id: string
+  quadrant: 'S' | 'W' | 'O' | 'T'
+  text: string
+  is_new_discovery: boolean
+  evidence_text?: string
+  data_point?: string
+  source_name?: string
+  source_url?: string
+  published_year?: number
+  confidence: 'high' | 'medium' | 'low' | 'not_found'
+  credibility_score: number
+}
+
+export interface OrgContextV2 {
+  industry: string
+  headcount: string
+  city: string
+}
+
+// ─── STEP 2 TYPES ────────────────────────────────────────────────
+
+export interface GeneratedQuery {
+  type: 'stat' | 'report' | 'news'
+  query: string
+  target_metric: string
+  days: number
+  priority: number
+}
+
+export interface EvidenceResult {
+  found: boolean
+  evidence_text?: string
+  data_point?: string
+  source_name?: string
+  source_url?: string
+  published_year?: number
+  confidence: 'high' | 'medium' | 'low' | 'not_found'
+  confidence_reason: string
+  credibility_score: number
+}
+
+// ─── STEP 3 TYPES ────────────────────────────────────────────────
+
+export interface SynthesizedSwotItem {
+  id: string
+  quadrant: 'S' | 'W' | 'O' | 'T'
+  statement: string
+  evidence: string
+  evidence_source?: string
+  evidence_url?: string
+  evidence_year?: number
+  implication: string
+  priority: 1 | 2 | 3 | 4 | 5
+  merged_from?: string[]
+  credibility_score: number
+}
+
+export interface SynthesisResult {
+  swot_items: SynthesizedSwotItem[]
+  merge_log: Array<{
+    merged_ids: string[]
+    into_item: string
+    reason: string
+  }>
+  discarded: Array<{
+    original_text: string
+    reason: string
+  }>
+  stats: {
+    total_input: number
+    total_output: number
+    merged_count: number
+    discarded_count: number
+  }
+}
+
+// ─── STEP 4 TYPES ────────────────────────────────────────────────
+
+export interface TowsStrategy {
+  strategy: string
+  s_item_ids: string[]
+  w_item_ids: string[]
+  o_item_ids: string[]
+  t_item_ids: string[]
+}
+
+export interface HoshinCandidate {
+  rank: number
+  title: string
+  type: 'SO' | 'ST' | 'WO' | 'WT'
+  rationale: string
+  score: number
+  score_breakdown: {
+    impact: number
+    feasibility: number
+    evidence: number
+  }
+  linked_item_ids: {
+    s: string[]
+    w: string[]
+    o: string[]
+    t: string[]
+  }
+  kpi_suggestion: string
+  timeframe: '90_days' | '6_months' | '12_months'
+  selected?: boolean
+}
+
+export interface TowsResult {
+  tows_strategies: {
+    SO: TowsStrategy[]
+    ST: TowsStrategy[]
+    WO: TowsStrategy[]
+    WT: TowsStrategy[]
+  }
+  hoshin_candidates: HoshinCandidate[]
+  ai_recommendation: string
+}
