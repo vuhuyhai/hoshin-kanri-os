@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 const DISCOVERY_STEPS = [
   {
@@ -68,6 +67,8 @@ interface XRayData {
   latestResultId?: string
 }
 
+type StepStatus = 'completed' | 'next' | 'locked'
+
 export default async function DiscoveryPage() {
   const supabase = await createClient()
   const { data: sessions } = await supabase
@@ -86,13 +87,20 @@ export default async function DiscoveryPage() {
   const xraySession = sessions?.find((s) => s.step_completed === 'x-ray')
   const xrayData = xraySession?.data_json as XRayData | null
 
+  // Determine status for each step
+  function getStepStatus(key: string, idx: number): StepStatus {
+    if (completedSteps.has(key)) return 'completed'
+    if (idx === 0 || completedSteps.has(DISCOVERY_STEPS[idx - 1].key)) return 'next'
+    return 'locked'
+  }
+
   // Find next uncompleted step
   const nextStep = DISCOVERY_STEPS.find((s) => !completedSteps.has(s.key))
 
   return (
     <div className="w-full min-h-full p-6 lg:p-8">
       {/* Page header */}
-      <div className="mb-8 pb-6 border-b-[3px] border-ink">
+      <div className="mb-8 pb-6">
         <p className="overline mb-1">Discovery</p>
         <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
           Khám phá doanh nghiệp
@@ -107,24 +115,23 @@ export default async function DiscoveryPage() {
         <div className="lg:col-span-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {DISCOVERY_STEPS.map((step, idx) => {
-              const done = completedSteps.has(step.key)
-              const isNext =
-                !done &&
-                (idx === 0 ||
-                  completedSteps.has(DISCOVERY_STEPS[idx - 1].key))
+              const status = getStepStatus(step.key, idx)
+              const done = status === 'completed'
+              const isNext = status === 'next'
+              const isLocked = status === 'locked'
 
               // Special X-Ray card with score
               if (step.key === 'x-ray' && done && xrayData) {
                 return (
                   <div
                     key={step.key}
-                    className="card-brutal border-green-600 p-5 flex flex-col min-h-[160px]"
+                    className="bg-[var(--bg)] border border-gray-200 shadow-sm p-5 flex flex-col min-h-[160px] transition-all duration-150 hover:border-gray-400 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-3xl">{step.icon}</span>
-                      <Badge className="badge-brutal border-green-600 text-green-600">
+                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
                         ✓ Hoàn thành
-                      </Badge>
+                      </span>
                     </div>
                     <h3 className="font-display text-base font-bold uppercase tracking-wider text-ink">
                       {step.label}
@@ -139,12 +146,20 @@ export default async function DiscoveryPage() {
                     )}
                     <div className="mt-auto pt-4 flex gap-2">
                       <Link href="/dashboard/discovery/xray-history" className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full btn-brutal">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-gray-300 text-gray-600 bg-white hover:bg-gray-50"
+                        >
                           Xem báo cáo
                         </Button>
                       </Link>
                       <Link href="/x-ray" target="_blank" className="flex-1">
-                        <Button size="sm" className="w-full btn-brutal-primary text-xs py-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-gray-300 text-gray-600 bg-white hover:bg-gray-50 text-xs"
+                        >
                           Chạy lại →
                         </Button>
                       </Link>
@@ -156,25 +171,28 @@ export default async function DiscoveryPage() {
               return (
                 <div
                   key={step.key}
-                  className={`card-brutal p-5 flex flex-col min-h-[160px] ${
-                    done
-                      ? 'border-green-600'
-                      : isNext
-                        ? 'border-accent-brand'
-                        : ''
-                  }`}
+                  className={`bg-[var(--bg)] border shadow-sm p-5 flex flex-col min-h-[160px] transition-all duration-150 ${
+                    isNext
+                      ? 'border-gray-400 hover:shadow-md'
+                      : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
+                  } ${isLocked ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-3xl">{step.icon}</span>
                     {done && (
-                      <Badge className="badge-brutal border-green-600 text-green-600">
+                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
                         ✓ Hoàn thành
-                      </Badge>
+                      </span>
                     )}
                     {isNext && (
-                      <Badge className="badge-brutal border-accent-brand text-accent-brand">
-                        Tiếp theo
-                      </Badge>
+                      <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 border border-amber-300 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
+                        → Tiếp theo
+                      </span>
+                    )}
+                    {isLocked && (
+                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 border border-gray-200 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5">
+                        Chưa bắt đầu
+                      </span>
                     )}
                   </div>
                   <h3 className="font-display text-base font-bold uppercase tracking-wider text-ink">
@@ -192,16 +210,17 @@ export default async function DiscoveryPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full btn-brutal"
+                          className="w-full border-gray-300 text-gray-600 bg-white hover:bg-gray-50"
                         >
                           Xem lại
                         </Button>
                       ) : (
                         <Button
                           size="sm"
-                          className="w-full btn-brutal-primary text-xs py-2"
+                          className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider"
+                          disabled={isLocked}
                         >
-                          Bắt đầu →
+                          {isNext ? 'Bắt đầu →' : 'Bắt đầu →'}
                         </Button>
                       )}
                     </Link>
@@ -214,16 +233,16 @@ export default async function DiscoveryPage() {
 
         {/* Right: Progress summary — sticky */}
         <div className="lg:col-span-1">
-          <div className="card-brutal p-6 lg:sticky lg:top-24">
-            <h3 className="font-display text-sm font-bold uppercase tracking-widest text-accent-brand mb-4">
+          <div className="bg-[var(--bg)] border border-gray-200 shadow-sm p-6 lg:sticky lg:top-24">
+            <h3 className="font-display text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">
               Tiến độ khám phá
             </h3>
 
             {/* Progress bar */}
             <div className="mb-5">
-              <div className="h-3 w-full border-2 border-ink bg-bg-muted-warm">
+              <div className="h-3 w-full border border-gray-200 bg-gray-200">
                 <div
-                  className="h-full bg-accent-brand transition-all duration-500"
+                  className="h-full bg-gray-800 transition-all duration-500"
                   style={{
                     width: `${(completedCount / DISCOVERY_STEPS.length) * 100}%`,
                   }}
@@ -236,25 +255,29 @@ export default async function DiscoveryPage() {
 
             {/* Step status list */}
             <div className="space-y-2.5 mb-6">
-              {DISCOVERY_STEPS.map((step) => {
-                const done = completedSteps.has(step.key)
-                const isLocked =
-                  !done && step.key === 'synthesis' && completedCount < 4
+              {DISCOVERY_STEPS.map((step, idx) => {
+                const status = getStepStatus(step.key, idx)
+                const done = status === 'completed'
+                const isLocked = status === 'locked'
                 return (
                   <div
                     key={step.key}
                     className="flex items-center gap-2 font-body text-sm"
                   >
-                    <span>
-                      {done ? '✅' : isLocked ? '🔒' : '⏳'}
-                    </span>
+                    {done ? (
+                      <span className="text-emerald-600">✓</span>
+                    ) : isLocked ? (
+                      <span className="text-gray-300">○</span>
+                    ) : (
+                      <span>⏳</span>
+                    )}
                     <span
                       className={
                         done
-                          ? 'text-text-3 line-through'
+                          ? 'text-gray-400 line-through'
                           : isLocked
-                            ? 'text-text-3'
-                            : 'text-ink font-medium'
+                            ? 'text-gray-300'
+                            : 'text-gray-900 font-medium'
                       }
                     >
                       {step.label}
@@ -266,7 +289,7 @@ export default async function DiscoveryPage() {
 
             {/* Next step CTA */}
             {nextStep && (
-              <div className="border-t-2 border-ink/10 pt-4">
+              <div className="border-t border-gray-200 pt-4">
                 <p className="font-display text-[11px] font-bold uppercase tracking-widest text-text-3 mb-2">
                   Bước tiếp theo
                 </p>
@@ -277,7 +300,7 @@ export default async function DiscoveryPage() {
                   href={nextStep.href}
                   target={nextStep.external ? '_blank' : undefined}
                 >
-                  <Button className="btn-brutal-primary w-full text-xs py-2">
+                  <Button className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider">
                     Tiếp tục →
                   </Button>
                 </Link>
@@ -285,8 +308,8 @@ export default async function DiscoveryPage() {
             )}
 
             {completedCount === DISCOVERY_STEPS.length && (
-              <div className="border-t-2 border-ink/10 pt-4">
-                <p className="font-display text-[11px] font-bold uppercase tracking-widest text-green-600 mb-3">
+              <div className="border-t border-gray-200 pt-4">
+                <p className="font-display text-[11px] font-bold uppercase tracking-widest text-emerald-600 mb-3">
                   Hoàn thành!
                 </p>
                 <Link href="/dashboard/x-matrix/new">
