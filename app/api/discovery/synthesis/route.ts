@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
       .select('data_json')
       .eq('org_id', orgId)
       .eq('step_completed', 'pain_mapper')
-      .single()
+      .maybeSingle()
 
     const { data: visionSession } = await supabase
       .from('discovery_sessions')
       .select('data_json')
       .eq('org_id', orgId)
       .eq('step_completed', 'vision')
-      .single()
+      .maybeSingle()
 
     const hasVision = !!visionSession?.data_json
     const hasPain = !!painSession?.data_json

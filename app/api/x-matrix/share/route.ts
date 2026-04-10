@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
       .select('id, year, title, vision_json, status, organizations(name, industry)')
       .eq('id', slug)
       .eq('status', 'active')
-      .single()
+      .maybeSingle()
 
-    if (error || !xMatrix) {
+    if (!xMatrix) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 

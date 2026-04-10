@@ -47,6 +47,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (membership) {
+      // Delete existing to avoid duplicates on re-run
+      await supabase
+        .from('discovery_sessions')
+        .delete()
+        .eq('org_id', membership.org_id)
+        .eq('step_completed', 'pain_mapper')
+
       await supabase.from('discovery_sessions').insert({
         org_id: membership.org_id,
         user_id: user.id,
