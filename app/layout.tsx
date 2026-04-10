@@ -22,7 +22,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("hoshin-theme-v2");if(t==="dark"){document.documentElement.classList.remove("light");document.documentElement.classList.add("dark")}else{document.documentElement.classList.remove("dark");document.documentElement.classList.add("light")}}catch(e){}})()`,
+            __html: `(function(){try{var k="hoshin-theme-v2";var t=localStorage.getItem(k);if(!t||t==="system"||t==="dark"){localStorage.setItem(k,"light")}document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");document.documentElement.setAttribute("data-theme","light")}catch(e){}})()`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

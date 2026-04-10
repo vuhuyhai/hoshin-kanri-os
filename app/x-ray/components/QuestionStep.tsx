@@ -30,20 +30,22 @@ export function QuestionStep({
   return (
     <div className="space-y-8">
       <div className="space-y-1 text-center">
-        <div className="text-4xl">{meta.icon}</div>
-        <h2 className="text-xl font-semibold">{meta.label}</h2>
-        <p className="text-sm text-muted-foreground">{meta.description}</p>
+        <div className="text-4xl" aria-hidden="true">{meta.icon}</div>
+        <h2 className="font-display text-xl font-bold uppercase tracking-wider text-ink">
+          {meta.label}
+        </h2>
+        <p className="font-body text-sm text-text-2">{meta.description}</p>
       </div>
 
       <div className="space-y-6">
         {questions.map((q, qIdx) => (
           <div key={q.id} className="space-y-3">
             <div>
-              <p className="text-sm font-medium leading-relaxed">
+              <p className="font-body text-base font-medium leading-relaxed text-ink">
                 {qIdx + 1}. {q.question}
               </p>
               {q.helpText && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 font-body text-sm text-text-3">
                   {q.helpText}
                 </p>
               )}
@@ -57,21 +59,26 @@ export function QuestionStep({
                     key={option.value}
                     onClick={() => onAnswer(q.id, option.value)}
                     className={cn(
-                      'w-full rounded-lg border px-4 py-3 text-left text-sm transition-all duration-150',
-                      'hover:border-primary/60 hover:bg-primary/5',
+                      'w-full text-left p-4 flex items-start gap-3',
+                      'border-[2px] font-body text-base',
+                      'transition-all duration-150 cursor-pointer min-h-[44px]',
                       isSelected
-                        ? 'border-primary bg-primary/10 font-medium text-primary'
-                        : 'border-border bg-card'
+                        ? 'bg-accent-brand border-accent-brand text-white shadow-[3px_3px_0_#9e1f1e]'
+                        : 'bg-bg-warm border-ink text-ink hover:bg-bg-muted-warm hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#2C2B2B]'
                     )}
                   >
                     <span
                       className={cn(
-                        'mr-3 inline-block h-5 w-5 rounded-full border-2 align-middle transition-colors',
+                        'w-5 h-5 border-[2px] flex-shrink-0 mt-0.5 flex items-center justify-center',
                         isSelected
-                          ? 'border-primary bg-primary'
-                          : 'border-muted-foreground'
+                          ? 'bg-white border-white'
+                          : 'bg-bg-warm border-ink'
                       )}
-                    />
+                    >
+                      {isSelected && (
+                        <span className="text-accent-brand text-xs font-bold">✓</span>
+                      )}
+                    </span>
                     {option.label}
                   </button>
                 )
@@ -83,11 +90,11 @@ export function QuestionStep({
 
       <div className="flex gap-3 pt-2">
         {!isFirstStep && (
-          <Button variant="outline" onClick={onBack} className="flex-1">
+          <Button variant="outline" onClick={onBack} className="flex-1 btn-brutal-secondary min-h-[44px]">
             ← Quay lại
           </Button>
         )}
-        <Button onClick={onNext} disabled={!allAnswered} className="flex-1">
+        <Button onClick={onNext} disabled={!allAnswered} className="flex-1 btn-brutal-primary min-h-[44px]">
           Tiếp theo →
         </Button>
       </div>

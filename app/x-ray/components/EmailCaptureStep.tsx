@@ -66,9 +66,11 @@ export function EmailCaptureStep({
   return (
     <div className="space-y-8">
       <div className="space-y-3 text-center">
-        <div className="text-4xl">🎉</div>
-        <h2 className="text-xl font-semibold">Bạn đã hoàn thành!</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <div className="text-4xl" aria-hidden="true">🎉</div>
+        <h2 className="font-display text-xl font-bold uppercase tracking-wider text-ink">
+          Bạn đã hoàn thành!
+        </h2>
+        <p className="font-body text-sm leading-relaxed text-text-2">
           Cho chúng tôi biết thêm về công ty bạn để báo cáo được{' '}
           <strong>cá nhân hóa theo ngành</strong>.
           <br />
@@ -78,9 +80,11 @@ export function EmailCaptureStep({
         </p>
       </div>
 
-      <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-        <p className="text-sm font-medium">Báo cáo của bạn sẽ bao gồm:</p>
-        <ul className="space-y-1 text-sm text-muted-foreground">
+      <div className="space-y-2 bg-bg-muted-warm border-2 border-ink p-4">
+        <p className="font-display text-sm font-bold uppercase tracking-wider text-ink">
+          Báo cáo của bạn sẽ bao gồm:
+        </p>
+        <ul className="space-y-1 font-body text-sm text-text-2">
           <li>✅ Điểm sức khỏe cho 5 chiều quan trọng</li>
           <li>✅ Phân tích theo ngành và quy mô công ty</li>
           <li>✅ Top 3 việc cần làm ngay trong 90 ngày</li>
@@ -121,7 +125,7 @@ export function EmailCaptureStep({
               setForm((prev) => ({ ...prev, industry: e.target.value }))
             }
             onBlur={() => setTouched((prev) => ({ ...prev, industry: true }))}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full border-2 border-ink bg-bg-warm px-3 py-2 font-body text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-brand disabled:cursor-not-allowed disabled:opacity-50 min-h-[44px]"
             disabled={isLoading}
           >
             <option value="">Chọn ngành nghề...</option>
@@ -147,10 +151,10 @@ export function EmailCaptureStep({
                 onClick={() =>
                   setForm((prev) => ({ ...prev, headcount: opt.value }))
                 }
-                className={`rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`border-2 px-3 py-2.5 font-display text-sm font-semibold uppercase tracking-wider transition-all duration-150 min-h-[44px] ${
                   form.headcount === opt.value
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-card hover:border-primary/60 hover:bg-primary/5'
+                    ? 'border-accent-brand bg-accent-brand text-white shadow-[3px_3px_0_#9e1f1e]'
+                    : 'border-ink bg-bg-warm text-ink hover:bg-bg-muted-warm'
                 }`}
                 disabled={isLoading}
               >
@@ -189,14 +193,14 @@ export function EmailCaptureStep({
           variant="outline"
           onClick={onBack}
           disabled={isLoading}
-          className="flex-1"
+          className="flex-1 btn-brutal-secondary min-h-[44px]"
         >
           ← Quay lại
         </Button>
         <Button
           onClick={handleSubmit}
           disabled={isLoading || !isFormValid}
-          className="flex-1"
+          className="flex-1 btn-brutal-primary min-h-[44px]"
         >
           {isLoading ? (
             <span className="flex items-center gap-2">

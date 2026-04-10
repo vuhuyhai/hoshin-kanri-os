@@ -22,20 +22,20 @@ export function XRayProgress({ currentStep }: XRayProgressProps) {
 
   return (
     <div className="w-full space-y-2">
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-2 w-full overflow-hidden border-2 border-ink bg-bg-muted-warm">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+          className="h-full bg-accent-brand transition-all duration-500 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
+      <div className="flex items-center justify-between font-body text-sm text-text-2">
         <span>
           {currentStep < PILLAR_ORDER.length
             ? `${OPEX_PILLARS[PILLAR_ORDER[currentStep]].icon} ${OPEX_PILLARS[PILLAR_ORDER[currentStep]].label}`
             : '📧 Nhận báo cáo'}
         </span>
-        <span>
+        <span className="font-display text-xs font-semibold tabular-nums">
           {currentStep + 1}/{totalSteps}
         </span>
       </div>
@@ -44,20 +44,20 @@ export function XRayProgress({ currentStep }: XRayProgressProps) {
         {PILLAR_ORDER.map((pillar, idx) => (
           <div
             key={pillar}
-            className="h-1.5 flex-1 rounded-full transition-colors duration-300"
+            className="h-1.5 flex-1 transition-colors duration-300"
             style={{
               background:
                 idx < currentStep
                   ? PILLAR_COLORS[idx]
                   : idx === currentStep
                     ? PILLAR_COLORS[idx] + '99'
-                    : '#e5e5e5',
+                    : '#ECEAE6',
             }}
           />
         ))}
         <div
-          className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-            currentStep >= PILLAR_ORDER.length ? 'bg-primary/60' : 'bg-muted'
+          className={`h-1.5 flex-1 transition-colors duration-300 ${
+            currentStep >= PILLAR_ORDER.length ? 'bg-accent-brand/60' : 'bg-bg-muted-warm'
           }`}
         />
       </div>
