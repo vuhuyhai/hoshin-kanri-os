@@ -84,6 +84,7 @@
    LIGHT MODE — Neo-Brutalism
    ============================================================ */
 :root {
+  color-scheme: light;
   --background: #F7F5F2;
   --foreground: #2C2B2B;
   --card: #F7F5F2;
@@ -147,6 +148,7 @@
    DARK MODE — Inverted brutalism
    ============================================================ */
 .dark {
+  color-scheme: dark;
   --background: #1a1919;
   --foreground: #F7F5F2;
   --card: #2C2B2B;

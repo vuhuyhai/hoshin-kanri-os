@@ -17,8 +17,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi" suppressHydrationWarning>
+    <html lang="vi" className="light" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("hoshin-theme-v2");if(t==="dark"){document.documentElement.classList.remove("light");document.documentElement.classList.add("dark")}else{document.documentElement.classList.remove("dark");document.documentElement.classList.add("light")}}catch(e){}})()`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
