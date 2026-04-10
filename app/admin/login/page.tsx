@@ -32,15 +32,9 @@ export default function AdminLoginPage() {
       return
     }
 
-    // Check is_super_admin
-    const { data: profile } = await supabase
-      .from('profiles' as 'organizations')
-      .select('is_super_admin' as 'id')
-      .eq('id' as 'id', data.user.id)
-      .single()
-
-    const isSuperAdmin = (profile as unknown as { is_super_admin: boolean } | null)
-      ?.is_super_admin
+    // Check is_super_admin via server API (bypasses RLS)
+    const res = await fetch('/api/admin/verify')
+    const { isSuperAdmin } = await res.json()
 
     if (!isSuperAdmin) {
       await supabase.auth.signOut()

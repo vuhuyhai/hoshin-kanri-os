@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export function AuthListener() {
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     const supabase = createClient()
@@ -16,6 +17,8 @@ export function AuthListener() {
           router.refresh()
         }
         if (event === 'SIGNED_OUT') {
+          // Admin pages handle their own sign-out redirect
+          if (pathname.startsWith('/admin')) return
           router.push('/login')
         }
       }
