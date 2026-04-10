@@ -1,62 +1,70 @@
-export type DimensionId =
-  | 'strategy'
-  | 'execution'
-  | 'people'
-  | 'finance'
-  | 'customer'
+export type OpexPillar =
+  | 'lean'
+  | 'six_sigma'
+  | 'workplace'
+  | 'value_chain'
+  | 'cx'
+  | 'value_innovation'
+  | 'value_ai'
 
 export interface XRayOption {
-  value: 1 | 2 | 3 | 4
+  value: number // 1 | 2 | 3 | 4
   label: string
 }
 
 export interface XRayQuestion {
   id: string
-  dimensionId: DimensionId
-  text: string
-  helpText?: string
+  pillar: OpexPillar
+  question: string
+  helpText: string
   options: XRayOption[]
 }
 
-export interface XRayDimension {
-  id: DimensionId
-  name: string
-  description: string
+export type ScoreLevel = 'critical' | 'weak' | 'moderate' | 'strong'
+
+export interface PillarScore {
+  pillar: OpexPillar
+  label: string
   icon: string
-  questions: XRayQuestion[]
-}
-
-export type XRayAnswers = Record<string, 1 | 2 | 3 | 4>
-
-export interface DimensionScore {
-  dimensionId: DimensionId
-  name: string
-  score: number
-  level: 'critical' | 'weak' | 'moderate' | 'strong'
-  feedback: string
+  score: number // 0-100
+  level: ScoreLevel
+  summary: string
   topIssue: string
 }
 
 export interface XRayResult {
-  email: string
-  completedAt: string
+  orgName: string
+  industry: string
   overallScore: number
-  overallLevel: 'critical' | 'weak' | 'moderate' | 'strong'
-  dimensions: DimensionScore[]
+  overallLevel: ScoreLevel
   executiveSummary: string
-  topPriorities: string[]
-  ctaMessage: string
+  pillarScores: PillarScore[]
+  topActions: string[] // top 3
+  generatedAt: string
+}
+
+// Score level thresholds
+// 0-25:  critical  -> "Nguy hiem"
+// 26-50: weak      -> "Yeu"
+// 51-75: moderate  -> "Trung binh"
+// 76-100: strong   -> "Tot"
+
+export interface CompanyInfo {
+  email: string
+  companyName: string
+  industry: string
+  headcount: '1-10' | '10-50' | '50-200'
 }
 
 export interface XRayScoreRequest {
-  answers: XRayAnswers
-  email: string
+  answers: Record<string, number>
+  companyInfo: CompanyInfo
 }
 
 export interface XRayFormState {
   currentStep: number
-  answers: XRayAnswers
-  email: string
+  answers: Record<string, number>
+  companyInfo: CompanyInfo
   isLoading: boolean
   result: XRayResult | null
   error: string | null

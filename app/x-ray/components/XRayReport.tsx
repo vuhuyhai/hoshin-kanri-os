@@ -1,34 +1,26 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import type { XRayResult, DimensionScore } from '@/lib/x-ray/types'
+import type { XRayResult, PillarScore } from '@/lib/x-ray/types'
 import { XRayRadarChart } from './XRayRadarChart'
 import { XRayBarChart } from './XRayBarChart'
-import { DimensionSparkline } from './DimensionSparkline'
 
 // ============================================================
-// SCORE HELPERS
+// SCORE HELPERS (new thresholds: 0-25, 26-50, 51-75, 76-100)
 // ============================================================
 
 function getScoreColor(score: number): string {
-  if (score <= 40) return '#c73937'
-  if (score <= 60) return '#D97706'
-  if (score <= 80) return '#2563EB'
+  if (score <= 25) return '#c73937'
+  if (score <= 50) return '#D97706'
+  if (score <= 75) return '#2563EB'
   return '#16A34A'
 }
 
 function getScoreLabel(score: number): string {
-  if (score <= 40) return 'Nguy hiem'
-  if (score <= 60) return 'Can cai thien'
-  if (score <= 80) return 'Trung binh'
-  return 'Tot'
-}
-
-function getScoreBg(score: number): string {
-  if (score <= 40) return '#c73937'
-  if (score <= 60) return '#D97706'
-  if (score <= 80) return '#2563EB'
-  return '#16A34A'
+  if (score <= 25) return 'Nguy hiểm'
+  if (score <= 50) return 'Yếu'
+  if (score <= 75) return 'Trung bình'
+  return 'Tốt'
 }
 
 // ============================================================
@@ -41,10 +33,8 @@ function ScoreGauge({ score }: { score: number }) {
   const cy = size / 2 + 10
   const r = 75
   const startAngle = Math.PI
-  const endAngle = 0
   const scoreAngle = startAngle - (score / 100) * Math.PI
 
-  // Arc path helper
   const arc = (start: number, end: number) => {
     const x1 = cx + r * Math.cos(start)
     const y1 = cy - r * Math.sin(start)
@@ -54,7 +44,6 @@ function ScoreGauge({ score }: { score: number }) {
     return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`
   }
 
-  // Needle endpoint
   const needleLen = r - 12
   const nx = cx + needleLen * Math.cos(scoreAngle)
   const ny = cy - needleLen * Math.sin(scoreAngle)
@@ -69,27 +58,25 @@ function ScoreGauge({ score }: { score: number }) {
         <defs>
           <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#c73937" />
-            <stop offset="50%" stopColor="#D97706" />
+            <stop offset="33%" stopColor="#D97706" />
+            <stop offset="66%" stopColor="#2563EB" />
             <stop offset="100%" stopColor="#16A34A" />
           </linearGradient>
         </defs>
-        {/* Background arc */}
         <path
-          d={arc(startAngle, endAngle)}
+          d={arc(startAngle, 0)}
           fill="none"
           stroke="#ECEAE6"
           strokeWidth={14}
           strokeLinecap="butt"
         />
-        {/* Colored arc */}
         <path
-          d={arc(startAngle, endAngle)}
+          d={arc(startAngle, 0)}
           fill="none"
           stroke="url(#gaugeGrad)"
           strokeWidth={14}
           strokeLinecap="butt"
         />
-        {/* Needle */}
         <line
           x1={cx}
           y1={cy}
@@ -100,7 +87,6 @@ function ScoreGauge({ score }: { score: number }) {
           strokeLinecap="butt"
         />
         <circle cx={cx} cy={cy} r={5} fill="#2C2B2B" />
-        {/* Score text */}
         <text
           x={cx}
           y={cy - 18}
@@ -124,30 +110,28 @@ function ScoreGauge({ score }: { score: number }) {
 // ============================================================
 
 function SidebarNavItem({
-  dim,
+  pillar,
   onClick,
 }: {
-  dim: DimensionScore
+  pillar: PillarScore
   onClick: () => void
 }) {
-  const color = getScoreColor(dim.score)
+  const color = getScoreColor(pillar.score)
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-4 py-3 border-l-[3px] border-transparent transition-colors"
-      style={{
-        ['--hover-border' as string]: '#c73937',
-      }}
+      className="w-full text-left px-4 py-2.5 border-l-[3px] border-transparent transition-colors"
       onMouseEnter={(e) =>
-        (e.currentTarget.style.borderLeftColor = '#c73937')
+        (e.currentTarget.style.borderLeftColor = color)
       }
       onMouseLeave={(e) =>
         (e.currentTarget.style.borderLeftColor = 'transparent')
       }
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="text-lg shrink-0">{pillar.icon}</span>
         <div
-          className="w-8 h-8 flex items-center justify-center shrink-0"
+          className="w-7 h-7 flex items-center justify-center shrink-0"
           style={{ background: color + '20' }}
         >
           <span
@@ -158,40 +142,28 @@ function SidebarNavItem({
               color,
             }}
           >
-            {dim.score}
+            {pillar.score}
           </span>
         </div>
         <div className="flex-1 min-w-0">
           <p
-            className="text-sm truncate"
+            className="text-xs truncate"
             style={{
               fontFamily: '"Montserrat", sans-serif',
               fontWeight: 700,
               textTransform: 'uppercase',
               color: '#2C2B2B',
-              fontSize: 13,
-            }}
-          >
-            {dim.name}
-          </p>
-          <p
-            className="text-xs"
-            style={{
-              fontFamily: '"Montserrat", sans-serif',
-              fontWeight: 600,
-              color: '#5A5757',
               fontSize: 11,
             }}
           >
-            {dim.score}/100
+            {pillar.label}
           </p>
         </div>
       </div>
-      {/* Mini progress bar */}
-      <div className="mt-2 h-1 w-full" style={{ background: '#ECEAE6' }}>
+      <div className="mt-1.5 h-1 w-full" style={{ background: '#ECEAE6' }}>
         <div
           className="h-full transition-all duration-500"
-          style={{ width: `${dim.score}%`, background: color }}
+          style={{ width: `${pillar.score}%`, background: color }}
         />
       </div>
     </button>
@@ -199,17 +171,16 @@ function SidebarNavItem({
 }
 
 // ============================================================
-// DIMENSION CARD
+// PILLAR CARD
 // ============================================================
 
-function DimensionCard({ dim }: { dim: DimensionScore }) {
-  const color = getScoreColor(dim.score)
-  const label = getScoreLabel(dim.score)
+function PillarCard({ pillar }: { pillar: PillarScore }) {
+  const color = getScoreColor(pillar.score)
+  const label = getScoreLabel(pillar.score)
 
   return (
     <div
-      id={`dim-${dim.dimensionId}`}
-      className="card-brutal"
+      id={`pillar-${pillar.pillar}`}
       style={{
         background: '#F7F5F2',
         border: '3px solid #2C2B2B',
@@ -222,18 +193,20 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
         className="flex items-center justify-between gap-3 px-5 py-4"
         style={{ borderBottom: '2px solid #2C2B2B' }}
       >
-        <h3
-          className="text-lg"
-          style={{
-            fontFamily: '"Montserrat", sans-serif',
-            fontWeight: 700,
-            color: '#2C2B2B',
-          }}
-        >
-          {dim.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{pillar.icon}</span>
+          <h3
+            className="text-base"
+            style={{
+              fontFamily: '"Montserrat", sans-serif',
+              fontWeight: 700,
+              color: '#2C2B2B',
+            }}
+          >
+            {pillar.label}
+          </h3>
+        </div>
         <div className="flex items-center gap-3 shrink-0">
-          <DimensionSparkline score={dim.score} />
           <span
             style={{
               fontFamily: '"Montserrat", sans-serif',
@@ -242,7 +215,7 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
               color,
             }}
           >
-            {dim.score}
+            {pillar.score}
           </span>
           <span
             className="px-2 py-0.5 text-white"
@@ -267,11 +240,11 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
         >
           <div
             className="h-full transition-all duration-1000"
-            style={{ width: `${dim.score}%`, background: color }}
+            style={{ width: `${pillar.score}%`, background: color }}
           />
         </div>
 
-        {/* Feedback */}
+        {/* Summary */}
         <p
           className="leading-relaxed"
           style={{
@@ -282,7 +255,7 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
             lineHeight: 1.7,
           }}
         >
-          {dim.feedback}
+          {pillar.summary}
         </p>
 
         {/* Top issue */}
@@ -290,7 +263,7 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
           className="px-4 py-3"
           style={{
             background: '#ECEAE6',
-            borderLeft: '4px solid #c73937',
+            borderLeft: `4px solid ${color}`,
           }}
         >
           <span
@@ -301,10 +274,10 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
               fontSize: 11,
               textTransform: 'uppercase',
               letterSpacing: '.12em',
-              color: '#c73937',
+              color,
             }}
           >
-            Van de chinh
+            Vấn đề chính
           </span>
           <p
             style={{
@@ -314,7 +287,7 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
               color: '#2C2B2B',
             }}
           >
-            {dim.topIssue}
+            {pillar.topIssue}
           </p>
         </div>
       </div>
@@ -336,8 +309,8 @@ export function XRayReport({ result }: XRayReportProps) {
   const handlePrint = () => window.print()
   const handleStartPlanning = () => router.push('/dashboard/discovery')
 
-  const scrollToDimension = (id: string) => {
-    document.getElementById(`dim-${id}`)?.scrollIntoView({
+  const scrollToPillar = (id: string) => {
+    document.getElementById(`pillar-${id}`)?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     })
@@ -376,7 +349,7 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#c73937',
               }}
             >
-              Phan tich boi Hoshin Kanri OS
+              Phân tích bởi Hoshin Kanri OS
             </span>
             <h1
               style={{
@@ -387,21 +360,58 @@ export function XRayReport({ result }: XRayReportProps) {
                 lineHeight: 1.1,
               }}
             >
-              Bao cao suc khoe
+              Báo cáo sức khỏe
               <br />
-              doanh nghiep
+              doanh nghiệp
             </h1>
             <p
-              className="mt-3"
+              className="mt-1"
               style={{
                 fontFamily: '"Barlow Condensed", sans-serif',
                 fontWeight: 400,
-                fontSize: 16,
+                fontSize: 14,
                 color: '#8A8787',
               }}
             >
-              {result.email} &middot;{' '}
-              {new Date(result.completedAt).toLocaleDateString('vi-VN')}
+              Phân tích theo 7 trụ cột Operational Excellence
+            </p>
+            {result.orgName && (
+              <p
+                className="mt-3"
+                style={{
+                  fontFamily: '"Montserrat", sans-serif',
+                  fontWeight: 600,
+                  fontSize: 18,
+                  color: '#ECEAE6',
+                }}
+              >
+                {result.orgName}
+                {result.industry && (
+                  <span
+                    className="ml-3 px-2 py-0.5"
+                    style={{
+                      fontFamily: '"Montserrat", sans-serif',
+                      fontWeight: 500,
+                      fontSize: 12,
+                      background: 'rgba(255,255,255,0.15)',
+                      color: '#ECEAE6',
+                    }}
+                  >
+                    {result.industry}
+                  </span>
+                )}
+              </p>
+            )}
+            <p
+              className="mt-2"
+              style={{
+                fontFamily: '"Barlow Condensed", sans-serif',
+                fontWeight: 400,
+                fontSize: 14,
+                color: '#8A8787',
+              }}
+            >
+              {new Date(result.generatedAt).toLocaleDateString('vi-VN')}
             </p>
           </div>
 
@@ -429,7 +439,7 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#8A8787',
               }}
             >
-              Diem tong the
+              Điểm tổng thể
             </span>
           </div>
         </div>
@@ -443,32 +453,23 @@ export function XRayReport({ result }: XRayReportProps) {
           borderBottom: '3px solid #2C2B2B',
         }}
       >
-        <div className="flex items-center gap-4 px-6 py-3 min-w-max">
-          {result.dimensions.map((dim) => (
+        <div className="flex items-center gap-3 px-6 py-3 min-w-max">
+          {result.pillarScores.map((p) => (
             <button
-              key={dim.dimensionId}
-              onClick={() => scrollToDimension(dim.dimensionId)}
-              className="flex items-center gap-2 shrink-0"
+              key={p.pillar}
+              onClick={() => scrollToPillar(p.pillar)}
+              className="flex items-center gap-1.5 shrink-0"
             >
+              <span className="text-sm">{p.icon}</span>
               <span
                 className="w-6 h-6 flex items-center justify-center text-xs text-white"
                 style={{
                   fontFamily: '"Montserrat", sans-serif',
                   fontWeight: 700,
-                  background: getScoreColor(dim.score),
+                  background: getScoreColor(p.score),
                 }}
               >
-                {dim.score}
-              </span>
-              <span
-                className="text-xs"
-                style={{
-                  fontFamily: '"Montserrat", sans-serif',
-                  fontWeight: 600,
-                  color: '#2C2B2B',
-                }}
-              >
-                {dim.name}
+                {p.score}
               </span>
             </button>
           ))}
@@ -481,7 +482,7 @@ export function XRayReport({ result }: XRayReportProps) {
         <aside
           className="xray-sidebar hidden lg:flex flex-col shrink-0 no-print"
           style={{
-            width: 240,
+            width: 260,
             background: '#ECEAE6',
             borderRight: '3px solid #2C2B2B',
             position: 'sticky',
@@ -490,23 +491,20 @@ export function XRayReport({ result }: XRayReportProps) {
             overflowY: 'auto',
           }}
         >
-          {/* Score gauge */}
           <div className="px-4 pt-6">
             <ScoreGauge score={result.overallScore} />
           </div>
 
-          {/* Nav links */}
-          <nav className="flex-1 py-4">
-            {result.dimensions.map((dim) => (
+          <nav className="flex-1 py-2">
+            {result.pillarScores.map((p) => (
               <SidebarNavItem
-                key={dim.dimensionId}
-                dim={dim}
-                onClick={() => scrollToDimension(dim.dimensionId)}
+                key={p.pillar}
+                pillar={p}
+                onClick={() => scrollToPillar(p.pillar)}
               />
             ))}
           </nav>
 
-          {/* CTA buttons — sticky bottom */}
           <div
             className="p-4 space-y-2"
             style={{ borderTop: '2px solid #2C2B2B' }}
@@ -525,7 +523,7 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#2C2B2B',
               }}
             >
-              Tai PDF
+              Tải PDF
             </button>
             <button
               onClick={handleStartPlanning}
@@ -541,7 +539,7 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#FFFFFF',
               }}
             >
-              Bat dau lap ke hoach &rarr;
+              Bắt đầu lập kế hoạch &rarr;
             </button>
           </div>
         </aside>
@@ -576,7 +574,7 @@ export function XRayReport({ result }: XRayReportProps) {
 
           {/* Charts — side-by-side on desktop */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <XRayRadarChart dimensions={result.dimensions} />
+            <XRayRadarChart pillarScores={result.pillarScores} />
             <div
               className="flex flex-col justify-center"
               style={{
@@ -594,16 +592,16 @@ export function XRayReport({ result }: XRayReportProps) {
                   color: '#2C2B2B',
                 }}
               >
-                So sanh 5 chieu
+                So sánh 7 trụ cột
               </h3>
-              <XRayBarChart dimensions={result.dimensions} />
+              <XRayBarChart pillarScores={result.pillarScores} />
             </div>
           </div>
 
-          {/* Dimension cards — 2-col grid */}
+          {/* Pillar cards — 2-col grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {result.dimensions.map((dim) => (
-              <DimensionCard key={dim.dimensionId} dim={dim} />
+            {result.pillarScores.map((p) => (
+              <PillarCard key={p.pillar} pillar={p} />
             ))}
           </div>
 
@@ -625,16 +623,16 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#FFFFFF',
               }}
             >
-              Top 3 viec can lam ngay
+              Top 3 việc cần làm ngay
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-              {result.topPriorities.map((priority, idx) => (
+              {result.topActions.map((action, idx) => (
                 <div
                   key={idx}
                   className="flex items-start gap-4 px-5 py-4"
                   style={{
                     borderRight:
-                      idx < result.topPriorities.length - 1
+                      idx < result.topActions.length - 1
                         ? '2px solid #5A5757'
                         : 'none',
                   }}
@@ -660,7 +658,7 @@ export function XRayReport({ result }: XRayReportProps) {
                       lineHeight: 1.6,
                     }}
                   >
-                    {priority}
+                    {action}
                   </p>
                 </div>
               ))}
@@ -686,7 +684,7 @@ export function XRayReport({ result }: XRayReportProps) {
                     lineHeight: 1.2,
                   }}
                 >
-                  {result.ctaMessage}
+                  Biến phân tích thành hành động — bắt đầu lập X-Matrix ngay
                 </h2>
               </div>
               <div className="shrink-0 text-center space-y-3">
@@ -704,7 +702,7 @@ export function XRayReport({ result }: XRayReportProps) {
                     boxShadow: '5px 5px 0 #9e1f1e',
                   }}
                 >
-                  Tao tai khoan mien phi &rarr;
+                  Tạo tài khoản miễn phí &rarr;
                 </button>
                 <p
                   style={{
@@ -715,7 +713,7 @@ export function XRayReport({ result }: XRayReportProps) {
                     opacity: 0.7,
                   }}
                 >
-                  Mien phi · Khong can the tin dung · Setup trong 5 phut
+                  Miễn phí · Không cần thẻ tín dụng · Setup trong 5 phút
                 </p>
               </div>
             </div>
@@ -736,7 +734,7 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#2C2B2B',
               }}
             >
-              Tai PDF
+              Tải PDF
             </button>
             <button
               onClick={handleStartPlanning}
@@ -751,7 +749,7 @@ export function XRayReport({ result }: XRayReportProps) {
                 color: '#FFFFFF',
               }}
             >
-              Bat dau lap ke hoach &rarr;
+              Bắt đầu lập kế hoạch &rarr;
             </button>
           </div>
         </main>

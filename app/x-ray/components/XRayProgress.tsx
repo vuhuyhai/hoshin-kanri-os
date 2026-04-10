@@ -1,13 +1,23 @@
 'use client'
 
-import { XRAY_DIMENSIONS } from '@/lib/x-ray/questions'
+import { PILLAR_ORDER, OPEX_PILLARS } from '@/lib/x-ray/questions'
 
 interface XRayProgressProps {
   currentStep: number
 }
 
+const PILLAR_COLORS = [
+  '#c73937', // lean
+  '#D97706', // six_sigma
+  '#2563EB', // workplace
+  '#7C3AED', // value_chain
+  '#EC4899', // cx
+  '#059669', // value_innovation
+  '#6366F1', // value_ai
+]
+
 export function XRayProgress({ currentStep }: XRayProgressProps) {
-  const totalSteps = XRAY_DIMENSIONS.length + 1
+  const totalSteps = PILLAR_ORDER.length + 1 // 7 pillars + email
   const progress = Math.round((currentStep / totalSteps) * 100)
 
   return (
@@ -21,8 +31,8 @@ export function XRayProgress({ currentStep }: XRayProgressProps) {
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          {currentStep < XRAY_DIMENSIONS.length
-            ? `${XRAY_DIMENSIONS[currentStep].icon} ${XRAY_DIMENSIONS[currentStep].name}`
+          {currentStep < PILLAR_ORDER.length
+            ? `${OPEX_PILLARS[PILLAR_ORDER[currentStep]].icon} ${OPEX_PILLARS[PILLAR_ORDER[currentStep]].label}`
             : '📧 Nhận báo cáo'}
         </span>
         <span>
@@ -30,22 +40,24 @@ export function XRayProgress({ currentStep }: XRayProgressProps) {
         </span>
       </div>
 
-      <div className="mt-1 flex gap-1.5">
-        {XRAY_DIMENSIONS.map((dim, idx) => (
+      <div className="mt-1 flex gap-1">
+        {PILLAR_ORDER.map((pillar, idx) => (
           <div
-            key={dim.id}
-            className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-              idx < currentStep
-                ? 'bg-primary'
-                : idx === currentStep
-                  ? 'bg-primary/60'
-                  : 'bg-muted'
-            }`}
+            key={pillar}
+            className="h-1.5 flex-1 rounded-full transition-colors duration-300"
+            style={{
+              background:
+                idx < currentStep
+                  ? PILLAR_COLORS[idx]
+                  : idx === currentStep
+                    ? PILLAR_COLORS[idx] + '99'
+                    : '#e5e5e5',
+            }}
           />
         ))}
         <div
           className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-            currentStep >= XRAY_DIMENSIONS.length ? 'bg-primary/60' : 'bg-muted'
+            currentStep >= PILLAR_ORDER.length ? 'bg-primary/60' : 'bg-muted'
           }`}
         />
       </div>

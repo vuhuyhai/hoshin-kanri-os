@@ -1,63 +1,61 @@
 'use client'
 
-import { XRAY_DIMENSIONS } from '@/lib/x-ray/questions'
-import type { DimensionId, XRayAnswers } from '@/lib/x-ray/types'
+import { OPEX_PILLARS, getQuestionsForPillar } from '@/lib/x-ray/questions'
+import type { OpexPillar } from '@/lib/x-ray/types'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface QuestionStepProps {
-  dimensionId: DimensionId
-  answers: XRayAnswers
-  onAnswer: (questionId: string, value: 1 | 2 | 3 | 4) => void
+  pillar: OpexPillar
+  answers: Record<string, number>
+  onAnswer: (questionId: string, value: number) => void
   onNext: () => void
   onBack: () => void
   isFirstStep: boolean
 }
 
 export function QuestionStep({
-  dimensionId,
+  pillar,
   answers,
   onAnswer,
   onNext,
   onBack,
   isFirstStep,
 }: QuestionStepProps) {
-  const dimension = XRAY_DIMENSIONS.find((d) => d.id === dimensionId)
-  if (!dimension) return null
+  const meta = OPEX_PILLARS[pillar]
+  const questions = getQuestionsForPillar(pillar)
 
-  const allAnswered = dimension.questions.every(
-    (q) => answers[q.id] !== undefined
-  )
+  const allAnswered = questions.every((q) => answers[q.id] !== undefined)
 
   return (
     <div className="space-y-8">
       <div className="space-y-1 text-center">
-        <div className="text-4xl">{dimension.icon}</div>
-        <h2 className="text-xl font-semibold">{dimension.name}</h2>
-        <p className="text-sm text-muted-foreground">{dimension.description}</p>
+        <div className="text-4xl">{meta.icon}</div>
+        <h2 className="text-xl font-semibold">{meta.label}</h2>
+        <p className="text-sm text-muted-foreground">{meta.description}</p>
       </div>
 
       <div className="space-y-6">
-        {dimension.questions.map((question, qIdx) => (
-          <div key={question.id} className="space-y-3">
+        {questions.map((q, qIdx) => (
+          <div key={q.id} className="space-y-3">
             <div>
               <p className="text-sm font-medium leading-relaxed">
-                {qIdx + 1}. {question.text}
+                {qIdx + 1}. {q.question}
               </p>
-              {question.helpText && (
+              {q.helpText && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {question.helpText}
+                  {q.helpText}
                 </p>
               )}
             </div>
 
             <div className="grid gap-2">
-              {question.options.map((option) => {
-                const isSelected = answers[question.id] === option.value
+              {q.options.map((option) => {
+                const isSelected = answers[q.id] === option.value
                 return (
                   <button
                     key={option.value}
-                    onClick={() => onAnswer(question.id, option.value)}
+                    onClick={() => onAnswer(q.id, option.value)}
                     className={cn(
                       'w-full rounded-lg border px-4 py-3 text-left text-sm transition-all duration-150',
                       'hover:border-primary/60 hover:bg-primary/5',

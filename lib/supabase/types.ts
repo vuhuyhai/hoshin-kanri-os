@@ -404,6 +404,48 @@ export type Database = {
           },
         ]
       }
+      xray_leads: {
+        Row: {
+          id: string
+          email: string
+          company_name: string
+          industry: string
+          headcount: string
+          answers_json: Json
+          result_json: Json
+          overall_score: number
+          overall_level: string
+          converted: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          company_name: string
+          industry: string
+          headcount: string
+          answers_json?: Json
+          result_json?: Json
+          overall_score: number
+          overall_level: string
+          converted?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          company_name?: string
+          industry?: string
+          headcount?: string
+          answers_json?: Json
+          result_json?: Json
+          overall_score?: number
+          overall_level?: string
+          converted?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

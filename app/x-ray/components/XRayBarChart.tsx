@@ -9,45 +9,41 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
-import type { DimensionScore } from '@/lib/x-ray/types'
+import type { PillarScore } from '@/lib/x-ray/types'
 
 interface XRayBarChartProps {
-  dimensions: DimensionScore[]
+  pillarScores: PillarScore[]
 }
 
 function getScoreColor(score: number): string {
-  if (score <= 40) return '#c73937'
-  if (score <= 60) return '#D97706'
-  if (score <= 80) return '#2563EB'
+  if (score <= 25) return '#c73937'
+  if (score <= 50) return '#D97706'
+  if (score <= 75) return '#2563EB'
   return '#16A34A'
 }
 
-export function XRayBarChart({ dimensions }: XRayBarChartProps) {
-  const data = dimensions.map((dim) => ({
-    name: dim.name,
-    score: dim.score,
+export function XRayBarChart({ pillarScores }: XRayBarChartProps) {
+  const data = pillarScores.map((p) => ({
+    name: p.label,
+    score: p.score,
   }))
 
   return (
-    <div className="w-full" style={{ height: 220 }}>
+    <div className="w-full" style={{ height: 320 }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           layout="vertical"
           margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
-          barSize={28}
+          barSize={24}
         >
-          <XAxis
-            type="number"
-            domain={[0, 100]}
-            hide
-          />
+          <XAxis type="number" domain={[0, 100]} hide />
           <YAxis
             type="category"
             dataKey="name"
-            width={160}
+            width={140}
             tick={{
-              fontSize: 13,
+              fontSize: 12,
               fontFamily: '"Montserrat", sans-serif',
               fontWeight: 600,
               fill: '#2C2B2B',
@@ -63,7 +59,7 @@ export function XRayBarChart({ dimensions }: XRayBarChartProps) {
               borderRadius: 0,
               boxShadow: '3px 3px 0 #2C2B2B',
             }}
-            formatter={(value) => [`${value}/100`, 'Diem']}
+            formatter={(value) => [`${value}/100`, 'Điểm']}
           />
           <Bar
             dataKey="score"
@@ -74,7 +70,7 @@ export function XRayBarChart({ dimensions }: XRayBarChartProps) {
               style: {
                 fontFamily: '"Montserrat", sans-serif',
                 fontWeight: 700,
-                fontSize: 13,
+                fontSize: 12,
                 fill: '#2C2B2B',
               },
             }}

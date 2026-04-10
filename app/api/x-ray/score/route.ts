@@ -1,98 +1,135 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { XRAY_DIMENSIONS, getAllQuestions } from '@/lib/x-ray/questions'
-import type { XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
+import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, calculatePillarScore } from '@/lib/x-ray/questions'
+import type { XRayScoreRequest, XRayResult, OpexPillar } from '@/lib/x-ray/types'
+import type { Json } from '@/lib/supabase/types'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
     const body: XRayScoreRequest = await request.json()
-    const { answers, email } = body
+    const { answers, companyInfo } = body
 
-    if (!email || !email.includes('@')) {
+    if (!companyInfo?.email || !companyInfo.email.includes('@')) {
       return NextResponse.json(
         { error: 'Email không hợp lệ' },
         { status: 400 }
       )
     }
 
-    const allQuestions = getAllQuestions()
-    if (Object.keys(answers).length < allQuestions.length) {
+    if (!companyInfo.companyName?.trim()) {
+      return NextResponse.json(
+        { error: 'Vui lòng nhập tên công ty' },
+        { status: 400 }
+      )
+    }
+
+    if (Object.keys(answers).length < X_RAY_QUESTIONS.length) {
       return NextResponse.json(
         { error: 'Chưa trả lời đủ câu hỏi' },
         { status: 400 }
       )
     }
 
-    // Build context for Claude
-    const answersContext = XRAY_DIMENSIONS.map((dimension) => {
-      const dimAnswers = dimension.questions
+    // Build context for Claude — grouped by pillar
+    const answersContext = PILLAR_ORDER.map((pillar) => {
+      const meta = OPEX_PILLARS[pillar]
+      const questions = getQuestionsForPillar(pillar)
+      const dimAnswers = questions
         .map((q) => {
           const value = answers[q.id]
           const option = q.options.find((o) => o.value === value)
-          return `  - ${q.text}\n    Trả lời (${value}/4): ${option?.label ?? 'Không có'}`
+          return `  - ${q.question}\n    Trả lời (${value}/4): ${option?.label ?? 'Không có'}`
         })
         .join('\n')
-      return `=== ${dimension.name} ===\n${dimAnswers}`
+      return `=== ${meta.icon} ${meta.label} ===\n${dimAnswers}`
     }).join('\n\n')
 
-    // Raw scores per dimension
-    const rawScores = XRAY_DIMENSIONS.map((dimension) => {
-      const total = dimension.questions.reduce(
-        (sum, q) => sum + (answers[q.id] ?? 1),
-        0
-      )
-      const maxScore = dimension.questions.length * 4
-      const percentage = Math.round((total / maxScore) * 100)
-      return { dimensionId: dimension.id, percentage }
+    // Calculate raw scores per pillar
+    const rawScores = PILLAR_ORDER.map((pillar) => {
+      const questions = getQuestionsForPillar(pillar)
+      const pillarAnswers = questions.map((q) => answers[q.id] ?? 1)
+      const score = calculatePillarScore(pillarAnswers)
+      return { pillar, score }
     })
 
-    const prompt = `Bạn là chuyên gia tư vấn chiến lược doanh nghiệp SME Việt Nam với 15 năm kinh nghiệm.
+    const headcountLabel =
+      companyInfo.headcount === '1-10'
+        ? '1–10 nhân viên (micro)'
+        : companyInfo.headcount === '10-50'
+          ? '10–50 nhân viên (nhỏ)'
+          : '50–200 nhân viên (vừa)'
 
-Một CEO vừa hoàn thành bài đánh giá sức khỏe doanh nghiệp (Business X-Ray). Dưới đây là câu trả lời của họ:
+    const pillarListJson = PILLAR_ORDER.map((pillar) => {
+      const meta = OPEX_PILLARS[pillar]
+      const raw = rawScores.find((r) => r.pillar === pillar)
+      return `    {
+      "pillar": "${pillar}",
+      "label": "${meta.label}",
+      "icon": "${meta.icon}",
+      "score": ${raw?.score ?? 0},
+      "level": "<critical|weak|moderate|strong>",
+      "summary": "<1 câu nhận xét cụ thể cho ngành ${companyInfo.industry}>",
+      "topIssue": "<1 câu vấn đề cần ưu tiên giải quyết>"
+    }`
+    }).join(',\n')
+
+    const prompt = `Bạn là chuyên gia phân tích Operational Excellence (OPEX).
+Dựa trên câu trả lời của CEO về 7 trụ cột OPEX, hãy:
+1. Viết executive summary 3-4 câu súc tích bằng tiếng Việt
+2. Với mỗi trụ cột: viết 1 câu nhận xét + 1 câu vấn đề cần ưu tiên
+3. Đề xuất top 3 hành động cụ thể nhất có thể bắt đầu trong 30 ngày
+
+Nguyên tắc:
+- Thẳng thắn, không nịnh
+- Cụ thể với ngành của doanh nghiệp
+- Không nhắc phương pháp luận hay tên tổ chức tư vấn nào
+- Viết như một advisor dày dạn kinh nghiệm, không như AI
+
+Thông tin công ty:
+- Tên: ${companyInfo.companyName}
+- Ngành: ${companyInfo.industry}
+- Quy mô: ${headcountLabel}
+
+Câu trả lời của CEO:
 
 ${answersContext}
 
 Điểm thô đã tính sẵn (0–100):
-${rawScores.map((s) => `- ${s.dimensionId}: ${s.percentage}/100`).join('\n')}
+${rawScores.map((s) => `- ${s.pillar}: ${s.score}/100`).join('\n')}
 
-Hãy phân tích và trả về JSON CHÍNH XÁC theo cấu trúc sau (KHÔNG thêm bất kỳ text nào ngoài JSON):
+Trả về JSON CHÍNH XÁC theo cấu trúc sau (KHÔNG thêm bất kỳ text nào ngoài JSON):
 
 {
-  "dimensions": [
-    {
-      "dimensionId": "strategy",
-      "name": "Chiến lược & Tầm nhìn",
-      "score": <số 0-100, dùng điểm thô đã cho>,
-      "level": "<critical|weak|moderate|strong>",
-      "feedback": "<2-3 câu nhận xét cụ thể, tiếng Việt tự nhiên>",
-      "topIssue": "<1 vấn đề cụ thể nhất cần giải quyết ngay>"
-    },
-    <tương tự cho: execution, people, finance, customer>
+  "pillarScores": [
+${pillarListJson}
   ],
-  "overallScore": <trung bình 5 dimensions, làm tròn>,
+  "overallScore": <trung bình 7 pillars, làm tròn>,
   "overallLevel": "<critical|weak|moderate|strong>",
-  "executiveSummary": "<3-4 câu tóm tắt tổng thể, trực tiếp với CEO>",
-  "topPriorities": [
-    "<Ưu tiên 1 — hành động cụ thể, bắt đầu bằng động từ>",
-    "<Ưu tiên 2>",
-    "<Ưu tiên 3>"
-  ],
-  "ctaMessage": "<1 câu CTA cá nhân hóa, kết nối với điểm yếu lớn nhất>"
+  "executiveSummary": "<3-4 câu tóm tắt tổng thể, xưng hô trực tiếp với CEO ${companyInfo.companyName}>",
+  "topActions": [
+    "<Hành động 1 — cụ thể, bắt đầu bằng động từ, khả thi trong 30 ngày>",
+    "<Hành động 2>",
+    "<Hành động 3>"
+  ]
 }
 
 Quy tắc phân loại level:
-- critical: 0–40
-- weak: 41–60
-- moderate: 61–80
-- strong: 81–100
+- critical: 0–25
+- weak: 26–50
+- moderate: 51–75
+- strong: 76–100
 
-Viết bằng tiếng Việt tự nhiên, nói thẳng vào vấn đề, không dùng từ ngữ học thuật.`
+LƯU Ý:
+- Viết bằng tiếng Việt tự nhiên, CÓ DẤU đầy đủ
+- Dùng đúng điểm thô đã tính sẵn cho score
+- Feedback phải cụ thể cho ngành ${companyInfo.industry} và quy mô ${headcountLabel}`
 
     const client = new Anthropic()
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 2500,
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -105,15 +142,20 @@ Viết bằng tiếng Việt tự nhiên, nói thẳng vào vấn đề, không 
     const parsed = JSON.parse(cleanJson)
 
     const result: XRayResult = {
-      email,
-      completedAt: new Date().toISOString(),
+      orgName: companyInfo.companyName,
+      industry: companyInfo.industry,
       overallScore: parsed.overallScore,
       overallLevel: parsed.overallLevel,
-      dimensions: parsed.dimensions,
       executiveSummary: parsed.executiveSummary,
-      topPriorities: parsed.topPriorities,
-      ctaMessage: parsed.ctaMessage,
+      pillarScores: parsed.pillarScores,
+      topActions: parsed.topActions,
+      generatedAt: new Date().toISOString(),
     }
+
+    // Save lead to Supabase (fire-and-forget)
+    saveLead(companyInfo, answers, result).catch((err) =>
+      console.error('Failed to save X-Ray lead:', err)
+    )
 
     return NextResponse.json({ result })
   } catch (error) {
@@ -122,5 +164,27 @@ Viết bằng tiếng Việt tự nhiên, nói thẳng vào vấn đề, không 
       { error: 'Không thể phân tích kết quả. Vui lòng thử lại.' },
       { status: 500 }
     )
+  }
+}
+
+async function saveLead(
+  companyInfo: XRayScoreRequest['companyInfo'],
+  answers: XRayScoreRequest['answers'],
+  result: XRayResult
+) {
+  try {
+    const supabase = await createClient()
+    await supabase.from('xray_leads').insert({
+      email: companyInfo.email,
+      company_name: companyInfo.companyName,
+      industry: companyInfo.industry,
+      headcount: companyInfo.headcount,
+      answers_json: answers as unknown as Json,
+      result_json: result as unknown as Json,
+      overall_score: result.overallScore,
+      overall_level: result.overallLevel,
+    })
+  } catch (err) {
+    console.error('Supabase lead save error:', err)
   }
 }
