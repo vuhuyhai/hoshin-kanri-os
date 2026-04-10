@@ -4,8 +4,21 @@ import { createClient } from '@/lib/supabase/server'
 import {
   getSwCoachingSystemPrompt,
   getOtCoachingSystemPrompt,
+  buildConversationMemory,
+  parseCoachingAIOutput,
 } from '@/lib/swot/coaching-prompts'
-import type { CoachingRequest, CoachingResponse } from '@/lib/swot/types'
+import {
+  getNextDimension,
+  getNextFramework,
+  getFirstDimension,
+  frameworkIdToLegacy,
+  trackerToCoachingContext,
+} from '@/lib/swot/coaching-tracker'
+import type {
+  CoachingRequest,
+  CoachingResponse,
+  CoachingTrackerState,
+} from '@/lib/swot/types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body: CoachingRequest = await request.json()
-    const { messages, orgContext, currentFramework } = body
+    const { messages, orgContext, currentFramework, coachingTracker } = body
 
     if (!messages || !orgContext) {
       return NextResponse.json(
@@ -26,10 +39,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const systemPrompt =
-      currentFramework === 'sw'
-        ? getSwCoachingSystemPrompt(orgContext)
-        : getOtCoachingSystemPrompt(orgContext)
+    // Derive coaching context from tracker (if provided), for prompt injection
+    const coachingContext = coachingTracker
+      ? trackerToCoachingContext(coachingTracker)
+      : body.coachingContext
+
+    // Use tracker's framework if available, otherwise use request field
+    const effectiveFramework = coachingTracker
+      ? frameworkIdToLegacy(coachingTracker.currentFramework)
+      : currentFramework
+
+    // Build system prompt with coaching context + dimension selection
+    const selectedDims = coachingTracker?.selectedDimensions
+    const extChoice = coachingTracker?.selectedExternalFramework
+
+    const basePrompt =
+      effectiveFramework === 'sw'
+        ? getSwCoachingSystemPrompt(orgContext, coachingContext, selectedDims?.['8M'])
+        : getOtCoachingSystemPrompt(orgContext, coachingContext, extChoice, selectedDims?.Porter, selectedDims?.PESTEL)
+
+    // Conversation memory — trim old messages, summarize into prompt
+    const { contextSummary, recentMessages } =
+      buildConversationMemory(messages)
+    const systemPrompt = contextSummary
+      ? basePrompt + contextSummary
+      : basePrompt
 
     const client = new Anthropic()
 
@@ -37,36 +71,137 @@ export async function POST(request: NextRequest) {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 800,
       system: systemPrompt,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: recentMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
     })
 
-    const assistantMessage = response.content
+    const rawText = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === 'text')
       .map((block) => block.text)
       .join('')
 
+    // Parse structured JSON output with text fallback
+    const parsed = parseCoachingAIOutput(rawText)
+
+    // Check completion markers
     const isSwComplete =
-      currentFramework === 'sw' && assistantMessage.includes('[SW_COMPLETE]')
+      effectiveFramework === 'sw' && parsed.message.includes('[SW_COMPLETE]')
     const isOtComplete =
-      currentFramework === 'ot' && assistantMessage.includes('[OT_COMPLETE]')
+      effectiveFramework === 'ot' && parsed.message.includes('[OT_COMPLETE]')
     const isCoachingComplete = isSwComplete || isOtComplete
 
-    const cleanMessage = assistantMessage
+    // Clean markers from display message
+    const cleanMessage = parsed.message
       .replace('[SW_COMPLETE]', '')
       .replace('[OT_COMPLETE]', '')
       .trim()
 
+    // Compute updated coaching tracker state
+    let updatedCoachingTracker: CoachingTrackerState | undefined
+    if (coachingTracker) {
+      updatedCoachingTracker = computeUpdatedTracker(
+        coachingTracker,
+        parsed,
+        isSwComplete,
+        isOtComplete
+      )
+    }
+
     const result: CoachingResponse = {
       message: { role: 'assistant', content: cleanMessage },
       isCoachingComplete,
+      extractedInsight: parsed.extractedInsight,
+      shouldTransition: parsed.shouldTransition,
+      nextDimension: parsed.nextDimension,
+      updatedCoachingTracker,
     }
 
     return NextResponse.json(result)
   } catch (error) {
     console.error('Coaching API error:', error)
     return NextResponse.json(
-      { error: 'Không thể kết nối AI coach. Thử lại.' },
+      { error: 'Khong the ket noi AI coach. Thu lai.' },
       { status: 500 }
     )
   }
+}
+
+// ============================================================
+// State computation — server-side tracker update
+// ============================================================
+
+function computeUpdatedTracker(
+  tracker: CoachingTrackerState,
+  parsed: ReturnType<typeof parseCoachingAIOutput>,
+  isSwComplete: boolean,
+  isOtComplete: boolean
+): CoachingTrackerState {
+  const updated: CoachingTrackerState = {
+    ...tracker,
+    messageCount: tracker.messageCount + 2, // user + assistant
+    lastUpdated: new Date().toISOString(),
+  }
+
+  // Append extracted insight
+  if (parsed.extractedInsight) {
+    const fw = parsed.extractedInsight.framework
+    updated.insights = {
+      ...updated.insights,
+      [fw]: [
+        ...updated.insights[fw],
+        {
+          dimension: parsed.extractedInsight.dimension,
+          insight: parsed.extractedInsight.insight,
+          confidence: parsed.extractedInsight.confidence,
+          collectedAt: new Date().toISOString(),
+        },
+      ],
+    }
+    updated.currentPhase = 'questioning'
+  }
+
+  // Dimension transition (only when AI explicitly signals)
+  if (parsed.shouldTransition) {
+    const fw = updated.currentFramework
+    if (!updated.completedDimensions[fw].includes(updated.currentDimension)) {
+      updated.completedDimensions = {
+        ...updated.completedDimensions,
+        [fw]: [...updated.completedDimensions[fw], updated.currentDimension],
+      }
+    }
+
+    // Compute next dimension from framework sequence (authoritative)
+    const nextDim = getNextDimension(fw, updated.currentDimension)
+    if (nextDim) {
+      updated.currentDimension = nextDim
+      updated.currentPhase = 'transitioning'
+    }
+  }
+
+  // Framework completion
+  if (isSwComplete) {
+    if (!updated.completedFrameworks.includes('8M')) {
+      updated.completedFrameworks = [...updated.completedFrameworks, '8M']
+    }
+    const nextFw = getNextFramework('8M')
+    if (nextFw) {
+      updated.currentFramework = nextFw
+      updated.currentDimension = getFirstDimension(nextFw)
+      updated.currentPhase = 'intro'
+    }
+  }
+
+  if (isOtComplete) {
+    // OT covers both Porter and PESTEL
+    for (const fw of ['Porter', 'PESTEL'] as const) {
+      if (!updated.completedFrameworks.includes(fw)) {
+        updated.completedFrameworks = [...updated.completedFrameworks, fw]
+      }
+    }
+    updated.currentPhase = 'completed'
+  }
+
+  return updated
 }

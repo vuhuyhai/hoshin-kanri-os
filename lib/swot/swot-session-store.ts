@@ -1,6 +1,23 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { createClient } from '@/lib/supabase/client'
 import type { Json } from '@/lib/supabase/types'
+import type {
+  ChatMessage,
+  CoachingTrackerState,
+  FrameworkId,
+  ExternalFrameworkChoice,
+  DimensionInsight,
+} from './types'
+import {
+  createInitialCoachingTracker,
+  getNextDimension,
+  getNextFramework,
+  getFirstDimension,
+  getFirstSelectedDimension,
+  findFrameworkForDimension,
+  selectCoachingProgress,
+} from './coaching-tracker'
 
 // ============================================================
 // TYPES
@@ -181,11 +198,10 @@ function createEmptySession(orgId: string): SwotSession {
   }
 }
 
-function highestCompletedStep(session: SwotSession): string {
-  if (session.strategy.status === 'completed') return 'swot_strategy'
-  if (session.synthesis.status === 'completed') return 'swot_synthesis'
-  if (session.evidence.status === 'completed') return 'swot_evidence'
-  if (session.coaching.status === 'completed') return 'swot_coaching'
+function highestCompletedStep(_session: SwotSession): string {
+  // Always use 'swot' — granular phase tracking lives in data_json.
+  // Using sub-keys (swot_coaching, swot_strategy, etc.) violates the
+  // discovery_sessions CHECK constraint and conflicts with coaching-persistence.
   return 'swot'
 }
 
@@ -262,13 +278,43 @@ interface SwotStoreState extends SwotSession {
   }[]
   canStartPhase: (phase: 'evidence' | 'synthesis' | 'strategy') => boolean
   getXMatrixCandidates: () => HoshinCandidate[]
+
+  // Coaching state machine
+  coachingTracker: CoachingTrackerState
+  coachingMessages: ChatMessage[]
+
+  updateCoachingTracker: (partial: Partial<CoachingTrackerState>) => void
+  addCoachingInsight: (framework: FrameworkId, insight: DimensionInsight) => void
+  advanceDimension: () => void
+  advanceFramework: () => void
+  resetCoaching: () => void
+  addCoachingMessage: (msg: ChatMessage) => void
+  setCoachingMessages: (msgs: ChatMessage[]) => void
+  getCoachingProgress: () => {
+    totalDimensions: number
+    completedCount: number
+    percentage: number
+  }
+
+  // Intro screen actions
+  startCoaching: (
+    selectedDimensions: Record<FrameworkId, string[]>,
+    selectedExternalFramework: ExternalFrameworkChoice
+  ) => void
+  jumpToDimension: (dimension: string) => void
 }
 
-export const useSwotStore = create<SwotStoreState>((set, get) => ({
+export const useSwotStore = create<SwotStoreState>()(
+  persist(
+    (set, get) => ({
   // Initial empty state
   ...createEmptySession(''),
   isLoading: false,
   isSaving: false,
+
+  // Coaching state machine
+  coachingTracker: createInitialCoachingTracker(),
+  coachingMessages: [] as ChatMessage[],
 
   // ============================================================
   // LIFECYCLE
@@ -347,20 +393,6 @@ export const useSwotStore = create<SwotStoreState>((set, get) => ({
         .delete()
         .eq('org_id', state.orgId)
         .eq('step_completed', 'swot')
-
-      // Also delete more specific step keys if they exist
-      for (const key of [
-        'swot_coaching',
-        'swot_evidence',
-        'swot_synthesis',
-        'swot_strategy',
-      ]) {
-        await supabase
-          .from('discovery_sessions')
-          .delete()
-          .eq('org_id', state.orgId)
-          .eq('step_completed', key)
-      }
 
       const { data: inserted } = await supabase
         .from('discovery_sessions')
@@ -717,4 +749,188 @@ export const useSwotStore = create<SwotStoreState>((set, get) => ({
   getXMatrixCandidates: () => {
     return get().strategy.candidates.filter((c) => c.isSelectedForXMatrix)
   },
-}))
+
+  // ============================================================
+  // COACHING STATE MACHINE
+  // ============================================================
+
+  updateCoachingTracker: (partial: Partial<CoachingTrackerState>) => {
+    set((state) => ({
+      coachingTracker: {
+        ...state.coachingTracker,
+        ...partial,
+        lastUpdated: new Date().toISOString(),
+      },
+    }))
+  },
+
+  addCoachingInsight: (framework: FrameworkId, insight: DimensionInsight) => {
+    set((state) => ({
+      coachingTracker: {
+        ...state.coachingTracker,
+        insights: {
+          ...state.coachingTracker.insights,
+          [framework]: [...state.coachingTracker.insights[framework], insight],
+        },
+        lastUpdated: new Date().toISOString(),
+      },
+    }))
+  },
+
+  advanceDimension: () => {
+    const tracker = get().coachingTracker
+    const fw = tracker.currentFramework
+    const current = tracker.currentDimension
+
+    // Mark current dimension as completed
+    const updatedCompleted = { ...tracker.completedDimensions }
+    if (!updatedCompleted[fw].includes(current)) {
+      updatedCompleted[fw] = [...updatedCompleted[fw], current]
+    }
+
+    const next = getNextDimension(fw, current)
+
+    if (next) {
+      set({
+        coachingTracker: {
+          ...tracker,
+          currentDimension: next,
+          completedDimensions: updatedCompleted,
+          currentPhase: 'questioning',
+          lastUpdated: new Date().toISOString(),
+        },
+      })
+    } else {
+      // Last dimension in framework — mark completed, don't crash
+      set({
+        coachingTracker: {
+          ...tracker,
+          completedDimensions: updatedCompleted,
+          currentPhase: 'completed',
+          lastUpdated: new Date().toISOString(),
+        },
+      })
+    }
+  },
+
+  advanceFramework: () => {
+    const tracker = get().coachingTracker
+    const completedFws = tracker.completedFrameworks.includes(tracker.currentFramework)
+      ? tracker.completedFrameworks
+      : [...tracker.completedFrameworks, tracker.currentFramework]
+
+    const nextFw = getNextFramework(tracker.currentFramework)
+
+    if (nextFw) {
+      set({
+        coachingTracker: {
+          ...tracker,
+          currentFramework: nextFw,
+          currentDimension: getFirstDimension(nextFw),
+          completedFrameworks: completedFws,
+          currentPhase: 'intro',
+          lastUpdated: new Date().toISOString(),
+        },
+      })
+    } else {
+      // All frameworks done
+      set({
+        coachingTracker: {
+          ...tracker,
+          completedFrameworks: completedFws,
+          currentPhase: 'completed',
+          lastUpdated: new Date().toISOString(),
+        },
+      })
+    }
+  },
+
+  resetCoaching: () => {
+    set({
+      coachingTracker: createInitialCoachingTracker(),
+      coachingMessages: [],
+    })
+  },
+
+  addCoachingMessage: (msg: ChatMessage) => {
+    set((state) => ({
+      coachingMessages: [...state.coachingMessages, msg],
+      coachingTracker: {
+        ...state.coachingTracker,
+        messageCount: state.coachingTracker.messageCount + 1,
+        lastUpdated: new Date().toISOString(),
+      },
+    }))
+  },
+
+  setCoachingMessages: (msgs: ChatMessage[]) => {
+    set({ coachingMessages: msgs })
+  },
+
+  getCoachingProgress: () => {
+    return selectCoachingProgress(get().coachingTracker)
+  },
+
+  // ============================================================
+  // INTRO SCREEN ACTIONS
+  // ============================================================
+
+  startCoaching: (
+    selectedDimensions: Record<FrameworkId, string[]>,
+    selectedExternalFramework: ExternalFrameworkChoice
+  ) => {
+    const firstDim = getFirstSelectedDimension('8M', selectedDimensions)
+    set((state) => ({
+      coachingTracker: {
+        ...state.coachingTracker,
+        selectedDimensions,
+        selectedExternalFramework,
+        currentPhase: 'questioning',
+        currentFramework: '8M',
+        currentDimension: firstDim,
+        lastUpdated: new Date().toISOString(),
+      },
+    }))
+  },
+
+  jumpToDimension: (dimension: string) => {
+    const tracker = get().coachingTracker
+    const targetFw = findFrameworkForDimension(dimension)
+    if (!targetFw) return
+
+    // Mark current dimension as completed
+    const fw = tracker.currentFramework
+    const current = tracker.currentDimension
+    const updatedCompleted = { ...tracker.completedDimensions }
+    if (!updatedCompleted[fw].includes(current)) {
+      updatedCompleted[fw] = [...updatedCompleted[fw], current]
+    }
+
+    // If crossing framework boundary, mark current framework as completed
+    const updatedFws =
+      targetFw !== fw && !tracker.completedFrameworks.includes(fw)
+        ? [...tracker.completedFrameworks, fw]
+        : tracker.completedFrameworks
+
+    set({
+      coachingTracker: {
+        ...tracker,
+        currentFramework: targetFw,
+        currentDimension: dimension,
+        currentPhase: 'questioning',
+        completedDimensions: updatedCompleted,
+        completedFrameworks: updatedFws,
+        lastUpdated: new Date().toISOString(),
+      },
+    })
+  },
+    }),
+    {
+      name: 'hoshin-swot-session',
+      partialize: (state) => ({
+        coachingTracker: state.coachingTracker,
+        coachingMessages: state.coachingMessages.slice(-20),
+      }),
+    }
+  )
+)

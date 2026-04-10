@@ -35,8 +35,8 @@ export default async function CoachingPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <CoachingClient orgContext={orgContext} />
+    <div className="w-full">
+      <CoachingClient orgContext={orgContext} userId={user.id} />
     </div>
   )
 }

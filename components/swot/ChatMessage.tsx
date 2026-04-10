@@ -47,15 +47,15 @@ export function ChatMessage({
 
   if (isAI) {
     return (
-      <div className="flex gap-3 max-w-[85%]">
-        <div className="w-8 h-8 bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1">
+      <div className="flex gap-3 max-w-3xl">
+        <div className="w-8 h-8 bg-primary/10 border-2 border-primary/30 flex items-center justify-center shrink-0 mt-1">
           <span className="text-sm">🤖</span>
         </div>
         <div className="flex flex-col gap-1 min-w-0">
           <span className="text-xs font-display font-semibold text-primary">
             AI Coach
           </span>
-          <div className="bg-card border border-border px-4 py-3">
+          <div className="bg-card border-2 border-foreground/15 px-4 py-3">
             {isStreaming && content === '' ? (
               <div className="flex gap-1 items-center h-5">
                 <span
@@ -85,13 +85,13 @@ export function ChatMessage({
   }
 
   return (
-    <div className="flex gap-3 justify-end max-w-[75%] ml-auto">
+    <div className="flex gap-3 justify-end max-w-2xl ml-auto">
       <div className="flex flex-col items-end gap-1">
-        <div className="bg-primary text-primary-foreground px-4 py-3">
+        <div className="bg-primary text-primary-foreground border-2 border-primary px-4 py-3">
           <p className="text-sm leading-relaxed">{content}</p>
         </div>
       </div>
-      <div className="w-8 h-8 bg-muted flex items-center justify-center shrink-0 mt-1">
+      <div className="w-8 h-8 bg-muted border-2 border-foreground/10 flex items-center justify-center shrink-0 mt-1">
         <span className="text-sm">👤</span>
       </div>
     </div>

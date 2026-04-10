@@ -109,12 +109,18 @@ export interface CoachingRequest {
   messages: ChatMessage[]
   orgContext: OrgContext
   currentFramework: 'sw' | 'ot'
+  coachingContext?: CoachingContext
+  coachingTracker?: CoachingTrackerState
 }
 
 export interface CoachingResponse {
   message: ChatMessage
   isCoachingComplete: boolean
   summary?: CoachingSummary
+  extractedInsight?: ExtractedInsight | null
+  shouldTransition?: boolean
+  nextDimension?: string | null
+  updatedCoachingTracker?: CoachingTrackerState
 }
 
 export interface GenerateQueriesRequest {
@@ -151,4 +157,55 @@ export interface OrgContext {
   industry: string
   city: string
   headcount: string
+}
+
+// ============================================================
+// Coaching — structured AI output
+// ============================================================
+
+export interface ExtractedInsight {
+  framework: '8M' | 'Porter' | 'PESTEL'
+  dimension: string
+  insight: string
+  confidence: 'high' | 'medium' | 'low'
+}
+
+export interface CoachingContext {
+  currentDimension: string | null
+  completedDimensions: string[]
+  collectedInsights: ExtractedInsight[]
+}
+
+// ============================================================
+// Coaching — state machine
+// ============================================================
+
+export type CoachingPhase =
+  | 'intro'
+  | 'questioning'
+  | 'probing'
+  | 'transitioning'
+  | 'completed'
+
+export type FrameworkId = '8M' | 'Porter' | 'PESTEL'
+export type ExternalFrameworkChoice = 'Porter' | 'PESTEL' | 'both'
+
+export interface DimensionInsight {
+  dimension: string
+  insight: string
+  confidence: 'high' | 'medium' | 'low'
+  collectedAt: string
+}
+
+export interface CoachingTrackerState {
+  currentFramework: FrameworkId
+  currentDimension: string
+  currentPhase: CoachingPhase
+  completedFrameworks: FrameworkId[]
+  completedDimensions: Record<FrameworkId, string[]>
+  insights: Record<FrameworkId, DimensionInsight[]>
+  messageCount: number
+  lastUpdated: string
+  selectedDimensions: Record<FrameworkId, string[]>
+  selectedExternalFramework: ExternalFrameworkChoice
 }
