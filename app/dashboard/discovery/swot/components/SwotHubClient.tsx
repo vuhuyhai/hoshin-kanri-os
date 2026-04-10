@@ -55,9 +55,9 @@ export function SwotHubClient({ orgId }: SwotHubClientProps) {
     (p) => p.status !== 'completed' && p.status !== 'locked'
   )
   const phaseRoutes: Record<PhaseName, string> = {
-    coaching: '/dashboard/discovery/swot/coaching',
-    evidence: '/dashboard/discovery/swot/evidence',
-    synthesis: '/dashboard/discovery/swot/synthesis',
+    coaching: '/dashboard/discovery/swot',
+    evidence: '/dashboard/discovery/swot',
+    synthesis: '/dashboard/discovery/swot',
     strategy: '/dashboard/discovery/swot/strategy',
   }
   const allCompleted = completedCount === 4
@@ -164,7 +164,7 @@ export function SwotHubClient({ orgId }: SwotHubClientProps) {
         <PhaseCard
           icon={MessageSquare}
           title="AI Coaching"
-          description="Phân tích nội tại (8Ms) và ngoại cảnh (Porter + PESTEL) qua hội thoại với AI"
+          description="Phân tích điểm mạnh, điểm yếu, cơ hội và thách thức qua hội thoại với AI"
           status={coaching.status}
           href={phaseRoutes.coaching}
           metadata={coachingMeta}

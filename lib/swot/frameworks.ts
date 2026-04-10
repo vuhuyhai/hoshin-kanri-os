@@ -1,4 +1,4 @@
-import type { EightMId, PorterId, PestelId } from './types'
+import type { EightMId, PorterId, PestelId, CoachingQuestion } from './types'
 
 export interface FrameworkDimension {
   id: EightMId | PorterId | PestelId
@@ -149,3 +149,119 @@ export const PESTEL_FACTORS: FrameworkDimension[] = [
     coachingPromptHint: 'Hỏi về thay đổi pháp lý sắp tới',
   },
 ]
+
+// ============================================================
+// Question Bank — user-facing, no framework jargon
+// ============================================================
+
+export const COACHING_QUESTION_BANK: CoachingQuestion[] = [
+  // --- Strengths / Weaknesses (Internal) ---
+  {
+    id: 'q_team',
+    text: 'Đội ngũ hiện tại của bạn — điểm mạnh lớn nhất và điểm yếu rõ nhất là gì?',
+    follow_up_prompt: 'Bạn có thể kể cụ thể hơn về trường hợp nào cho thấy điểm đó không?',
+    framework_source: '8M:Man',
+    swot_target: 'S',
+    dimension_key: 'team_capability',
+  },
+  {
+    id: 'q_process',
+    text: 'Quy trình vận hành nào đang chạy tốt nhất? Quy trình nào thường xuyên gây ra vấn đề?',
+    framework_source: '8M:Method',
+    swot_target: 'W',
+    dimension_key: 'operations',
+  },
+  {
+    id: 'q_cashflow',
+    text: 'Tình hình dòng tiền 6 tháng gần nhất như thế nào? Có tháng nào bạn lo ngại không?',
+    framework_source: '8M:Money',
+    swot_target: 'W',
+    dimension_key: 'finance',
+  },
+  {
+    id: 'q_product',
+    text: 'Sản phẩm/dịch vụ nào đang tạo ra nhiều doanh thu nhất? Tại sao khách hàng chọn bạn thay vì đối thủ?',
+    framework_source: '8M:Material',
+    swot_target: 'S',
+    dimension_key: 'product_strength',
+  },
+  {
+    id: 'q_management',
+    text: 'Quyết định chiến lược lớn nhất bạn đã đưa ra trong 12 tháng qua là gì? Kết quả ra sao?',
+    framework_source: '8M:Management',
+    swot_target: 'S',
+    dimension_key: 'leadership',
+  },
+  // --- Opportunities / Threats (External) ---
+  {
+    id: 'q_competitor',
+    text: 'Đối thủ trực tiếp lớn nhất của bạn là ai? Họ đang làm gì mà bạn chưa làm được?',
+    framework_source: 'Porter:Rivalry',
+    swot_target: 'T',
+    dimension_key: 'competition',
+  },
+  {
+    id: 'q_new_entrants',
+    text: 'Trong 1-2 năm tới, bạn thấy ai có thể vào ngành này cạnh tranh với bạn?',
+    framework_source: 'Porter:NewEntrants',
+    swot_target: 'T',
+    dimension_key: 'market_entry_risk',
+  },
+  {
+    id: 'q_customer_trend',
+    text: 'Nhu cầu của khách hàng đang thay đổi như thế nào? Có xu hướng nào bạn chưa đáp ứng được?',
+    framework_source: 'PESTEL:Social',
+    swot_target: 'O',
+    dimension_key: 'customer_trend',
+  },
+  {
+    id: 'q_technology',
+    text: 'Có công nghệ hay công cụ nào bạn biết đang thay đổi ngành của mình không? Bạn đang phản ứng thế nào?',
+    framework_source: 'PESTEL:Technological',
+    swot_target: 'O',
+    dimension_key: 'tech_opportunity',
+  },
+  {
+    id: 'q_regulation',
+    text: 'Có chính sách hay quy định nào sắp thay đổi có thể ảnh hưởng đến hoạt động của bạn không?',
+    framework_source: 'PESTEL:Legal',
+    swot_target: 'T',
+    dimension_key: 'regulatory_risk',
+  },
+]
+
+export const REQUIRED_DIMENSIONS = [
+  'team_capability',
+  'operations',
+  'finance',
+  'competition',
+  'customer_trend',
+]
+
+export const MIN_COVERAGE_TO_ADVANCE = 7
+
+/** User-facing labels for dimension pills — no framework jargon */
+export const DIMENSION_LABELS: Record<string, string> = {
+  // 8M dimensions
+  Man: 'Đội ngũ',
+  Machine: 'Công nghệ',
+  Material: 'Sản phẩm',
+  Method: 'Vận hành',
+  Measurement: 'Đo lường',
+  'Mother Nature': 'Môi trường',
+  Management: 'Lãnh đạo',
+  Money: 'Tài chính',
+  // Porter dimensions
+  'Competitive Rivalry': 'Cạnh tranh',
+  'Supplier Power': 'Nhà cung cấp',
+  'Buyer Power': 'Khách hàng',
+  'Threat of Substitutes': 'Sản phẩm thay thế',
+  'Threat of New Entrants': 'Đối thủ mới',
+  // PESTEL dimensions
+  Political: 'Chính sách',
+  Economic: 'Kinh tế',
+  Social: 'Xu hướng XH',
+  Technological: 'Công nghệ',
+  Environmental: 'Môi trường',
+  Legal: 'Pháp lý',
+}

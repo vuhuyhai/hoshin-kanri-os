@@ -9,6 +9,7 @@ import type {
   CoachingSummary,
   EvidenceItem,
   OrgContext,
+  SwotSynthesisOutput,
 } from '@/lib/swot/types'
 import { Phase1Coaching } from './Phase1Coaching'
 import { Phase2Evidence } from './Phase2Evidence'
@@ -36,7 +37,7 @@ const initialState: SwotModuleState = {
     completedBatches: 0,
     isComplete: false,
   },
-  items: [],
+  synthesisOutput: null,
   isSaved: false,
   sessionId: null,
 }
@@ -111,15 +112,22 @@ export function SwotContainer({ orgContext }: SwotContainerProps) {
       })
 
       if (!response.ok) throw new Error('Synthesis failed')
-      const { items } = await response.json()
+      const { synthesis }: { synthesis: SwotSynthesisOutput } =
+        await response.json()
+
+      const totalItems =
+        synthesis.S.length +
+        synthesis.W.length +
+        synthesis.O.length +
+        synthesis.T.length
 
       setState((prev) => ({
         ...prev,
         phase: 'results',
-        items,
+        synthesisOutput: synthesis,
         isSaved: true,
       }))
-      toast.success(`SWOT hoàn thành! ${items.length} insights đã lưu.`)
+      toast.success(`SWOT hoàn thành! ${totalItems} insights đã lưu.`)
     } catch {
       toast.error('Lỗi khi tổng hợp SWOT. Thử lại.')
       setState((prev) => ({ ...prev, phase: 'evidence' }))
@@ -183,9 +191,12 @@ export function SwotContainer({ orgContext }: SwotContainerProps) {
           </div>
         )}
 
-        {state.phase === 'results' && (
+        {state.phase === 'results' && state.synthesisOutput && (
           <div className="p-6">
-            <SwotResults items={state.items} isSaved={state.isSaved} />
+            <SwotResults
+              synthesisOutput={state.synthesisOutput}
+              isSaved={state.isSaved}
+            />
           </div>
         )}
       </div>

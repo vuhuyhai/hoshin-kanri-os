@@ -25,6 +25,24 @@ export type PestelId =
 
 export type FrameworkSourceId = EightMId | PorterId | PestelId
 export type SwotQuadrant = 'S' | 'W' | 'O' | 'T'
+export type SwotTarget = 'S' | 'W' | 'O' | 'T'
+
+export type FrameworkSource =
+  | '8M:Man' | '8M:Machine' | '8M:Material' | '8M:Method'
+  | '8M:Measurement' | '8M:Management' | '8M:Money'
+  | 'Porter:Rivalry' | 'Porter:NewEntrants' | 'Porter:Substitutes'
+  | 'Porter:BuyerPower' | 'Porter:SupplierPower'
+  | 'PESTEL:Political' | 'PESTEL:Economic' | 'PESTEL:Social'
+  | 'PESTEL:Technological' | 'PESTEL:Environmental' | 'PESTEL:Legal'
+
+export interface CoachingQuestion {
+  id: string
+  text: string
+  follow_up_prompt?: string
+  framework_source: FrameworkSource
+  swot_target: SwotTarget
+  dimension_key: string
+}
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -81,12 +99,39 @@ export interface EvidenceState {
 }
 
 export interface SwotItem {
-  id?: string
-  quadrant: SwotQuadrant
-  frameworkSource: FrameworkSourceId
+  id: string
   statement: string
-  evidence: EvidenceItem[]
   implication: string
+  confidence: number
+  framework_source?: string
+}
+
+export interface SwotSynthesisOutput {
+  S: SwotItem[]
+  W: SwotItem[]
+  O: SwotItem[]
+  T: SwotItem[]
+  summary: string
+}
+
+// ============================================================
+// Context Cards — replaces manual evidence collection
+// ============================================================
+
+export type ContextCardType = 'market_trend' | 'competitive_risk' | 'regulatory' | 'opportunity'
+
+export interface ContextCard {
+  id: string
+  title: string
+  insight: string
+  card_type: ContextCardType
+  swot_quadrant: 'O' | 'T'
+  relevance_score: number
+}
+
+export interface ContextCardsOutput {
+  cards: ContextCard[]
+  generated_at: string
 }
 
 export type SwotPhase =
@@ -100,7 +145,7 @@ export interface SwotModuleState {
   phase: SwotPhase
   coaching: CoachingState
   evidence: EvidenceState
-  items: SwotItem[]
+  synthesisOutput: SwotSynthesisOutput | null
   isSaved: boolean
   sessionId: string | null
 }
@@ -148,7 +193,7 @@ export interface SynthesisRequest {
 }
 
 export interface SynthesisResponse {
-  items: SwotItem[]
+  synthesis: SwotSynthesisOutput
 }
 
 export interface OrgContext {
@@ -234,7 +279,7 @@ export interface DiscoverySessionEvidence {
 export interface DiscoverySessionSynthesis {
   step: 'swot_synthesis'
   status: string
-  items: SwotItem[]
+  synthesis: SwotSynthesisOutput
   completedAt: string | null
   savedAt: string
 }

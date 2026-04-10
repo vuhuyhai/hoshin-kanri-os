@@ -1,3 +1,7 @@
+/**
+ * @deprecated Logic moved to lib/swot/swot-session-store.ts
+ * Safe to delete after verifying no remaining imports.
+ */
 import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS } from './frameworks'
 import type { CoachingTrackerState, FrameworkId } from './types'
 

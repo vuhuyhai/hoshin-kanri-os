@@ -1,16 +1,19 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import type { SwotItem } from '@/lib/swot/types'
+import type { SwotSynthesisOutput, SwotQuadrant } from '@/lib/swot/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 interface SwotResultsProps {
-  items: SwotItem[]
+  synthesisOutput: SwotSynthesisOutput
   isSaved: boolean
 }
 
-const QUADRANT_CONFIG = {
+const QUADRANT_CONFIG: Record<
+  SwotQuadrant,
+  { label: string; emoji: string; bg: string; border: string }
+> = {
   S: {
     label: 'Điểm Mạnh',
     emoji: '💪',
@@ -35,13 +38,16 @@ const QUADRANT_CONFIG = {
     bg: 'bg-red-50 dark:bg-red-950',
     border: 'border-red-200 dark:border-red-800',
   },
-} as const
+}
 
-export function SwotResults({ items, isSaved }: SwotResultsProps) {
+export function SwotResults({ synthesisOutput, isSaved }: SwotResultsProps) {
   const router = useRouter()
 
-  const getItemsByQuadrant = (q: 'S' | 'W' | 'O' | 'T') =>
-    items.filter((item) => item.quadrant === q)
+  const totalItems =
+    synthesisOutput.S.length +
+    synthesisOutput.W.length +
+    synthesisOutput.O.length +
+    synthesisOutput.T.length
 
   return (
     <div className="space-y-8">
@@ -49,15 +55,20 @@ export function SwotResults({ items, isSaved }: SwotResultsProps) {
         <div className="text-3xl">🎯</div>
         <h2 className="text-xl font-semibold">SWOT Analysis hoàn thành</h2>
         <p className="text-sm text-muted-foreground">
-          {items.length} insights · CEO input + nghiên cứu thị trường
+          {totalItems} insights · CEO input + nghiên cứu thị trường
           {isSaved && ' · ✅ Đã lưu'}
         </p>
+        {synthesisOutput.summary && (
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
+            {synthesisOutput.summary}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {(['S', 'W', 'O', 'T'] as const).map((q) => {
           const config = QUADRANT_CONFIG[q]
-          const qItems = getItemsByQuadrant(q)
+          const qItems = synthesisOutput[q]
           return (
             <div
               key={q}
@@ -71,31 +82,27 @@ export function SwotResults({ items, isSaved }: SwotResultsProps) {
                 </Badge>
               </h3>
               <div className="space-y-3">
-                {qItems.map((item, idx) => (
+                {qItems.map((item) => (
                   <div
-                    key={idx}
+                    key={item.id}
                     className="space-y-2 rounded-lg bg-background/70 p-3"
                   >
                     <p className="text-sm font-medium leading-relaxed">
                       {item.statement}
                     </p>
-                    <div className="flex flex-wrap gap-1">
-                      {item.evidence.map((ev, eidx) => (
-                        <span
-                          key={eidx}
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            ev.source === 'CEO'
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {ev.source === 'CEO' ? '👤 CEO' : '🌐 Web'}
-                        </span>
-                      ))}
-                    </div>
                     <p className="text-xs italic text-muted-foreground">
                       → {item.implication}
                     </p>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {item.confidence < 0.7 && (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-300 bg-amber-50 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                        >
+                          Cần xác nhận ({Math.round(item.confidence * 100)}%)
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

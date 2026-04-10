@@ -4,17 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type {
-  CoachingSummary,
-  OrgContext,
-  ContextCard,
-  EvidenceItem,
-} from '@/lib/swot/types'
+import { useSwotStore } from '@/lib/swot/swot-session-store'
+import type { ContextCard, OrgContext, CoachingSummary } from '@/lib/swot/types'
 
-interface Phase2EvidenceProps {
-  summary: CoachingSummary
+interface ContextCardsPhaseProps {
   orgContext: OrgContext
-  onComplete: (allEvidence: EvidenceItem[]) => void
+  summary: CoachingSummary | null
 }
 
 const CARD_TYPE_LABELS: Record<string, string> = {
@@ -39,25 +34,21 @@ const QUADRANT_CONFIG = {
   },
 } as const
 
-function contextCardsToEvidenceItems(cards: ContextCard[]): EvidenceItem[] {
-  return cards.map((card) => ({
-    source: 'Web' as const,
-    content: `${card.title}: ${card.insight}`,
-    relevance: card.relevance_score >= 0.7 ? ('high' as const) : ('medium' as const),
-  }))
-}
-
-export function Phase2Evidence({
-  summary,
+export function ContextCardsPhase({
   orgContext,
-  onComplete,
-}: Phase2EvidenceProps) {
-  const [status, setStatus] = useState<'loading' | 'complete' | 'error'>(
-    'loading'
-  )
-  const [cards, setCards] = useState<ContextCard[]>([])
-  const started = useRef(false)
+  summary,
+}: ContextCardsPhaseProps) {
+  const setSwotPhase = useSwotStore((s) => s.setSwotPhase)
+  const setContextCards = useSwotStore((s) => s.setContextCards)
+  const existingCards = useSwotStore((s) => s.evidence.contextCards)
 
+  const [status, setStatus] = useState<'loading' | 'complete' | 'error'>(
+    existingCards.length > 0 ? 'complete' : 'loading'
+  )
+  const [cards, setCards] = useState<ContextCard[]>(existingCards)
+  const started = useRef(existingCards.length > 0)
+
+  // Auto-fetch on mount if no cards yet
   useEffect(() => {
     if (!started.current) {
       started.current = true
@@ -66,33 +57,40 @@ export function Phase2Evidence({
   }, [])
 
   const loadContextCards = async () => {
+    setStatus('loading')
     try {
+      const dummySummary = summary ?? {
+        strengths: [],
+        weaknesses: [],
+        opportunities: [],
+        threats: [],
+      }
       const response = await fetch('/api/swot/context-cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary, orgContext }),
+        body: JSON.stringify({ summary: dummySummary, orgContext }),
       })
 
       if (!response.ok) throw new Error('Context cards failed')
       const data = await response.json()
 
-      setCards(data.cards ?? [])
+      const fetchedCards = data.cards ?? []
+      setCards(fetchedCards)
+      setContextCards(fetchedCards)
       setStatus('complete')
     } catch {
       setStatus('error')
-      toast.error(
-        'Gặp lỗi khi phân tích bối cảnh. Tiếp tục với dữ liệu CEO.'
-      )
+      toast.error('Gặp lỗi khi phân tích bối cảnh.')
     }
   }
 
   const handleContinue = () => {
-    const evidenceItems = contextCardsToEvidenceItems(cards)
-    onComplete(evidenceItems)
+    setSwotPhase(3)
   }
 
   const handleSkip = () => {
-    onComplete([])
+    setContextCards([])
+    setSwotPhase(3)
   }
 
   if (status === 'loading') {
@@ -121,9 +119,7 @@ export function Phase2Evidence({
             />
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Thường mất 15–20 giây
-        </p>
+        <p className="text-xs text-muted-foreground">Thường mất 15–20 giây</p>
       </div>
     )
   }
@@ -142,11 +138,13 @@ export function Phase2Evidence({
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button variant="outline" onClick={() => {
-            setStatus('loading')
-            started.current = false
-            loadContextCards()
-          }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              started.current = false
+              loadContextCards()
+            }}
+          >
             Thử lại
           </Button>
           <Button onClick={handleSkip}>Tiếp tục không cần bối cảnh →</Button>
@@ -157,6 +155,14 @@ export function Phase2Evidence({
 
   return (
     <div className="space-y-6">
+      {/* Back link */}
+      <button
+        onClick={() => setSwotPhase(1)}
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        ← Quay lại coaching
+      </button>
+
       <div className="space-y-2 text-center">
         <div className="text-3xl">🌐</div>
         <h2 className="text-xl font-semibold">Bối cảnh thị trường</h2>

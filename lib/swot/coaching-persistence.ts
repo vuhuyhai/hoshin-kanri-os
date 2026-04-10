@@ -1,3 +1,7 @@
+/**
+ * @deprecated Logic moved to lib/swot/swot-session-store.ts
+ * Safe to delete after verifying no remaining imports.
+ */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Json } from '@/lib/supabase/types'
 import type {

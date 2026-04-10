@@ -1,7 +1,7 @@
 # MASTER BUILD SPEC — Hoshin Kanri OS
 
 > Upload file nay vao Project Knowledge cua Claude de no hieu ngu canh va cau truc app.
-> Last updated: 2026-04-10
+> Last updated: 2026-04-10 (verified & updated)
 
 ---
 
@@ -63,6 +63,7 @@ hoshin-kanri-os/
 │   │   ├── page.tsx
 │   │   └── components/           # XRayForm, QuestionStep, XRayReport, EmailCaptureStep, XRayProgress
 │   │
+│   │
 │   ├── x/[slug]/page.tsx         # Public - Shared X-Matrix view
 │   │
 │   ├── onboarding/
@@ -82,7 +83,10 @@ hoshin-kanri-os/
 │   │   │   ├── pain-mapper/      # Pain → Goal Mapper
 │   │   │   ├── vision-workshop/  # Vision Workshop (AI-assisted)
 │   │   │   ├── synthesis/        # AI Strategy Synthesis (aggregate all discovery data)
-│   │   │   └── benchmark/        # KPI Benchmark Library
+│   │   │   ├── benchmark/        # KPI Benchmark Library
+│   │   │   └── xray-history/     # X-Ray Assessment History
+│   │   │       ├── page.tsx      # List past X-Ray assessments
+│   │   │       └── [id]/page.tsx # View specific past assessment
 │   │   │
 │   │   ├── x-matrix/
 │   │   │   └── new/page.tsx      # X-Matrix Wizard (5-step creation)
@@ -107,25 +111,31 @@ hoshin-kanri-os/
 │       ├── settings/org/         # Org settings CRUD
 │       ├── swot/                 # coaching, evidence, generate-queries, strategy, sync-xmatrix, synthesis
 │       ├── x-matrix/             # create, prefill, share
-│       └── x-ray/score/          # X-Ray scoring (AI)
+│       └── x-ray/                # X-Ray
+│           ├── score/            # X-Ray scoring (AI)
+│           └── history/          # X-Ray assessment history
 │
 ├── components/
 │   ├── analytics/IdentifyUser.tsx    # PostHog user identification
 │   ├── layout/
 │   │   ├── header.tsx                # Top header bar
-│   │   └── sidebar.tsx               # Navigation sidebar (desktop + mobile sheet)
+│   │   ├── sidebar.tsx               # Navigation sidebar (desktop + mobile sheet)
+│   │   ├── bottom-nav.tsx            # Mobile bottom navigation
+│   │   └── footer.tsx                # Footer component
 │   ├── providers/
 │   │   ├── auth-listener.tsx         # Supabase auth state listener
 │   │   ├── posthog-provider.tsx      # PostHog provider
 │   │   └── theme-provider.tsx        # next-themes provider
 │   ├── swot/                         # SWOT-specific UI components
+│   │   ├── AiCoachAvatar.tsx
 │   │   ├── ChatMessage.tsx
 │   │   ├── ExtendedSwotMatrix.tsx
 │   │   ├── PhaseCard.tsx
 │   │   └── SwotCell.tsx
 │   ├── ui/                           # shadcn/ui components
-│   │   ├── avatar, badge, button, card, dropdown-menu
-│   │   ├── input, label, select, separator, sheet, textarea
+│   │   ├── alert-dialog, avatar, badge, button, card, checkbox
+│   │   ├── dropdown-menu, input, label, logo, radio-group
+│   │   ├── select, separator, sheet, textarea
 │   └── x-matrix/                     # X-Matrix Wizard components
 │       ├── XMatrixWizard.tsx         # Main wizard orchestrator
 │       ├── Step1Vision.tsx           # Vision & Year Goals
@@ -155,6 +165,8 @@ hoshin-kanri-os/
 │   │   ├── types.ts                  # SWOT types (8M, Porter, PESTEL)
 │   │   ├── frameworks.ts             # Framework definitions (8M, Porter 5 Forces, PESTEL)
 │   │   ├── coaching-prompts.ts       # AI coaching prompts
+│   │   ├── coaching-persistence.ts   # Persist coaching session state
+│   │   ├── coaching-tracker.ts       # Track coaching progress
 │   │   ├── swot-session-store.ts     # Zustand store for SWOT session
 │   │   └── sync-to-xmatrix.ts        # Sync SWOT results to X-Matrix
 │   ├── x-matrix/
@@ -166,8 +178,11 @@ hoshin-kanri-os/
 │
 ├── supabase/
 │   ├── migrations/
-│   │   ├── 001_initial_schema.sql    # All tables + indexes + triggers
-│   │   └── 002_rls_policies.sql      # Row Level Security policies
+│   │   ├── 001_initial_schema.sql    # Core tables + indexes + triggers
+│   │   ├── 002_rls_policies.sql      # Row Level Security policies
+│   │   ├── 003_fix_step_completed_constraint.sql  # Expand discovery step_completed CHECK
+│   │   ├── 004_xray_leads.sql        # xray_leads table (public lead capture)
+│   │   └── 005_xray_results.sql      # xray_results table (org-linked history)
 │   └── seed.sql                      # Seed data
 │
 ├── middleware.ts                      # Supabase session refresh middleware
@@ -184,7 +199,7 @@ hoshin-kanri-os/
 
 ## 4. Database Schema
 
-**9 tables** trong Supabase PostgreSQL, tat ca co RLS (Row Level Security).
+**11 tables** trong Supabase PostgreSQL, tat ca co RLS (Row Level Security).
 
 ### Core Tables
 
@@ -212,7 +227,7 @@ hoshin-kanri-os/
 
 #### `discovery_sessions`
 - `org_id` (FK), `user_id` (FK)
-- `step_completed` ('x-ray'|'current_state'|'swot'|'pain_mapper'|'vision')
+- `step_completed` ('x-ray'|'current_state'|'swot'|'swot_coaching'|'swot_evidence'|'swot_synthesis'|'pain_mapper'|'vision'|'synthesis'|'xray_history')
 - `data_json` (JSONB) — luu data cua tung buoc discovery
 
 ### Operational Tables
@@ -227,6 +242,18 @@ hoshin-kanri-os/
 
 #### `notification_logs`
 - `org_id`, `user_id`, `type` ('zalo'|'email'|'in_app'), `status`, `payload`
+
+### Lead Gen Tables
+
+#### `xray_leads`
+- `id` (uuid PK), `email`, `company_name`, `industry`, `headcount`
+- `answers_json` (JSONB), `result_json` (JSONB)
+- `overall_score`, `overall_level`, `converted` (boolean)
+
+#### `xray_results`
+- `id` (uuid PK), `org_id` (FK), `user_id` (FK)
+- `overall_score`, `overall_level`
+- `result_json` (JSONB), `answers_json` (JSONB)
 
 ### RLS Rules Summary
 - **SELECT**: User chi thay data cua org minh (thong qua org_members)
@@ -444,6 +471,8 @@ The app enforces strict limits based on Hoshin Kanri methodology:
 /dashboard/discovery/vision-workshop → Vision Workshop
 /dashboard/discovery/synthesis      → AI Strategy Synthesis
 /dashboard/discovery/benchmark      → KPI Benchmark Library
+/dashboard/discovery/xray-history   → X-Ray Assessment History
+/dashboard/discovery/xray-history/[id] → View past X-Ray assessment
 /dashboard/x-matrix/new            → X-Matrix Wizard
 /dashboard/kpi                      → KPI Dashboard
 /dashboard/report                   → Monthly Report
@@ -459,6 +488,7 @@ POST /api/auth/dev-login              → Dev login helper
 GET  /api/debug                       → Debug info
 
 POST /api/x-ray/score                 → Score X-Ray answers with AI
+GET  /api/x-ray/history               → Fetch X-Ray assessment history
 
 POST /api/swot/coaching               → AI coaching conversation
 POST /api/swot/generate-queries       → Generate evidence search queries

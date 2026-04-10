@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SwotHubClient } from './components/SwotHubClient'
+import { SwotOrchestrator } from '@/components/swot/SwotOrchestrator'
+import type { OrgContext } from '@/lib/swot/types'
 
 export default async function SwotPage() {
   const supabase = await createClient()
@@ -17,9 +18,25 @@ export default async function SwotPage() {
 
   if (!membership) redirect('/onboarding/setup-org')
 
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name, industry, city, headcount')
+    .eq('id', membership.org_id)
+    .single()
+
+  if (!org) redirect('/onboarding/setup-org')
+
+  const orgContext: OrgContext = {
+    orgId: membership.org_id,
+    orgName: org.name,
+    industry: org.industry,
+    city: org.city,
+    headcount: org.headcount,
+  }
+
   return (
-    <div className="w-full min-h-full p-6 lg:p-8">
-      <SwotHubClient orgId={membership.org_id} />
+    <div className="w-full min-h-full">
+      <SwotOrchestrator orgContext={orgContext} userId={user.id} />
     </div>
   )
 }

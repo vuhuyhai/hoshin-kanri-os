@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS } from '@/lib/swot/frameworks'
+import { DIMENSION_LABELS } from '@/lib/swot/frameworks'
 import {
   getDimensionStatus,
   DIMENSION_SEQUENCES,
@@ -21,9 +21,7 @@ import {
 import type {
   CoachingTrackerState,
   FrameworkId,
-  ExternalFrameworkChoice,
 } from '@/lib/swot/types'
-import type { FrameworkDimension } from '@/lib/swot/frameworks'
 import { cn } from '@/lib/utils'
 
 interface DimensionPillsProps {
@@ -31,22 +29,9 @@ interface DimensionPillsProps {
   onJumpToDimension: (dimension: string) => void
 }
 
-/** Map nameEn → short label for pills. */
-function getShortLabel(nameEn: string, framework: FrameworkId): string {
-  const allDims: FrameworkDimension[] =
-    framework === '8M'
-      ? EIGHT_MS
-      : framework === 'Porter'
-        ? PORTER_FORCES
-        : PESTEL_FACTORS
-
-  const dim = allDims.find((d) => d.nameEn === nameEn)
-  if (!dim) return nameEn
-
-  if (framework === '8M') {
-    return `${dim.id.replace('_', ' ')} ${dim.name}`
-  }
-  return dim.name
+/** Map nameEn → user-friendly short label (no framework jargon). */
+function getShortLabel(nameEn: string): string {
+  return DIMENSION_LABELS[nameEn] ?? nameEn
 }
 
 const STATUS_CLASSES: Record<DimensionStatus, string> = {
@@ -56,6 +41,12 @@ const STATUS_CLASSES: Record<DimensionStatus, string> = {
     'border-foreground border-2 bg-background text-foreground animate-pulse',
   pending:
     'border-border text-muted-foreground hover:border-foreground/30',
+}
+
+const GROUP_LABELS: Record<FrameworkId, string> = {
+  '8M': 'Noi bo',
+  Porter: 'Thi truong',
+  PESTEL: 'Vi mo',
 }
 
 export function DimensionPills({
@@ -74,7 +65,7 @@ export function DimensionPills({
   const groups: { framework: FrameworkId; label: string; dims: string[] }[] = [
     {
       framework: '8M',
-      label: '8Ms',
+      label: GROUP_LABELS['8M'],
       dims: DIMENSION_SEQUENCES['8M'].filter((d) =>
         selected['8M'].includes(d)
       ),
@@ -84,7 +75,7 @@ export function DimensionPills({
   if (extChoice === 'Porter' || extChoice === 'both') {
     groups.push({
       framework: 'Porter',
-      label: 'Porter',
+      label: GROUP_LABELS.Porter,
       dims: DIMENSION_SEQUENCES.Porter.filter((d) =>
         selected.Porter.includes(d)
       ),
@@ -93,7 +84,7 @@ export function DimensionPills({
   if (extChoice === 'PESTEL' || extChoice === 'both') {
     groups.push({
       framework: 'PESTEL',
-      label: 'PESTEL',
+      label: GROUP_LABELS.PESTEL,
       dims: DIMENSION_SEQUENCES.PESTEL.filter((d) =>
         selected.PESTEL.includes(d)
       ),
@@ -103,12 +94,11 @@ export function DimensionPills({
   const handlePillClick = (
     dimension: string,
     status: DimensionStatus,
-    framework: FrameworkId
   ) => {
     if (status === 'completed' || status === 'active') return
     setJumpTarget({
       dimension,
-      label: getShortLabel(dimension, framework),
+      label: getShortLabel(dimension),
     })
   }
 
@@ -139,9 +129,7 @@ export function DimensionPills({
               return (
                 <button
                   key={dim}
-                  onClick={() =>
-                    handlePillClick(dim, status, group.framework)
-                  }
+                  onClick={() => handlePillClick(dim, status)}
                   disabled={status === 'completed' || status === 'active'}
                   className={cn(
                     'inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-display font-semibold border whitespace-nowrap transition-colors shrink-0',
@@ -155,7 +143,7 @@ export function DimensionPills({
                   {status === 'active' && (
                     <span className="w-1.5 h-1.5 bg-foreground shrink-0" />
                   )}
-                  {getShortLabel(dim, group.framework)}
+                  {getShortLabel(dim)}
                 </button>
               )
             })}
@@ -170,7 +158,7 @@ export function DimensionPills({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Chuyen sang dimension khac?</AlertDialogTitle>
+            <AlertDialogTitle>Chuyen sang chu de khac?</AlertDialogTitle>
             <AlertDialogDescription>
               Bo qua cac cau hoi con lai va chuyen sang{' '}
               <strong>{jumpTarget?.label}</strong>?

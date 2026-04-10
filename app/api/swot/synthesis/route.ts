@@ -1,8 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { getSynthesisPrompt } from '@/lib/swot/coaching-prompts'
-import type { SynthesisRequest, SynthesisResponse, SwotItem } from '@/lib/swot/types'
+import {
+  SWOT_SYNTHESIS_SYSTEM_PROMPT,
+  buildSynthesisUserMessage,
+} from '@/lib/swot/coaching-prompts'
+import type {
+  SynthesisRequest,
+  SynthesisResponse,
+  SwotSynthesisOutput,
+  SwotQuadrant,
+} from '@/lib/swot/types'
+
+const MAX_ITEMS_PER_QUADRANT = 3
+
+function parseSynthesisResponse(raw: string): SwotSynthesisOutput {
+  const cleaned = raw
+    .replace(/```json\n?/g, '')
+    .replace(/```\n?/g, '')
+    .trim()
+
+  const parsed = JSON.parse(cleaned) as SwotSynthesisOutput
+
+  return {
+    S: (parsed.S ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
+    W: (parsed.W ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
+    O: (parsed.O ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
+    T: (parsed.T ?? []).slice(0, MAX_ITEMS_PER_QUADRANT),
+    summary: parsed.summary ?? '',
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,14 +63,19 @@ export async function POST(request: NextRequest) {
       .map((e) => `- ${e.content}${e.url ? ` (${e.url})` : ''}`)
       .join('\n')
 
-    const prompt = getSynthesisPrompt(orgContext, coachingText, evidenceText)
+    const userMessage = buildSynthesisUserMessage(
+      orgContext,
+      coachingText,
+      evidenceText
+    )
 
     const client = new Anthropic()
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
+      system: SWOT_SYNTHESIS_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMessage }],
     })
 
     const text = response.content
@@ -51,7 +83,7 @@ export async function POST(request: NextRequest) {
       .map((b) => b.text)
       .join('')
 
-    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim())
+    const synthesis = parseSynthesisResponse(text)
 
     // Save to Supabase
     const { data: membership } = await supabase
@@ -66,24 +98,24 @@ export async function POST(request: NextRequest) {
         .delete()
         .eq('org_id', membership.org_id)
 
-      const insertData = parsed.items.map(
-        (item: SwotItem) => ({
+      const quadrants: SwotQuadrant[] = ['S', 'W', 'O', 'T']
+      const insertData = quadrants.flatMap((q) =>
+        synthesis[q].map((item) => ({
           org_id: membership.org_id,
-          quadrant: item.quadrant,
-          framework_source: item.frameworkSource,
+          quadrant: q,
+          framework_source: item.framework_source ?? '',
           statement: item.statement,
-          evidence_json: item.evidence,
+          evidence_json: [],
           implication: item.implication,
-        })
+        }))
       )
 
-      await supabase.from('swot_analyses').insert(insertData)
-
-      // discovery_sessions for swot_synthesis is managed by
-      // swot-session-store.ts — no duplicate write here.
+      if (insertData.length > 0) {
+        await supabase.from('swot_analyses').insert(insertData)
+      }
     }
 
-    const result: SynthesisResponse = { items: parsed.items }
+    const result: SynthesisResponse = { synthesis }
     return NextResponse.json(result)
   } catch (error) {
     console.error('Synthesis error:', error)

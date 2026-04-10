@@ -7,6 +7,7 @@ import {
   buildConversationMemory,
   parseCoachingAIOutput,
 } from '@/lib/swot/coaching-prompts'
+import { COACHING_QUESTION_BANK } from '@/lib/swot/frameworks'
 import {
   getNextDimension,
   getNextFramework,
@@ -58,12 +59,26 @@ export async function POST(request: NextRequest) {
         ? getSwCoachingSystemPrompt(orgContext, coachingContext, selectedDims?.['8M'])
         : getOtCoachingSystemPrompt(orgContext, coachingContext, extChoice, selectedDims?.Porter, selectedDims?.PESTEL)
 
+    // Shallow-answer follow-up: if last user message is < 20 words,
+    // append follow_up_prompt from the matching question
+    const lastUserMsg = messages.filter((m) => m.role === 'user').pop()
+    let followUpHint = ''
+    if (lastUserMsg && lastUserMsg.content.split(/\s+/).length < 20 && coachingTracker) {
+      const currentDim = coachingTracker.currentDimension
+      const matchingQ = COACHING_QUESTION_BANK.find(
+        (q) => q.dimension_key === currentDim && q.follow_up_prompt
+      )
+      if (matchingQ?.follow_up_prompt) {
+        followUpHint = `\n\n[GOI Y HOI THEM vi CEO tra loi qua ngan]: ${matchingQ.follow_up_prompt}`
+      }
+    }
+
     // Conversation memory — trim old messages, summarize into prompt
     const { contextSummary, recentMessages } =
       buildConversationMemory(messages)
-    const systemPrompt = contextSummary
-      ? basePrompt + contextSummary
-      : basePrompt
+    const systemPrompt = basePrompt
+      + (contextSummary ?? '')
+      + followUpHint
 
     const client = new Anthropic()
 

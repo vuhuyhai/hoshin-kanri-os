@@ -6,7 +6,19 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { createClient } from '@/lib/supabase/client'
+import { useSwotStore } from '@/lib/swot/swot-session-store'
 
 interface OrgData {
   name: string
@@ -213,6 +225,53 @@ export function SettingsClient({
         >
           {copied ? 'Đã copy!' : 'Copy link mời thành viên'}
         </Button>
+      </section>
+
+      {/* Data & sessions */}
+      <section className="space-y-4">
+        <div className="border-b-2 border-border pb-2">
+          <h2 className="font-display text-lg font-bold">
+            Dữ liệu &amp; Phiên làm việc
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Quản lý phiên phân tích chiến lược
+          </p>
+        </div>
+
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button
+                variant="outline"
+                className="w-full border-destructive text-destructive hover:bg-destructive/10"
+              />
+            }
+          >
+            Bắt đầu lại phân tích SWOT
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xoá dữ liệu SWOT?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tất cả dữ liệu coaching, bối cảnh thị trường, và kết quả tổng
+                hợp SWOT sẽ bị xoá. Hành động này không thể hoàn tác.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Huỷ</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  useSwotStore.getState().resetSession()
+                  toast.success('Đã xoá dữ liệu SWOT')
+                  router.push('/dashboard/discovery/swot')
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Xoá và bắt đầu lại
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </section>
 
       {/* Account */}

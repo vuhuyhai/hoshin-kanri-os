@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS } from '@/lib/swot/frameworks'
+import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS, DIMENSION_LABELS } from '@/lib/swot/frameworks'
 import { DIMENSION_SEQUENCES } from '@/lib/swot/coaching-tracker'
 import type { FrameworkId, ExternalFrameworkChoice } from '@/lib/swot/types'
 
@@ -15,74 +14,99 @@ interface CoachingIntroScreenProps {
   ) => void
 }
 
-const MIN_8M_DIMENSIONS = 3
+const MIN_INTERNAL_DIMENSIONS = 3
 
 export function CoachingIntroScreen({ onStart }: CoachingIntroScreenProps) {
-  // 8M: multi-select, all checked by default
-  const [selected8M, setSelected8M] = useState<string[]>(
+  // Internal: multi-select, all checked by default
+  const [selectedInternal, setSelectedInternal] = useState<string[]>(
     () => [...DIMENSION_SEQUENCES['8M']]
   )
 
-  // External: single-select radio, default "both"
-  const [externalChoice, setExternalChoice] =
-    useState<ExternalFrameworkChoice>('both')
+  // External: always include both (no framework selection exposed)
+  const [selectedExternal, setSelectedExternal] = useState<string[]>(() => [
+    ...DIMENSION_SEQUENCES.Porter,
+    ...DIMENSION_SEQUENCES.PESTEL,
+  ])
 
-  const toggle8M = (dim: string) => {
-    setSelected8M((prev) =>
+  const toggleInternal = (dim: string) => {
+    setSelectedInternal((prev) =>
       prev.includes(dim)
         ? prev.filter((d) => d !== dim)
         : [...prev, dim]
     )
   }
 
-  const canStart = selected8M.length >= MIN_8M_DIMENSIONS
+  const toggleExternal = (dim: string) => {
+    setSelectedExternal((prev) =>
+      prev.includes(dim)
+        ? prev.filter((d) => d !== dim)
+        : [...prev, dim]
+    )
+  }
+
+  const canStart = selectedInternal.length >= MIN_INTERNAL_DIMENSIONS && selectedExternal.length >= 2
 
   const handleStart = () => {
     if (!canStart) return
 
+    // Map back to framework-scoped dimensions for internal tracking
+    const porterDims = DIMENSION_SEQUENCES.Porter.filter((d) =>
+      selectedExternal.includes(d)
+    )
+    const pestelDims = DIMENSION_SEQUENCES.PESTEL.filter((d) =>
+      selectedExternal.includes(d)
+    )
+
     const selectedDimensions: Record<FrameworkId, string[]> = {
-      '8M': selected8M,
-      Porter:
-        externalChoice === 'PESTEL'
-          ? []
-          : [...DIMENSION_SEQUENCES.Porter],
-      PESTEL:
-        externalChoice === 'Porter'
-          ? []
-          : [...DIMENSION_SEQUENCES.PESTEL],
+      '8M': selectedInternal,
+      Porter: porterDims,
+      PESTEL: pestelDims,
     }
 
-    onStart(selectedDimensions, externalChoice)
+    onStart(selectedDimensions, 'both')
   }
 
-  const selectedExternalCount =
-    externalChoice === 'both'
-      ? PORTER_FORCES.length + PESTEL_FACTORS.length
-      : externalChoice === 'Porter'
-        ? PORTER_FORCES.length
-        : PESTEL_FACTORS.length
+  // Build display items for internal dimensions
+  const internalDims = EIGHT_MS.map((dim) => ({
+    key: dim.nameEn,
+    label: DIMENSION_LABELS[dim.nameEn] ?? dim.name,
+    description: dim.description,
+  }))
+
+  // Build display items for external dimensions
+  const externalDims = [
+    ...PORTER_FORCES.map((dim) => ({
+      key: dim.nameEn,
+      label: DIMENSION_LABELS[dim.nameEn] ?? dim.name,
+      description: dim.description,
+    })),
+    ...PESTEL_FACTORS.map((dim) => ({
+      key: dim.nameEn,
+      label: DIMENSION_LABELS[dim.nameEn] ?? dim.name,
+      description: dim.description,
+    })),
+  ]
 
   return (
     <div className="w-full space-y-8">
-      {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* LEFT: Internal (8M) */}
+        {/* LEFT: Internal analysis */}
         <div className="space-y-4">
           <div>
             <h2 className="font-display text-lg font-bold uppercase tracking-wider">
-              Phan tich noi bo (SW)
+              Noi bo (Diem manh &amp; Diem yeu)
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Framework: 8Ms
+              Chon cac khia canh ban muon phan tich
             </p>
           </div>
 
           <div className="space-y-2">
-            {EIGHT_MS.map((dim) => {
-              const checked = selected8M.includes(dim.nameEn)
+            {internalDims.map((dim) => {
+              const checked = selectedInternal.includes(dim.key)
               return (
                 <label
-                  key={dim.id}
+                  key={dim.key}
                   className={`flex items-center gap-3 px-4 py-3 border-2 cursor-pointer transition-colors ${
                     checked
                       ? 'border-foreground bg-primary/5'
@@ -91,11 +115,11 @@ export function CoachingIntroScreen({ onStart }: CoachingIntroScreenProps) {
                 >
                   <Checkbox
                     checked={checked}
-                    onCheckedChange={() => toggle8M(dim.nameEn)}
+                    onCheckedChange={() => toggleInternal(dim.key)}
                   />
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-display font-semibold">
-                      {dim.id.replace('_', ' ')} — {dim.name}
+                      {dim.label}
                     </span>
                     <p className="text-xs text-muted-foreground truncate">
                       {dim.description}
@@ -107,73 +131,57 @@ export function CoachingIntroScreen({ onStart }: CoachingIntroScreenProps) {
           </div>
 
           <p className="text-xs font-display font-semibold text-muted-foreground tabular-nums">
-            Da chon: {selected8M.length}/8
-            {selected8M.length < MIN_8M_DIMENSIONS && (
+            Da chon: {selectedInternal.length}/{internalDims.length}
+            {selectedInternal.length < MIN_INTERNAL_DIMENSIONS && (
               <span className="text-destructive ml-2">
-                (toi thieu {MIN_8M_DIMENSIONS})
+                (toi thieu {MIN_INTERNAL_DIMENSIONS})
               </span>
             )}
           </p>
         </div>
 
-        {/* RIGHT: External (Porter/PESTEL) */}
+        {/* RIGHT: External analysis */}
         <div className="space-y-4">
           <div>
             <h2 className="font-display text-lg font-bold uppercase tracking-wider">
-              Phan tich ngoai canh (OT)
+              Ben ngoai (Co hoi &amp; Thach thuc)
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Chon framework:
+              Chon cac yeu to thi truong can xem xet
             </p>
           </div>
 
-          <RadioGroup
-            value={externalChoice}
-            onValueChange={(val) =>
-              setExternalChoice(val as ExternalFrameworkChoice)
-            }
-            className="space-y-3"
-          >
-            {[
-              {
-                value: 'Porter' as const,
-                label: 'Porter 5 Forces',
-                desc: `${PORTER_FORCES.length} forces: ${PORTER_FORCES.map((f) => f.name).join(', ')}`,
-              },
-              {
-                value: 'PESTEL' as const,
-                label: 'PESTEL',
-                desc: `${PESTEL_FACTORS.length} factors: ${PESTEL_FACTORS.map((f) => f.name).join(', ')}`,
-              },
-              {
-                value: 'both' as const,
-                label: 'Ca hai (day du)',
-                desc: `${PORTER_FORCES.length + PESTEL_FACTORS.length} dimensions tong cong`,
-              },
-            ].map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex items-center gap-3 px-4 py-3 border-2 cursor-pointer transition-colors ${
-                  externalChoice === opt.value
-                    ? 'border-foreground bg-primary/5'
-                    : 'border-border hover:border-foreground/30'
-                }`}
-              >
-                <RadioGroupItem value={opt.value} />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-display font-semibold">
-                    {opt.label}
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    {opt.desc}
-                  </p>
-                </div>
-              </label>
-            ))}
-          </RadioGroup>
+          <div className="space-y-2">
+            {externalDims.map((dim) => {
+              const checked = selectedExternal.includes(dim.key)
+              return (
+                <label
+                  key={dim.key}
+                  className={`flex items-center gap-3 px-4 py-3 border-2 cursor-pointer transition-colors ${
+                    checked
+                      ? 'border-foreground bg-primary/5'
+                      : 'border-border hover:border-foreground/30'
+                  }`}
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleExternal(dim.key)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-display font-semibold">
+                      {dim.label}
+                    </span>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {dim.description}
+                    </p>
+                  </div>
+                </label>
+              )
+            })}
+          </div>
 
           <p className="text-xs font-display font-semibold text-muted-foreground tabular-nums">
-            Da chon: {selectedExternalCount} dimensions
+            Da chon: {selectedExternal.length}/{externalDims.length}
           </p>
         </div>
       </div>
@@ -181,7 +189,7 @@ export function CoachingIntroScreen({ onStart }: CoachingIntroScreenProps) {
       {/* Hint + CTA */}
       <div className="border-t-2 border-foreground pt-6 space-y-4">
         <p className="text-sm text-muted-foreground text-center">
-          Goi y: Chon toi thieu 4 dimensions noi bo de co phan tich day du
+          Goi y: Chon toi thieu 4 khia canh noi bo de co phan tich day du
         </p>
         <div className="flex justify-center">
           <Button

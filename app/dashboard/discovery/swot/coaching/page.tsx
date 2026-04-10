@@ -1,42 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { CoachingClient } from './components/CoachingClient'
-import type { OrgContext } from '@/lib/swot/types'
 
-export default async function CoachingPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: membership } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!membership) redirect('/onboarding/setup-org')
-
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('name, industry, city, headcount')
-    .eq('id', membership.org_id)
-    .single()
-
-  if (!org) redirect('/onboarding/setup-org')
-
-  const orgContext: OrgContext = {
-    orgId: membership.org_id,
-    orgName: org.name,
-    industry: org.industry,
-    city: org.city,
-    headcount: org.headcount,
-  }
-
-  return (
-    <div className="w-full">
-      <CoachingClient orgContext={orgContext} userId={user.id} />
-    </div>
-  )
+/**
+ * @deprecated The coaching flow is now integrated into /dashboard/discovery/swot
+ * as Phase 1 of the single-page SWOT experience.
+ * This redirect catches bookmarked URLs. Safe to delete after 1 sprint.
+ */
+export default function CoachingRedirect() {
+  redirect('/dashboard/discovery/swot')
 }

@@ -8,6 +8,7 @@ import type {
   FrameworkId,
   ExternalFrameworkChoice,
   DimensionInsight,
+  ContextCard,
 } from './types'
 import {
   createInitialCoachingTracker,
@@ -18,6 +19,40 @@ import {
   findFrameworkForDimension,
   selectCoachingProgress,
 } from './coaching-tracker'
+import {
+  COACHING_QUESTION_BANK,
+  REQUIRED_DIMENSIONS,
+  MIN_COVERAGE_TO_ADVANCE,
+} from './frameworks'
+
+// ============================================================
+// COACHING COVERAGE — coverage-based exit condition
+// ============================================================
+
+export interface CoachingCoverage {
+  answered: Record<string, boolean>
+  questionIds: Record<string, boolean>
+  totalQuestions: number
+  answeredCount: number
+}
+
+function createEmptyCoverage(): CoachingCoverage {
+  return {
+    answered: {},
+    questionIds: {},
+    totalQuestions: COACHING_QUESTION_BANK.length,
+    answeredCount: 0,
+  }
+}
+
+function computeCoverageDerived(coverage: CoachingCoverage) {
+  const answeredCount = Object.values(coverage.answered).filter(Boolean).length
+  const requiredDimensionsMet = REQUIRED_DIMENSIONS.every(
+    (d) => coverage.answered[d] === true
+  )
+  const canAdvanceToPhase2 = answeredCount >= MIN_COVERAGE_TO_ADVANCE
+  return { answeredCount, requiredDimensionsMet, canAdvanceToPhase2 }
+}
 
 // ============================================================
 // TYPES
@@ -149,6 +184,8 @@ export interface SwotSession {
     completedAt?: string
     batches: EvidenceBatch[]
     allSources: EvidenceSource[]
+    contextCards: ContextCard[]
+    contextCardsStatus: 'idle' | 'loading' | 'complete' | 'error'
   }
   synthesis: {
     status: PhaseStatus
@@ -183,7 +220,7 @@ function createEmptySession(orgId: string): SwotSession {
   return {
     orgId,
     coaching: { status: 'not_started', responses: [] },
-    evidence: { status: 'locked', batches: [], allSources: [] },
+    evidence: { status: 'locked', batches: [], allSources: [], contextCards: [], contextCardsStatus: 'idle' },
     synthesis: { status: 'locked', items: [] },
     strategy: {
       status: 'locked',
@@ -243,9 +280,15 @@ function debouncedSave(saveFn: () => Promise<void>) {
 // ZUSTAND STORE
 // ============================================================
 
+export type SwotPhaseNumber = 1 | 2 | 3
+
 interface SwotStoreState extends SwotSession {
   isLoading: boolean
   isSaving: boolean
+
+  // Top-level SWOT phase (1=coaching, 2=context, 3=synthesis)
+  swotPhase: SwotPhaseNumber
+  setSwotPhase: (phase: SwotPhaseNumber) => void
 
   // Lifecycle
   initSession: (orgId: string) => Promise<void>
@@ -271,6 +314,7 @@ interface SwotStoreState extends SwotSession {
     updates: Partial<EvidenceBatch>
   ) => void
   addSource: (source: EvidenceSource) => void
+  setContextCards: (cards: ContextCard[]) => void
   completeEvidence: () => void
 
   // Phase 3
@@ -299,6 +343,18 @@ interface SwotStoreState extends SwotSession {
   }[]
   canStartPhase: (phase: 'evidence' | 'synthesis' | 'strategy') => boolean
   getXMatrixCandidates: () => HoshinCandidate[]
+
+  // Coaching coverage
+  coachingCoverage: CoachingCoverage
+  requiredDimensionsMet: boolean
+  canAdvanceToPhase2: boolean
+  canAdvanceToPhase3: boolean
+  markDimensionAnswered: (dimension_key: string) => void
+  markQuestionAsked: (question_id: string) => void
+  resetCoverage: () => void
+
+  // Full session reset
+  resetSession: () => void
 
   // Coaching state machine
   coachingTracker: CoachingTrackerState
@@ -332,10 +388,21 @@ export const useSwotStore = create<SwotStoreState>()(
   ...createEmptySession(''),
   isLoading: false,
   isSaving: false,
+  swotPhase: 1 as SwotPhaseNumber,
+
+  setSwotPhase: (phase: SwotPhaseNumber) => {
+    set({ swotPhase: phase })
+  },
 
   // Coaching state machine
   coachingTracker: createInitialCoachingTracker(),
   coachingMessages: [] as ChatMessage[],
+
+  // Coaching coverage
+  coachingCoverage: createEmptyCoverage(),
+  requiredDimensionsMet: false,
+  canAdvanceToPhase2: false,
+  canAdvanceToPhase3: false,
 
   // ============================================================
   // LIFECYCLE
@@ -394,6 +461,8 @@ export const useSwotStore = create<SwotStoreState>()(
               completedAt: (d.completedAt as string) ?? undefined,
               batches: (d.batches as EvidenceBatch[]) ?? [],
               allSources: (d.allSources as EvidenceSource[]) ?? [],
+              contextCards: (d.contextCards as ContextCard[]) ?? [],
+              contextCardsStatus: (d.contextCardsStatus as 'idle' | 'loading' | 'complete' | 'error') ?? 'idle',
             }
             break
           }
@@ -488,7 +557,7 @@ export const useSwotStore = create<SwotStoreState>()(
         case 'coaching':
           return {
             coaching: { status: 'not_started', responses: [] },
-            evidence: { status: 'locked', batches: [], allSources: [] },
+            evidence: { status: 'locked', batches: [], allSources: [], contextCards: [], contextCardsStatus: 'idle' },
             synthesis: { status: 'locked', items: [] },
             strategy: {
               status: 'locked',
@@ -503,7 +572,7 @@ export const useSwotStore = create<SwotStoreState>()(
           }
         case 'evidence':
           return {
-            evidence: { status: 'not_started', batches: [], allSources: [] },
+            evidence: { status: 'not_started', batches: [], allSources: [], contextCards: [], contextCardsStatus: 'idle' as const },
             synthesis: { ...state.synthesis, status: 'locked' },
             strategy: { ...state.strategy, status: 'locked' },
           }
@@ -640,6 +709,19 @@ export const useSwotStore = create<SwotStoreState>()(
         allSources: [...state.evidence.allSources, source],
       },
     }))
+  },
+
+  setContextCards: (cards: ContextCard[]) => {
+    set((state) => ({
+      evidence: {
+        ...state.evidence,
+        contextCards: cards,
+        contextCardsStatus: 'complete' as const,
+        status: 'in_progress' as PhaseStatus,
+      },
+      canAdvanceToPhase3: cards.length > 0,
+    }))
+    debouncedSave(get().saveSession)
   },
 
   completeEvidence: () => {
@@ -817,6 +899,59 @@ export const useSwotStore = create<SwotStoreState>()(
   },
 
   // ============================================================
+  // COACHING COVERAGE
+  // ============================================================
+
+  markDimensionAnswered: (dimension_key: string) => {
+    set((state) => {
+      const updated: CoachingCoverage = {
+        ...state.coachingCoverage,
+        answered: { ...state.coachingCoverage.answered, [dimension_key]: true },
+      }
+      const { answeredCount, requiredDimensionsMet, canAdvanceToPhase2 } =
+        computeCoverageDerived(updated)
+      return {
+        coachingCoverage: { ...updated, answeredCount },
+        requiredDimensionsMet,
+        canAdvanceToPhase2,
+      }
+    })
+  },
+
+  markQuestionAsked: (question_id: string) => {
+    set((state) => ({
+      coachingCoverage: {
+        ...state.coachingCoverage,
+        questionIds: { ...state.coachingCoverage.questionIds, [question_id]: true },
+      },
+    }))
+  },
+
+  resetCoverage: () => {
+    set({
+      coachingCoverage: createEmptyCoverage(),
+      requiredDimensionsMet: false,
+      canAdvanceToPhase2: false,
+    })
+  },
+
+  resetSession: () => {
+    const orgId = get().orgId
+    set({
+      ...createEmptySession(orgId),
+      swotPhase: 1 as SwotPhaseNumber,
+      coachingTracker: createInitialCoachingTracker(),
+      coachingMessages: [],
+      coachingCoverage: createEmptyCoverage(),
+      requiredDimensionsMet: false,
+      canAdvanceToPhase2: false,
+      canAdvanceToPhase3: false,
+      staleSince: undefined,
+      staleReason: undefined,
+    })
+  },
+
+  // ============================================================
   // COACHING STATE MACHINE
   // ============================================================
 
@@ -915,6 +1050,9 @@ export const useSwotStore = create<SwotStoreState>()(
     set({
       coachingTracker: createInitialCoachingTracker(),
       coachingMessages: [],
+      coachingCoverage: createEmptyCoverage(),
+      requiredDimensionsMet: false,
+      canAdvanceToPhase2: false,
     })
   },
 
@@ -994,11 +1132,26 @@ export const useSwotStore = create<SwotStoreState>()(
     {
       name: 'hoshin-swot-session',
       partialize: (state) => ({
+        swotPhase: state.swotPhase,
         coachingTracker: state.coachingTracker,
         coachingMessages: state.coachingMessages.slice(-20),
+        coachingCoverage: state.coachingCoverage,
         staleSince: state.staleSince,
         staleReason: state.staleReason,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const updates: Record<string, unknown> = {}
+          if (state.coachingCoverage) {
+            const { requiredDimensionsMet, canAdvanceToPhase2 } =
+              computeCoverageDerived(state.coachingCoverage)
+            updates.requiredDimensionsMet = requiredDimensionsMet
+            updates.canAdvanceToPhase2 = canAdvanceToPhase2
+          }
+          updates.canAdvanceToPhase3 = (state.evidence?.contextCards?.length ?? 0) > 0
+          useSwotStore.setState(updates)
+        }
+      },
     }
   )
 )

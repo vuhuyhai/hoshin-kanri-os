@@ -1,11 +1,9 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,12 +15,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Phase1Coaching } from '../../components/Phase1Coaching'
-import { CoachingIntroScreen } from '../../components/CoachingIntroScreen'
-import { DimensionPills } from '../../components/DimensionPills'
+import { Phase1Coaching } from '@/app/dashboard/discovery/swot/components/Phase1Coaching'
+import { CoachingIntroScreen } from '@/app/dashboard/discovery/swot/components/CoachingIntroScreen'
+import { DimensionPills } from '@/app/dashboard/discovery/swot/components/DimensionPills'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import { frameworkIdToLegacy } from '@/lib/swot/coaching-tracker'
-import { useCoachingPersistence } from '../hooks/useCoachingPersistence'
+import { useCoachingPersistence } from '@/app/dashboard/discovery/swot/coaching/hooks/useCoachingPersistence'
 import type {
   CoachingState,
   OrgContext,
@@ -31,12 +29,10 @@ import type {
   ExternalFrameworkChoice,
 } from '@/lib/swot/types'
 
-interface CoachingClientProps {
+interface CoachingPhaseProps {
   orgContext: OrgContext
   userId: string
 }
-
-const SWOT_HUB_PATH = '/dashboard/discovery/swot'
 
 function formatSavedTime(iso: string): string {
   const d = new Date(iso)
@@ -54,9 +50,7 @@ function formatSavedTime(iso: string): string {
   return `Luu luc ${time} — ${date}`
 }
 
-export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
-  const router = useRouter()
-
+export function CoachingPhase({ orgContext, userId }: CoachingPhaseProps) {
   // Zustand store
   const coachingTracker = useSwotStore((s) => s.coachingTracker)
   const coachingMessages = useSwotStore((s) => s.coachingMessages)
@@ -66,10 +60,16 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
   const completeCoaching = useSwotStore((s) => s.completeCoaching)
   const startCoaching = useSwotStore((s) => s.startCoaching)
   const jumpToDimension = useSwotStore((s) => s.jumpToDimension)
+  const setSwotPhase = useSwotStore((s) => s.setSwotPhase)
+
+  // Coverage state
+  const answeredCount = useSwotStore((s) => s.coachingCoverage.answeredCount)
+  const canAdvanceToPhase2 = useSwotStore((s) => s.canAdvanceToPhase2)
+  const markDimensionAnswered = useSwotStore((s) => s.markDimensionAnswered)
 
   const [isLoading, setIsLoading] = useState(false)
 
-  // Supabase persistence (auto-save, load, resume)
+  // Supabase persistence
   const {
     resumeData,
     lastSaved,
@@ -95,9 +95,13 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
 
   const handleTrackerUpdate = (tracker: CoachingTrackerState) => {
     updateCoachingTracker(tracker)
+    for (const dims of Object.values(tracker.completedDimensions)) {
+      for (const dim of dims) {
+        markDimensionAnswered(dim)
+      }
+    }
   }
 
-  // Intro screen → start coaching
   const handleIntroStart = useCallback(
     (
       selectedDimensions: Record<FrameworkId, string[]>,
@@ -108,36 +112,44 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
     [startCoaching]
   )
 
-  // Trigger A: called when AI signals coaching complete — save + mark, NO navigate
   const handlePhaseComplete = useCallback(async () => {
     try {
       completeCoaching()
       await saveBeforeNavigate()
       toast.success('Da luu phien lam viec')
     } catch {
-      console.error('[CoachingClient] save on complete failed')
+      console.error('[CoachingPhase] save on complete failed')
     }
   }, [completeCoaching, saveBeforeNavigate])
 
-  // Navigate to next phase (called from completion banner)
-  const handleNavigateNext = useCallback(() => {
-    router.push(SWOT_HUB_PATH)
-  }, [router])
+  // Advance to Phase 2 — store action, no router.push
+  const handleAdvanceToPhase2 = useCallback(async () => {
+    try {
+      updateCoachingTracker({ currentPhase: 'completed' })
+      completeCoaching()
+      await saveBeforeNavigate()
+      setSwotPhase(2)
+    } catch {
+      console.error('[CoachingPhase] advance to phase 2 failed')
+    }
+  }, [updateCoachingTracker, completeCoaching, saveBeforeNavigate, setSwotPhase])
 
-  // Trigger B: manual early termination
+  const handleNavigateNext = useCallback(() => {
+    setSwotPhase(2)
+  }, [setSwotPhase])
+
   const handleEarlyTermination = useCallback(async () => {
     try {
       updateCoachingTracker({ currentPhase: 'completed' })
       completeCoaching()
       await saveBeforeNavigate()
       toast.success('Da luu phien lam viec')
-      router.push(SWOT_HUB_PATH)
+      setSwotPhase(2)
     } catch {
-      console.error('[CoachingClient] early termination save failed')
+      console.error('[CoachingPhase] early termination failed')
     }
-  }, [updateCoachingTracker, completeCoaching, saveBeforeNavigate, router])
+  }, [updateCoachingTracker, completeCoaching, saveBeforeNavigate, setSwotPhase])
 
-  // Dimension pill jump
   const handleJumpToDimension = useCallback(
     (dimension: string) => {
       jumpToDimension(dimension)
@@ -150,95 +162,67 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
   const showEarlyEndButton =
     progress.percentage >= 50 && !coachingState.isComplete && !isIntro
 
-  // Resume prompt — shown when saved session found on mount
+  // Resume prompt
   if (resumeData) {
     return (
-      <div className="w-full px-6 md:px-12 lg:px-20 py-8 space-y-4">
-        <div>
-          <button
-            onClick={() => router.push(SWOT_HUB_PATH)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 block"
-          >
-            &larr; Phan tich SWOT
-          </button>
-          <h1 className="text-2xl font-bold">AI Coaching</h1>
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold">AI Coaching</h2>
+        <div className="border-2 p-6 space-y-4">
+          <div className="text-center space-y-2">
+            <p className="text-lg font-semibold">
+              Tiep tuc phien lam viec truoc?
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {formatSavedTime(resumeData.savedAt)} &middot;{' '}
+              {resumeData.messages.length} tin nhan
+            </p>
+          </div>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={handleResume}>Tiep tuc</Button>
+            <Button variant="outline" onClick={handleStartOver}>
+              Bat dau lai
+            </Button>
+          </div>
         </div>
-
-        <Card className="border-2">
-          <CardContent className="py-6 space-y-4">
-            <div className="text-center space-y-2">
-              <p className="text-lg font-semibold">
-                Tiep tuc phien lam viec truoc?
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {formatSavedTime(resumeData.savedAt)} &middot;{' '}
-                {resumeData.messages.length} tin nhan
-              </p>
-            </div>
-            <div className="flex gap-3 justify-center">
-              <Button onClick={handleResume}>Tiep tuc</Button>
-              <Button variant="outline" onClick={handleStartOver}>
-                Bat dau lai
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     )
   }
 
-  // Intro screen — shown before chat when phase is 'intro'
+  // Intro screen
   if (isIntro) {
     return (
-      <div className="w-full px-6 md:px-12 lg:px-20 py-8 space-y-6">
-        <div>
-          <button
-            onClick={() => router.push(SWOT_HUB_PATH)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 block"
-          >
-            &larr; Phan tich SWOT
-          </button>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">AI Coaching</h1>
-              <p className="text-sm text-muted-foreground">
-                Chon cac dimensions ban muon phan tich
-              </p>
-            </div>
-            <Badge variant="outline" className="text-xs shrink-0">
-              Buoc 1/4
-            </Badge>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold">AI Coaching</h2>
+            <p className="text-sm text-muted-foreground">
+              Chon cac khia canh ban muon phan tich
+            </p>
           </div>
+          <Badge variant="outline" className="text-xs shrink-0">
+            Buoc 1/3
+          </Badge>
         </div>
         <CoachingIntroScreen onStart={handleIntroStart} />
       </div>
     )
   }
 
-  // Chat interface — full-width
+  // Chat interface
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] w-full">
-      {/* Header — sticky top */}
-      <div className="shrink-0 px-6 md:px-12 lg:px-20 py-3 border-b-2 border-foreground/10 bg-background">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 16rem)' }}>
+      {/* Header bar */}
+      <div className="shrink-0 pb-3 border-b-2 border-foreground/10">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <button
-              onClick={() => router.push(SWOT_HUB_PATH)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              &larr; Phan tich SWOT
-            </button>
-            <h1 className="text-lg font-display font-bold truncate">
-              AI Coaching
-            </h1>
+          <h2 className="text-lg font-display font-bold truncate">
+            AI Coaching
+          </h2>
+          <div className="flex items-center gap-2 shrink-0">
             {lastSaved && (
-              <span className="text-[10px] text-muted-foreground/70 shrink-0 hidden sm:block">
+              <span className="text-[10px] text-muted-foreground/70 hidden sm:block">
                 {formatSavedTime(lastSaved)}
               </span>
             )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Trigger B: early termination button */}
             {showEarlyEndButton && (
               <AlertDialog>
                 <AlertDialogTrigger
@@ -254,13 +238,11 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      Ket thuc phan tich som?
-                    </AlertDialogTitle>
+                    <AlertDialogTitle>Ket thuc phan tich som?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Ban da hoan thanh {progress.completedCount}/
-                      {progress.totalDimensions} dimensions. AI se tong hop
-                      SWOT tu du lieu hien co.
+                      {progress.totalDimensions} chu de. AI se tong hop SWOT tu
+                      du lieu hien co.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -280,9 +262,6 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
             >
               💾
             </button>
-            <Badge variant="outline" className="text-xs">
-              Buoc 1/4
-            </Badge>
           </div>
         </div>
 
@@ -300,7 +279,7 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
         </div>
       </div>
 
-      {/* Dimension pills — sticky below header */}
+      {/* Dimension pills */}
       <div className="shrink-0">
         <DimensionPills
           tracker={coachingTracker}
@@ -308,7 +287,7 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
         />
       </div>
 
-      {/* Chat container — fills remaining space */}
+      {/* Chat container */}
       <div className="flex-1 min-h-0">
         <Phase1Coaching
           orgContext={orgContext}
@@ -318,6 +297,9 @@ export function CoachingClient({ orgContext, userId }: CoachingClientProps) {
           onNavigateNext={handleNavigateNext}
           coachingTracker={coachingTracker}
           onTrackerUpdate={handleTrackerUpdate}
+          answeredCount={answeredCount}
+          canAdvanceToPhase2={canAdvanceToPhase2}
+          onAdvanceToPhase2={handleAdvanceToPhase2}
         />
       </div>
     </div>
