@@ -198,10 +198,11 @@ function createEmptySession(orgId: string): SwotSession {
   }
 }
 
-function highestCompletedStep(_session: SwotSession): string {
-  // Always use 'swot' — granular phase tracking lives in data_json.
-  // Using sub-keys (swot_coaching, swot_strategy, etc.) violates the
-  // discovery_sessions CHECK constraint and conflicts with coaching-persistence.
+function highestCompletedStep(session: SwotSession): string {
+  if (session.strategy.status === 'completed') return 'swot_strategy'
+  if (session.synthesis.status === 'completed') return 'swot_synthesis'
+  if (session.evidence.status === 'completed') return 'swot_evidence'
+  if (session.coaching.status === 'completed') return 'swot_coaching'
   return 'swot'
 }
 
@@ -387,12 +388,20 @@ export const useSwotStore = create<SwotStoreState>()(
 
       const stepCompleted = highestCompletedStep(sessionData)
 
-      // Delete existing swot session, then insert (safe upsert)
-      await supabase
-        .from('discovery_sessions')
-        .delete()
-        .eq('org_id', state.orgId)
-        .eq('step_completed', 'swot')
+      // Delete all swot-related sessions, then insert (safe upsert)
+      for (const key of [
+        'swot',
+        'swot_coaching',
+        'swot_evidence',
+        'swot_synthesis',
+        'swot_strategy',
+      ]) {
+        await supabase
+          .from('discovery_sessions')
+          .delete()
+          .eq('org_id', state.orgId)
+          .eq('step_completed', key)
+      }
 
       const { data: inserted } = await supabase
         .from('discovery_sessions')
