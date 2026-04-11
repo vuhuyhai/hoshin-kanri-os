@@ -20,7 +20,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL ?? 'Hoshin Kanri OS <noreply@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL ?? 'Hoshin Kanri OS <noreply@chienluoc.org>',
       to,
       subject,
       html,

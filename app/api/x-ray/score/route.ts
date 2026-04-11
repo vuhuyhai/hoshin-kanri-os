@@ -4,6 +4,8 @@ import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, cal
 import type { XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
 import type { Json } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/server'
+import { sendEmail } from '@/lib/email/send'
+import { xRayReportEmailTemplate } from '@/lib/email/templates'
 
 export async function POST(request: NextRequest) {
   try {
@@ -179,6 +181,20 @@ LƯU Ý:
     // Also save lead for non-logged-in users
     saveLead(supabase, companyInfo, answers, result).catch((err) =>
       console.error('Failed to save X-Ray lead:', err)
+    )
+
+    // Send report email (fire-and-forget, don't block response)
+    const { subject, html } = xRayReportEmailTemplate({
+      companyName: result.orgName,
+      industry: result.industry,
+      overallScore: result.overallScore,
+      overallLevel: result.overallLevel,
+      executiveSummary: result.executiveSummary,
+      pillarScores: result.pillarScores,
+      topActions: result.topActions,
+    })
+    sendEmail({ to: companyInfo.email, subject, html }).catch((err) =>
+      console.error('Failed to send X-Ray report email:', err)
     )
 
     return NextResponse.json({

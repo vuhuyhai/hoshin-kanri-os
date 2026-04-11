@@ -27,7 +27,7 @@ const HEADCOUNT_OPTIONS = [
 ] as const
 
 interface EmailCaptureStepProps {
-  onSubmit: (companyInfo: CompanyInfo) => void
+  onSubmit: (companyInfo: CompanyInfo) => Promise<void> | void
   onBack: () => void
   isLoading: boolean
 }
@@ -199,7 +199,7 @@ export function EmailCaptureStep({
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={isLoading || !isFormValid}
+          disabled={isLoading}
           className="flex-1 btn-brutal-primary min-h-[44px]"
         >
           {isLoading ? (
