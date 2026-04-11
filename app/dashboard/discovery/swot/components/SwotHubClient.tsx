@@ -13,6 +13,8 @@ import {
   type PhaseStatus,
 } from '@/lib/swot/swot-session-store'
 import { cn } from '@/lib/utils'
+import { XRayContextBanner } from './XRayContextBanner'
+import type { XRaySeedContext } from '@/lib/swot/xray-to-swot-mapper'
 
 interface SwotHubClientProps {
   orgId: string
@@ -31,6 +33,8 @@ export function SwotHubClient({ orgId }: SwotHubClientProps) {
   const staleReason = useSwotStore((s) => s.staleReason)
   const initSession = useSwotStore((s) => s.initSession)
   const getXMatrixCandidates = useSwotStore((s) => s.getXMatrixCandidates)
+  const [xrayContext, setXrayContext] = useState<XRaySeedContext | null>(null)
+  const [xrayBannerDismissed, setXrayBannerDismissed] = useState(false)
 
   useEffect(() => {
     if (!started.current) {
@@ -38,6 +42,15 @@ export function SwotHubClient({ orgId }: SwotHubClientProps) {
       initSession(orgId)
     }
   }, [orgId, initSession])
+
+  useEffect(() => {
+    fetch('/api/swot/xray-context').then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d?.hasXRay) {
+        setXrayContext(d.data as XRaySeedContext)
+        sessionStorage.setItem('swot_xray_context', JSON.stringify(d.data))
+      }
+    }).catch(() => {})
+  }, [])
 
   // Count completed phases
   const phases: { name: PhaseName; status: PhaseStatus }[] = [
@@ -138,6 +151,14 @@ export function SwotHubClient({ orgId }: SwotHubClientProps) {
           {completedCount}/4
         </span>
       </div>
+
+      {/* X-Ray context banner */}
+      {xrayContext && !xrayBannerDismissed && (
+        <XRayContextBanner
+          xrayContext={xrayContext}
+          onDismiss={() => setXrayBannerDismissed(true)}
+        />
+      )}
 
       {/* Stale banner */}
       {staleSince && staleReason && (

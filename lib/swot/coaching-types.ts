@@ -1,5 +1,7 @@
 // SWOT AI Coaching — structured context intake + 1-shot draft types
 
+import type { XRaySeedContext } from './xray-to-swot-mapper'
+
 export type AnalysisFramework = '8Ms' | '5Forces' | 'PESTEL'
 
 export interface SelectedElements {
@@ -18,6 +20,7 @@ export interface SwotContextInput {
   breakthroughGoal: string
   selectedFrameworks: AnalysisFramework[]
   selectedElements?: SelectedElements
+  xrayContext?: XRaySeedContext
 }
 
 export interface SwotDraftItem {

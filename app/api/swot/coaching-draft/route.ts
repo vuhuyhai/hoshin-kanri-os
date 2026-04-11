@@ -73,13 +73,16 @@ export async function POST(request: NextRequest) {
     }
 
     const client = new Anthropic()
+    const xrayHint = body.xrayContext?.summaryForAI
+      ? `\n\nDỮ LIỆU CHẨN ĐOÁN (Business X-Ray):\n${body.xrayContext.summaryForAI}`
+      : ''
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
       system: getDraftSystemPrompt(),
       messages: [
-        { role: 'user', content: buildDraftUserPrompt(body) },
+        { role: 'user', content: buildDraftUserPrompt(body) + xrayHint },
       ],
     })
 

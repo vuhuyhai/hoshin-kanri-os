@@ -6,6 +6,7 @@ import type {
   ExternalFrameworkChoice,
 } from './types'
 import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS, COACHING_QUESTION_BANK } from './frameworks'
+import type { XRaySeedContext } from './xray-to-swot-mapper'
 
 // ============================================================
 // NEW COACHING PROMPT — no framework jargon
@@ -155,7 +156,8 @@ function formatStateBlock(ctx?: CoachingContext): string {
 export function getSwCoachingSystemPrompt(
   orgContext: OrgContext,
   ctx?: CoachingContext,
-  selectedDimensionNames?: string[]
+  selectedDimensionNames?: string[],
+  xrayContext?: XRaySeedContext,
 ): string {
   const activeDims = selectedDimensionNames
     ? EIGHT_MS.filter((d) => selectedDimensionNames.includes(d.nameEn))
@@ -168,6 +170,9 @@ export function getSwCoachingSystemPrompt(
     : ''
 
   const stateBlock = formatStateBlock(ctx)
+  const xrayBlock = xrayContext && xrayContext.overallScore > 0
+    ? `\n\n=== DỮ LIỆU CHẨN ĐOÁN (Business X-Ray) ===\n${xrayContext.summaryForAI}\nĐiểm yếu cần khai thác sâu: ${xrayContext.swotHints.weaknesses.join(' | ') || 'chưa xác định'}\nĐiểm mạnh tiềm năng: ${xrayContext.swotHints.strengths.join(' | ') || 'chưa xác định'}\n=> Ưu tiên hỏi về các lĩnh vực điểm yếu trên. Không hỏi lại thông tin đã có trong X-Ray.\n==========================================`
+    : ''
 
   return `Bạn là **Minh** — AI Coach chiến lược, 20 năm tư vấn SME Việt Nam. Phong cách: thẳng thắn, hỏi sâu, không nịnh.
 
@@ -210,7 +215,7 @@ CEO: "Nhân sự tôi ổn"
 
 ### Đủ insight → chuyển chủ đề tự nhiên
 CEO: "Core team 8 người gần 3 năm. Tuyển mới mất 2 tháng vì thiếu PT có chứng chỉ"
-{"message":"Retention tốt nhưng pipeline tuyển là bottleneck — ghi nhận. Giờ mình nói về **công nghệ và hệ thống** bạn đang dùng. Phần mềm nào quản lý lịch, membership, và thu tiền?","extractedInsight":{"framework":"8M","dimension":"Man","insight":"Core 8/15 gần >3 năm, tuyển thay thế mất 2 tháng do thiếu PT có chứng chỉ","confidence":"high"},"shouldTransition":true,"nextDimension":"Machine"}`
+{"message":"Retention tốt nhưng pipeline tuyển là bottleneck — ghi nhận. Giờ mình nói về **công nghệ và hệ thống** bạn đang dùng. Phần mềm nào quản lý lịch, membership, và thu tiền?","extractedInsight":{"framework":"8M","dimension":"Man","insight":"Core 8/15 gần >3 năm, tuyển thay thế mất 2 tháng do thiếu PT có chứng chỉ","confidence":"high"},"shouldTransition":true,"nextDimension":"Machine"}${xrayBlock}`
 }
 
 // ============================================================
@@ -222,7 +227,8 @@ export function getOtCoachingSystemPrompt(
   ctx?: CoachingContext,
   externalFramework?: ExternalFrameworkChoice,
   selectedPorter?: string[],
-  selectedPestel?: string[]
+  selectedPestel?: string[],
+  xrayContext?: XRaySeedContext,
 ): string {
   const includePorter = externalFramework !== 'PESTEL'
   const includePestel = externalFramework !== 'Porter'
@@ -260,6 +266,9 @@ export function getOtCoachingSystemPrompt(
 
   const pestelSection = includePestel
     ? `## PESTEL${includePorter ? ' (đi sau Porter)' : ''}\n${pestelDims}\n\n`
+    : ''
+  const xrayBlock = xrayContext && xrayContext.overallScore > 0
+    ? `\n\n=== DỮ LIỆU CHẨN ĐOÁN (Business X-Ray) ===\n${xrayContext.summaryForAI}\nRủi ro phát hiện từ X-Ray: ${xrayContext.swotHints.threats.join(' | ') || 'chưa xác định'}\n=> Khai thác các mối đe dọa trên khi hỏi về Threats. Liên kết Opportunities với điểm mạnh đã có.\n==========================================`
     : ''
 
   return `Bạn là **Minh** — AI Coach chiến lược, 20 năm tư vấn SME Việt Nam. Phong cách: thẳng thắn, hỏi sâu, không nịnh.
@@ -300,7 +309,7 @@ CEO: "Có 3 gym lớn gần đây nhưng mình khác biệt bằng PT 1-1"
 
 ### Chuyển sang chủ đề tiếp
 CEO: "Họ không copy được vì mình có hệ thống training PT riêng, mất 6 tháng đào tạo"
-{"message":"Moat 6 tháng đào tạo — barrier tốt. Giờ mình nói về **xu hướng khách hàng**. Thói quen tập gym ở ${orgContext.city} thay đổi thế nào gần đây — khách có chuyển sang tập ở nhà nhiều không?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy","confidence":"high"},"shouldTransition":true,"nextDimension":"Social"}`
+{"message":"Moat 6 tháng đào tạo — barrier tốt. Giờ mình nói về **xu hướng khách hàng**. Thói quen tập gym ở ${orgContext.city} thay đổi thế nào gần đây — khách có chuyển sang tập ở nhà nhiều không?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy","confidence":"high"},"shouldTransition":true,"nextDimension":"Social"}${xrayBlock}`
 }
 
 // ============================================================

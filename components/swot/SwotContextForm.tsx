@@ -8,11 +8,13 @@ import { Textarea } from '@/components/ui/textarea'
 import IndustryIcon from '@/components/ui/IndustryIcon'
 import { SwotFrameworkPicker } from './SwotFrameworkPicker'
 import type { AnalysisFramework, SelectedElements, SwotContextInput } from '@/lib/swot/coaching-types'
+import type { XRaySeedContext } from '@/lib/swot/xray-to-swot-mapper'
 
 interface SwotContextFormProps {
   orgProfile: { name: string; industry: string; headcount: string; city: string }
   onSubmit: (input: SwotContextInput) => Promise<void>
   isLoading: boolean
+  xrayContext?: XRaySeedContext
 }
 
 const INDUSTRY_OPTIONS = [
@@ -56,7 +58,7 @@ function findIndustryOption(raw: string) {
     null
 }
 
-export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContextFormProps) {
+export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }: SwotContextFormProps) {
   const initialOption = findIndustryOption(orgProfile.industry)
   const [industry, setIndustry] = useState(initialOption?.value ?? '')
   const [industryOpen, setIndustryOpen] = useState(false)
@@ -81,6 +83,14 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [industryOpen])
+
+  // Auto-fill from X-Ray context
+  useEffect(() => {
+    if (!xrayContext) return
+    if (!industry) setIndustry(findIndustryOption(orgProfile.industry)?.value ?? '')
+    if (!topChallenges && xrayContext.swotHints.weaknesses.length > 0)
+      setTopChallenges(xrayContext.swotHints.weaknesses.slice(0, 2).join('. '))
+  }, [xrayContext]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const swValid = selectedElements.eightMs.length >= 1
   const otValid = selectedElements.fiveForces.length + selectedElements.pestel.length >= 1
@@ -110,6 +120,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
       industry, headcount, topChallenges, currentStrengths, breakthroughGoal,
       selectedFrameworks: deriveFrameworks(selectedElements),
       selectedElements,
+      xrayContext: xrayContext ?? undefined,
     })
   }
 
@@ -255,6 +266,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
             rows={3}
             className="border-2 border-black resize-none"
           />
+          {xrayContext && <p className="text-xs text-[#8A8787] mt-1">💡 Gợi ý từ Business X-Ray của bạn</p>}
           {errors.topChallenges && <p className="text-xs text-red-600">{errors.topChallenges}</p>}
         </div>
         <div className="space-y-1.5">
