@@ -11,6 +11,7 @@ import { XRayReport } from './XRayReport'
 import { AnalyzingLoader } from './AnalyzingLoader'
 
 const LOCALSTORAGE_KEY = 'hoshin_xray_progress_v2'
+const RESULT_SESSION_KEY = 'hoshin_xray_result'
 
 const initialState: XRayFormState = {
   currentStep: 0,
@@ -31,9 +32,20 @@ export function XRayForm() {
   const [showTransition, setShowTransition] = useState(false)
   const [savedSuccessfully, setSavedSuccessfully] = useState<boolean | undefined>(undefined)
 
-  // Restore progress from localStorage
+  // Restore progress from localStorage, or result from sessionStorage
   useEffect(() => {
     try {
+      // If a completed result exists in sessionStorage, restore it
+      const savedResult = sessionStorage.getItem(RESULT_SESSION_KEY)
+      if (savedResult) {
+        const parsed = JSON.parse(savedResult)
+        if (parsed.result) {
+          setState((prev) => ({ ...prev, result: parsed.result }))
+          setSavedSuccessfully(parsed.savedSuccessfully ?? false)
+          return
+        }
+      }
+
       const saved = localStorage.getItem(LOCALSTORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved) as Partial<XRayFormState>
@@ -112,6 +124,14 @@ export function XRayForm() {
 
       localStorage.removeItem(LOCALSTORAGE_KEY)
       setSavedSuccessfully(data.savedSuccessfully ?? false)
+
+      // Persist result in sessionStorage so it survives router.refresh()
+      try {
+        sessionStorage.setItem(RESULT_SESSION_KEY, JSON.stringify({
+          result: data.result,
+          savedSuccessfully: data.savedSuccessfully ?? false,
+        }))
+      } catch { /* quota exceeded — non-critical */ }
 
       setState((prev) => ({
         ...prev,
