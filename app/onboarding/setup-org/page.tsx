@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,40 +59,28 @@ export default function SetupOrgPage() {
     }
 
     setIsLoading(true)
-    const supabase = createClient()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
-    }
+    try {
+      const res = await fetch('/api/settings/org', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), industry, headcount, city }),
+      })
 
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .insert({ name: name.trim(), industry, headcount, city })
-      .select()
-      .single()
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || 'Không thể tạo công ty. Thử lại.')
+        setIsLoading(false)
+        return
+      }
 
-    if (orgError || !org) {
-      toast.error('Không thể tạo công ty. Thử lại.')
+      toast.success(`Chào mừng ${name.trim()}!`)
+      router.push('/dashboard')
+    } catch {
+      toast.error('Lỗi kết nối. Vui lòng thử lại.')
       setIsLoading(false)
       return
     }
-
-    const { error: memberError } = await supabase
-      .from('org_members')
-      .insert({ org_id: org.id, user_id: user.id, role: 'CEO' })
-
-    if (memberError) {
-      toast.error('Lỗi khi thiết lập tài khoản. Thử lại.')
-      setIsLoading(false)
-      return
-    }
-
-    toast.success(`Chào mừng ${name.trim()}!`)
-    router.push('/dashboard')
   }
 
   return (

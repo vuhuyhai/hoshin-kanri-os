@@ -1,9 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+// POST: Create new org + add user as CEO (onboarding)
+// Uses service role to bypass RLS (new user has no org_members yet)
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Check if user already has an org
+    const { data: existing } = await supabase
+      .from('org_members')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (existing)
+      return NextResponse.json({ error: 'Bạn đã có tổ chức' }, { status: 409 })
+
+    const body = await request.json()
+    const { name, industry, headcount, city } = body as {
+      name: string; industry: string; headcount: string; city: string
+    }
+
+    if (!name?.trim() || !industry)
+      return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 })
+
+    // Use service role to bypass RLS for atomic org + member creation
+    const adminDb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: org, error: orgError } = await adminDb
+      .from('organizations')
+      .insert({ name: name.trim(), industry, headcount, city })
+      .select('id')
+      .single()
+
+    if (orgError || !org)
+      return NextResponse.json({ error: 'Không thể tạo công ty' }, { status: 500 })
+
+    const { error: memberError } = await adminDb
+      .from('org_members')
+      .insert({ org_id: org.id, user_id: user.id, role: 'CEO' })
+
+    if (memberError) {
+      // Rollback: delete the org if member creation fails
+      await adminDb.from('organizations').delete().eq('id', org.id)
+      return NextResponse.json({ error: 'Lỗi thiết lập tài khoản' }, { status: 500 })
+    }
+
+    return NextResponse.json({ org })
+  } catch (error) {
+    console.error('Setup org error:', error)
+    return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 })
+  }
+}
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
