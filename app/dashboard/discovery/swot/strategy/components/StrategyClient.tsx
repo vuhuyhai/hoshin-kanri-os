@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,6 +44,8 @@ const CATEGORY_CONFIG: Record<
 
 export function StrategyClient({ orgId, orgContext }: StrategyClientProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const isTowsFlow = pathname.includes('tows')
   const started = useRef(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [isGeneratingCandidates, setIsGeneratingCandidates] = useState(false)
@@ -133,7 +135,7 @@ export function StrategyClient({ orgId, orgContext }: StrategyClientProps) {
     )
   }
 
-  if (synthesis.status !== 'completed') {
+  if (!isTowsFlow && synthesis.status !== 'completed') {
     return (
       <div className="text-center py-16 space-y-4">
         <p className="text-5xl">⚠️</p>
