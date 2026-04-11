@@ -2,6 +2,12 @@
 
 export type AnalysisFramework = '8Ms' | '5Forces' | 'PESTEL'
 
+export interface SelectedElements {
+  eightMs: string[]
+  fiveForces: string[]
+  pestel: string[]
+}
+
 export interface SwotContextInput {
   orgName: string
   city: string
@@ -11,6 +17,7 @@ export interface SwotContextInput {
   currentStrengths: string
   breakthroughGoal: string
   selectedFrameworks: AnalysisFramework[]
+  selectedElements?: SelectedElements
 }
 
 export interface SwotDraftItem {

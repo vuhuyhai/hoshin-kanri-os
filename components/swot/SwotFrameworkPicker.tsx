@@ -1,114 +1,119 @@
 'use client'
 
-import type { AnalysisFramework } from '@/lib/swot/coaching-types'
+import { FrameworkElementSelector } from './FrameworkElementSelector'
+import type { SelectedElements } from '@/lib/swot/coaching-types'
 
-interface FrameworkOption {
-  id: AnalysisFramework
-  name: string
-  description: string
-  dimensions: string[]
-  focusNote: string
-}
+const EIGHT_MS_ELEMENTS = [
+  'Nhân lực', 'Máy móc', 'Nguyên liệu', 'Phương pháp',
+  'Tài chính', 'Đo lường', 'Quản lý', 'Môi trường làm việc',
+]
 
-const FRAMEWORKS: FrameworkOption[] = [
-  {
-    id: '8Ms',
-    name: '8Ms',
-    description: 'Phân tích nội bộ theo 8 nguồn lực',
-    dimensions: [
-      'Nhân lực', 'Máy móc', 'Nguyên liệu', 'Phương pháp',
-      'Tài chính', 'Đo lường', 'Quản lý', 'Môi trường làm việc',
-    ],
-    focusNote: 'Giúp AI tập trung vào Strengths & Weaknesses',
-  },
-  {
-    id: '5Forces',
-    name: '5 Forces',
-    description: 'Áp lực cạnh tranh ngành',
-    dimensions: [
-      'Đối thủ hiện tại', 'Khách hàng', 'Nhà cung cấp',
-      'Sản phẩm thay thế', 'Đối thủ tiềm ẩn',
-    ],
-    focusNote: 'Giúp AI tập trung vào Threats & Opportunities',
-  },
-  {
-    id: 'PESTEL',
-    name: 'PESTEL',
-    description: 'Môi trường vĩ mô Việt Nam',
-    dimensions: [
-      'Chính trị', 'Kinh tế', 'Xã hội',
-      'Công nghệ', 'Môi trường', 'Pháp lý',
-    ],
-    focusNote: 'Giúp AI tập trung vào Opportunities & Threats',
-  },
+const FIVE_FORCES_ELEMENTS = [
+  'Đối thủ hiện tại', 'Khách hàng', 'Nhà cung cấp',
+  'Sản phẩm thay thế', 'Đối thủ tiềm ẩn',
+]
+
+const PESTEL_ELEMENTS = [
+  'Chính trị', 'Kinh tế', 'Xã hội',
+  'Công nghệ', 'Môi trường', 'Pháp lý',
 ]
 
 interface SwotFrameworkPickerProps {
-  selected: AnalysisFramework[]
-  onChange: (selected: AnalysisFramework[]) => void
+  selectedElements: SelectedElements
+  onChange: (elements: SelectedElements) => void
   error?: string
 }
 
 export function SwotFrameworkPicker({
-  selected,
-  onChange,
-  error,
+  selectedElements, onChange, error,
 }: SwotFrameworkPickerProps) {
-  const toggle = (id: AnalysisFramework) => {
-    if (selected.includes(id)) {
-      onChange(selected.filter((s) => s !== id))
-    } else {
-      onChange([...selected, id])
-    }
+  const toggleElement = (
+    key: keyof SelectedElements,
+    element: string,
+  ) => {
+    const current = selectedElements[key]
+    const next = current.includes(element)
+      ? current.filter((e) => e !== element)
+      : [...current, element]
+    onChange({ ...selectedElements, [key]: next })
   }
 
+  const swCount = selectedElements.eightMs.length
+  const otCount = selectedElements.fiveForces.length + selectedElements.pestel.length
+  const swValid = swCount >= 1
+  const otValid = otCount >= 1
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {FRAMEWORKS.map((fw) => {
-          const isSelected = selected.includes(fw.id)
-          return (
-            <button
-              key={fw.id}
-              type="button"
-              onClick={() => toggle(fw.id)}
-              className={`text-left p-4 border-2 border-black transition-all ${
-                isSelected
-                  ? 'bg-black text-white shadow-none'
-                  : 'bg-white hover:shadow-[4px_4px_0_#000]'
-              }`}
-            >
-              <div className="font-display font-bold text-sm">
-                {fw.name}
-              </div>
-              <p className={`text-xs mt-0.5 ${
-                isSelected ? 'text-gray-300' : 'text-muted-foreground'
-              }`}>
-                {fw.description}
-              </p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {fw.dimensions.map((d) => (
-                  <span
-                    key={d}
-                    className={`text-[10px] px-1.5 py-0.5 border ${
-                      isSelected
-                        ? 'border-white/30 text-gray-300'
-                        : 'border-black/20 text-muted-foreground'
-                    }`}
-                  >
-                    {d}
-                  </span>
-                ))}
-              </div>
-              <p className={`text-[10px] mt-2 italic ${
-                isSelected ? 'text-gray-400' : 'text-muted-foreground/70'
-              }`}>
-                {fw.focusNote}
-              </p>
-            </button>
-          )
-        })}
+    <div className="space-y-6">
+      {/* ── S-W Group ── */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-display font-bold px-2 py-0.5 border-2 border-blue-600 bg-blue-50 text-blue-700">
+            S-W
+          </span>
+          <span className="text-xs font-display font-semibold text-ink">
+            Phân tích Điểm mạnh &amp; Điểm yếu
+          </span>
+        </div>
+        <FrameworkElementSelector
+          name="8Ms"
+          description="Phân tích nội bộ theo 8 nguồn lực"
+          elements={EIGHT_MS_ELEMENTS}
+          selectedElements={selectedElements.eightMs}
+          onToggle={(el) => toggleElement('eightMs', el)}
+          focusNote="Giúp AI tập trung vào Strengths & Weaknesses"
+        />
       </div>
+
+      {/* ── O-T Group ── */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-display font-bold px-2 py-0.5 border-2 border-orange-500 bg-orange-50 text-orange-700">
+            O-T
+          </span>
+          <span className="text-xs font-display font-semibold text-ink">
+            Phân tích Cơ hội &amp; Thách thức
+          </span>
+        </div>
+        <p className="text-[11px] text-muted-foreground -mt-1">
+          Chọn ít nhất 1 yếu tố từ 1 trong 2 framework bên dưới
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <FrameworkElementSelector
+            name="5 Forces"
+            description="Áp lực cạnh tranh ngành"
+            elements={FIVE_FORCES_ELEMENTS}
+            selectedElements={selectedElements.fiveForces}
+            onToggle={(el) => toggleElement('fiveForces', el)}
+            focusNote="Giúp AI tập trung vào Threats & Opportunities"
+          />
+          <FrameworkElementSelector
+            name="PESTEL"
+            description="Môi trường vĩ mô Việt Nam"
+            elements={PESTEL_ELEMENTS}
+            selectedElements={selectedElements.pestel}
+            onToggle={(el) => toggleElement('pestel', el)}
+            focusNote="Giúp AI tập trung vào Opportunities & Threats"
+          />
+        </div>
+      </div>
+
+      {/* ── Progress indicator ── */}
+      <div className="border-2 border-black/10 bg-gray-50 p-3 space-y-1.5">
+        <div className="flex items-center gap-2 text-xs">
+          <span>{swValid ? '✅' : '⬜'}</span>
+          <span className={swValid ? 'text-ink font-medium' : 'text-muted-foreground'}>
+            Đã chọn {swCount} yếu tố SW
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span>{otValid ? '✅' : '⬜'}</span>
+          <span className={otValid ? 'text-ink font-medium' : 'text-muted-foreground'}>
+            Đã chọn {otCount} yếu tố OT
+          </span>
+        </div>
+      </div>
+
       {error && (
         <p className="text-sm text-red-600 font-medium">{error}</p>
       )}

@@ -11,21 +11,35 @@ export function getDraftSystemPrompt(): string {
 
 export function buildDraftUserPrompt(input: SwotContextInput): string {
   const frameworkBlocks: string[] = []
+  const el = input.selectedElements
 
-  if (input.selectedFrameworks.includes('8Ms')) {
-    frameworkBlocks.push(
-      '→ Phân tích qua 8 nguồn lực: Nhân lực (Man), Máy móc (Machine), Nguyên liệu (Material), Phương pháp (Method), Tài chính (Money), Đo lường (Measurement), Quản lý (Management), Môi trường làm việc (Mother Nature)'
-    )
-  }
-  if (input.selectedFrameworks.includes('5Forces')) {
-    frameworkBlocks.push(
-      "→ Phân tích qua 5 áp lực: Đối thủ hiện tại, Khách hàng, Nhà cung cấp, Sản phẩm thay thế, Đối thủ tiềm ẩn (Porter's Five Forces)"
-    )
-  }
-  if (input.selectedFrameworks.includes('PESTEL')) {
-    frameworkBlocks.push(
-      '→ Phân tích qua 6 yếu tố vĩ mô Việt Nam: Chính trị, Kinh tế, Xã hội, Công nghệ, Môi trường, Pháp lý (PESTEL)'
-    )
+  if (el) {
+    if (el.eightMs.length > 0) {
+      frameworkBlocks.push(`→ Phân tích theo các yếu tố 8Ms: ${el.eightMs.join(', ')}`)
+    }
+    if (el.fiveForces.length > 0) {
+      frameworkBlocks.push(`→ Phân tích theo các yếu tố 5 Forces: ${el.fiveForces.join(', ')}`)
+    }
+    if (el.pestel.length > 0) {
+      frameworkBlocks.push(`→ Phân tích theo các yếu tố PESTEL: ${el.pestel.join(', ')}`)
+    }
+  } else {
+    // Fallback: legacy full-framework selection
+    if (input.selectedFrameworks.includes('8Ms')) {
+      frameworkBlocks.push(
+        '→ Phân tích qua 8 nguồn lực: Nhân lực, Máy móc, Nguyên liệu, Phương pháp, Tài chính, Đo lường, Quản lý, Môi trường làm việc (8Ms)'
+      )
+    }
+    if (input.selectedFrameworks.includes('5Forces')) {
+      frameworkBlocks.push(
+        "→ Phân tích qua 5 áp lực: Đối thủ hiện tại, Khách hàng, Nhà cung cấp, Sản phẩm thay thế, Đối thủ tiềm ẩn (5 Forces)"
+      )
+    }
+    if (input.selectedFrameworks.includes('PESTEL')) {
+      frameworkBlocks.push(
+        '→ Phân tích qua 6 yếu tố vĩ mô: Chính trị, Kinh tế, Xã hội, Công nghệ, Môi trường, Pháp lý (PESTEL)'
+      )
+    }
   }
 
   return `Doanh nghiệp: ${input.orgName}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { SwotFrameworkPicker } from './SwotFrameworkPicker'
-import type { AnalysisFramework, SwotContextInput } from '@/lib/swot/coaching-types'
+import type { AnalysisFramework, SelectedElements, SwotContextInput } from '@/lib/swot/coaching-types'
 
 interface SwotContextFormProps {
   orgProfile: { name: string; industry: string; headcount: string; city: string }
@@ -24,7 +25,17 @@ const HEADCOUNT_OPTIONS = [
   { value: '200+', label: 'Trên 200 người' },
 ]
 
+const EMPTY_ELEMENTS: SelectedElements = { eightMs: [], fiveForces: [], pestel: [] }
+
 type FormErrors = Partial<Record<'industry' | 'headcount' | 'topChallenges' | 'currentStrengths' | 'breakthroughGoal' | 'frameworks', string>>
+
+function deriveFrameworks(el: SelectedElements): AnalysisFramework[] {
+  const fw: AnalysisFramework[] = []
+  if (el.eightMs.length > 0) fw.push('8Ms')
+  if (el.fiveForces.length > 0) fw.push('5Forces')
+  if (el.pestel.length > 0) fw.push('PESTEL')
+  return fw
+}
 
 export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContextFormProps) {
   const [industry, setIndustry] = useState(orgProfile.industry || '')
@@ -32,8 +43,12 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
   const [topChallenges, setTopChallenges] = useState('')
   const [currentStrengths, setCurrentStrengths] = useState('')
   const [breakthroughGoal, setBreakthroughGoal] = useState('')
-  const [selectedFrameworks, setSelectedFrameworks] = useState<AnalysisFramework[]>([])
+  const [selectedElements, setSelectedElements] = useState<SelectedElements>(EMPTY_ELEMENTS)
   const [errors, setErrors] = useState<FormErrors>({})
+
+  const swValid = selectedElements.eightMs.length >= 1
+  const otValid = selectedElements.fiveForces.length + selectedElements.pestel.length >= 1
+  const elementsValid = swValid && otValid
 
   const validate = (): boolean => {
     const e: FormErrors = {}
@@ -42,17 +57,23 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
     if (!topChallenges || topChallenges.length < 20) e.topChallenges = 'Tối thiểu 20 ký tự'
     if (!currentStrengths || currentStrengths.length < 10) e.currentStrengths = 'Tối thiểu 10 ký tự'
     if (!breakthroughGoal || breakthroughGoal.length < 15) e.breakthroughGoal = 'Tối thiểu 15 ký tự'
-    if (selectedFrameworks.length === 0) e.frameworks = 'Chọn ít nhất 1 góc nhìn phân tích'
+    if (!elementsValid) e.frameworks = 'Chọn ít nhất 1 yếu tố 8Ms và 1 yếu tố OT (5 Forces hoặc PESTEL)'
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!elementsValid) {
+      toast.error('Vui lòng chọn ít nhất 1 yếu tố 8Ms và 1 yếu tố OT')
+      return
+    }
     if (!validate()) return
     await onSubmit({
       orgName: orgProfile.name, city: orgProfile.city,
-      industry, headcount, topChallenges, currentStrengths, breakthroughGoal, selectedFrameworks,
+      industry, headcount, topChallenges, currentStrengths, breakthroughGoal,
+      selectedFrameworks: deriveFrameworks(selectedElements),
+      selectedElements,
     })
   }
 
@@ -93,7 +114,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
 
       <fieldset className="space-y-4">
         <legend className="font-display font-bold text-base flex items-center gap-2">
-          📊 Hiện trạng (Current State)
+          Hiện trạng (Current State)
         </legend>
         <div className="space-y-1.5">
           <Label htmlFor="challenges">3 thách thức lớn nhất hiện tại *</Label>
@@ -113,7 +134,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
 
       <fieldset className="space-y-3">
         <legend className="font-display font-bold text-base flex items-center gap-2">
-          🎯 Mục tiêu đột phá
+          Mục tiêu đột phá
         </legend>
         <div className="space-y-1.5">
           <Label htmlFor="goal">Mục tiêu lớn nhất muốn đạt trong 12 tháng tới *</Label>
@@ -126,21 +147,28 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContext
 
       <fieldset className="space-y-3">
         <legend className="font-display font-bold text-base flex items-center gap-2">
-          🔍 Góc nhìn phân tích
+          Góc nhìn phân tích
         </legend>
-        <p className="text-xs text-muted-foreground">Chọn ít nhất 1 framework — AI sẽ dùng để phân tích SWOT phù hợp nhất</p>
-        <SwotFrameworkPicker selected={selectedFrameworks} onChange={setSelectedFrameworks} error={errors.frameworks} />
+        <p className="text-xs text-muted-foreground">Chọn yếu tố cụ thể — AI sẽ tập trung phân tích SWOT theo đúng những gì bạn quan tâm</p>
+        <SwotFrameworkPicker selectedElements={selectedElements} onChange={setSelectedElements} error={errors.frameworks} />
       </fieldset>
 
-      <Button type="submit" disabled={isLoading}
-        className="w-full border-2 border-black bg-black text-white font-display font-bold text-sm py-6 shadow-[4px_4px_0_#000] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all">
-        {isLoading ? (
-          <span className="flex items-center gap-2">
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Đang xử lý...
-          </span>
-        ) : '⚡ Tạo SWOT với AI'}
-      </Button>
+      <div className="relative group">
+        <Button type="submit" disabled={isLoading || !elementsValid}
+          className="w-full border-2 border-black bg-black text-white font-display font-bold text-sm py-6 shadow-[4px_4px_0_#000] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0">
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Đang xử lý...
+            </span>
+          ) : 'Bắt đầu phân tích với AI'}
+        </Button>
+        {!elementsValid && !isLoading && (
+          <div className="invisible group-hover:visible absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black text-white text-xs px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_#000]">
+            Vui lòng chọn ít nhất 1 yếu tố 8Ms và 1 yếu tố OT
+          </div>
+        )}
+      </div>
     </form>
   )
 }
