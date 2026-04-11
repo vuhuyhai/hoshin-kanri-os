@@ -8,6 +8,7 @@ import type {
   CustomerDetail,
   AdminNote,
   AdminStats,
+  RegisteredUser,
 } from './types'
 
 const VALID_PLANS = ['free', 'starter', 'growth', 'enterprise'] as const
@@ -101,7 +102,7 @@ export async function getAdminStats(): Promise<AdminStats> {
   const db = createAdminClient()
 
   // Run all counts in parallel
-  const [orgsResult, payingResult, newResult, subsResult] = await Promise.all([
+  const [orgsResult, payingResult, newResult, subsResult, usersResult] = await Promise.all([
     db.from('organizations').select('id', { count: 'exact', head: true }),
     db
       .from('subscriptions' as 'organizations')
@@ -112,12 +113,14 @@ export async function getAdminStats(): Promise<AdminStats> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at' as 'id', startOfMonth()),
     db.from('subscriptions' as 'organizations').select('plan' as 'id'),
+    db.from('users').select('id', { count: 'exact', head: true }),
   ])
 
   if (orgsResult.error) throw orgsResult.error
   if (payingResult.error) throw payingResult.error
   if (newResult.error) throw newResult.error
   if (subsResult.error) throw subsResult.error
+  if (usersResult.error) throw usersResult.error
 
   const rows = (subsResult.data ?? []) as unknown as { plan: string }[]
   const mrr = rows.reduce(
@@ -130,7 +133,45 @@ export async function getAdminStats(): Promise<AdminStats> {
     paying_customers: payingResult.count ?? 0,
     new_this_month: newResult.count ?? 0,
     mrr_estimate: mrr,
+    total_users: usersResult.count ?? 0,
   }
+}
+
+export async function getRegisteredUsers(): Promise<RegisteredUser[]> {
+  const db = createAdminClient()
+
+  // Get all users with their org info
+  const { data: users, error: usersError } = await db
+    .from('users')
+    .select('id, email, full_name, phone, created_at')
+    .order('created_at', { ascending: false })
+
+  if (usersError) throw usersError
+  if (!users || users.length === 0) return []
+
+  // Get org memberships
+  const { data: members } = await db
+    .from('org_members')
+    .select('user_id, org_id')
+
+  // Get org names
+  const { data: orgs } = await db
+    .from('organizations')
+    .select('id, name')
+
+  const orgList = (orgs ?? []) as unknown as { id: string; name: string }[]
+  const memberList = (members ?? []) as unknown as { user_id: string; org_id: string }[]
+  const orgMap = new Map(orgList.map((o) => [o.id, o.name]))
+  const memberMap = new Map(memberList.map((m) => [m.user_id, m.org_id]))
+
+  return (users as { id: string; email: string; full_name: string | null; phone: string | null; created_at: string }[]).map((u) => {
+    const orgId = memberMap.get(u.id)
+    return {
+      ...u,
+      has_org: !!orgId,
+      org_name: orgId ? (orgMap.get(orgId) ?? null) : null,
+    }
+  })
 }
 
 function startOfMonth(): string {

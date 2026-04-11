@@ -32,4 +32,15 @@ export interface AdminStats {
   paying_customers: number
   new_this_month: number
   mrr_estimate: number
+  total_users: number
+}
+
+export interface RegisteredUser {
+  id: string
+  email: string
+  full_name: string | null
+  phone: string | null
+  created_at: string
+  has_org: boolean
+  org_name: string | null
 }
