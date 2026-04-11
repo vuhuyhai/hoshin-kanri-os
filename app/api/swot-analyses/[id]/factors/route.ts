@@ -83,31 +83,41 @@ export async function POST(
     const orgId = await verifyAnalysisOwnership(supabase, user.id, analysisId)
     if (!orgId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const code = await generateFactorCode(
-      supabase,
-      analysisId,
-      body.quadrant as SwotQuadrant,
-    )
+    // Retry loop: generateFactorCode is count-based and not atomic,
+    // so a concurrent request could produce a duplicate code.
+    // The UNIQUE(swot_analysis_id, code) constraint catches this — retry with next code.
+    const MAX_RETRIES = 3
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const code = await generateFactorCode(
+        supabase,
+        analysisId,
+        body.quadrant as SwotQuadrant,
+      )
 
-    const { data: factor, error } = await supabase
-      .from('swot_factors')
-      .insert({
-        org_id: orgId,
-        swot_analysis_id: analysisId,
-        quadrant: body.quadrant,
-        code,
-        content: body.content.trim(),
-        source_framework: body.source_framework ?? null,
-        source_ref: body.source_ref ?? null,
-        evidence_text: body.evidence_text ?? null,
-        is_key_factor: body.is_key_factor ?? false,
-      })
-      .select()
-      .single()
+      const { data: factor, error } = await supabase
+        .from('swot_factors')
+        .insert({
+          org_id: orgId,
+          swot_analysis_id: analysisId,
+          quadrant: body.quadrant,
+          code,
+          content: body.content.trim(),
+          source_framework: body.source_framework ?? null,
+          source_ref: body.source_ref ?? null,
+          evidence_text: body.evidence_text ?? null,
+          is_key_factor: body.is_key_factor ?? false,
+        })
+        .select()
+        .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (!error) return NextResponse.json(factor, { status: 201 })
 
-    return NextResponse.json(factor, { status: 201 })
+      // 23505 = unique_violation in PostgreSQL
+      const isUniqueViolation = error.code === '23505'
+      if (!isUniqueViolation || attempt === MAX_RETRIES - 1) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Lỗi tạo yếu tố'
     return NextResponse.json({ error: msg }, { status: 500 })

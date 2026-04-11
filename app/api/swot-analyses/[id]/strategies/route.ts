@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { Database } from '@/lib/supabase/types'
 import type {
   TowsStrategyWithFactorsRecord,
   StrategyStatus,
   BscPerspective,
 } from '@/lib/swot/tows-types'
+
+type FactorRow = Database['public']['Tables']['swot_factors']['Row']
 
 async function verifyAnalysisOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -49,25 +52,31 @@ export async function GET(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // Enrich each strategy with its factors
-    const enriched: TowsStrategyWithFactorsRecord[] = []
+    // Batch-fetch all referenced factors in 1 query instead of N+1
+    const allFactorIds = new Set<string>()
     for (const s of strategies ?? []) {
-      const { data: swFactors } = await supabase
-        .from('swot_factors')
-        .select('*')
-        .in('id', s.sw_factor_ids?.length ? s.sw_factor_ids : ['__none__'])
-
-      const { data: otFactors } = await supabase
-        .from('swot_factors')
-        .select('*')
-        .in('id', s.ot_factor_ids?.length ? s.ot_factor_ids : ['__none__'])
-
-      enriched.push({
-        ...s,
-        sw_factors: swFactors ?? [],
-        ot_factors: otFactors ?? [],
-      } as TowsStrategyWithFactorsRecord)
+      for (const id of s.sw_factor_ids ?? []) allFactorIds.add(id)
+      for (const id of s.ot_factor_ids ?? []) allFactorIds.add(id)
     }
+
+    const factorsById = new Map<string, FactorRow>()
+    if (allFactorIds.size > 0) {
+      const { data: allFactors } = await supabase
+        .from('swot_factors')
+        .select('*')
+        .in('id', [...allFactorIds])
+      for (const f of allFactors ?? []) factorsById.set(f.id, f)
+    }
+
+    const enriched: TowsStrategyWithFactorsRecord[] = (strategies ?? []).map((s) => {
+      const swf = (s.sw_factor_ids ?? []).reduce<FactorRow[]>((acc, id) => {
+        const f = factorsById.get(id); if (f) acc.push(f); return acc
+      }, [])
+      const otf = (s.ot_factor_ids ?? []).reduce<FactorRow[]>((acc, id) => {
+        const f = factorsById.get(id); if (f) acc.push(f); return acc
+      }, [])
+      return { ...s, sw_factors: swf, ot_factors: otf } as TowsStrategyWithFactorsRecord
+    })
 
     return NextResponse.json(enriched)
   } catch (err) {

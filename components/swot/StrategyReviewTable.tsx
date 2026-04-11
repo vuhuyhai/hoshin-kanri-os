@@ -10,6 +10,7 @@ interface Props {
   analysisId: string
   strategies: TowsStrategyWithFactorsRecord[]
   onStatusChange: (id: string, status: StrategyStatus) => void
+  onBscChange?: (id: string, bsc: BscPerspective) => void
   onSendToXMatrix: (strategies: TowsStrategyWithFactorsRecord[]) => void
 }
 
@@ -64,7 +65,7 @@ function SummaryBar({ strategies }: { strategies: TowsStrategyWithFactorsRecord[
   )
 }
 
-export function StrategyReviewTable({ analysisId, strategies, onStatusChange, onSendToXMatrix }: Props) {
+export function StrategyReviewTable({ analysisId, strategies, onStatusChange, onBscChange, onSendToXMatrix }: Props) {
   if (strategies.length === 0) {
     return <p className="text-center text-ink/50 py-8 font-body">Chưa có chiến lược nào. Quay lại Phase 2 để tạo.</p>
   }
@@ -79,10 +80,14 @@ export function StrategyReviewTable({ analysisId, strategies, onStatusChange, on
         body: JSON.stringify({ id, status: next }),
       })
       if (!res.ok) throw new Error()
-    } catch { toast.error('Lỗi cập nhật trạng thái') }
+    } catch {
+      onStatusChange(id, current) // rollback
+      toast.error('Lỗi cập nhật trạng thái')
+    }
   }
 
   const handleBscChange = async (id: string, bsc: BscPerspective) => {
+    onBscChange?.(id, bsc)
     try {
       const res = await fetch(`/api/swot-analyses/${analysisId}/strategies`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },

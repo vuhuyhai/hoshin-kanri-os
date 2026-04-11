@@ -60,12 +60,22 @@ export default async function SwotPage() {
     analysisId = newAnalysis?.id
   }
 
+  if (!analysisId) {
+    return (
+      <div className="w-full min-h-full p-6">
+        <div style={{ padding: 24, border: '2px solid #c73937', color: '#c73937' }}>
+          Không thể tạo phiên phân tích SWOT. Vui lòng thử tải lại trang.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full min-h-full">
       <SwotPageTabs
         orgContext={orgContext}
         userId={user.id}
-        analysisId={analysisId!}
+        analysisId={analysisId}
         orgId={membership.org_id}
       />
     </div>

@@ -62,8 +62,9 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sw_factor_ids: [...selectedSwIds], ot_factor_ids: [...selectedOtIds], quadrant: activeQuad }),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const newItems = await res.json() as TowsStrategyWithFactorsRecord[]
+      const genBody = await res.json()
+      if (!res.ok) throw new Error(genBody.error ?? 'Lỗi tạo chiến lược')
+      const newItems = genBody as TowsStrategyWithFactorsRecord[]
       const merged = [...strategies.filter((s) => !newItems.some((n) => n.combined_code === s.combined_code)), ...newItems]
       setStrategies(merged); notify(merged)
       setSelectedSwIds(new Set()); setSelectedOtIds(new Set()); setActiveQuad(null)

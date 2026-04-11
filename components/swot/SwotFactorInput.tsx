@@ -45,8 +45,9 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quadrant: q, content, is_key_factor: false }),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const factor = await res.json() as SwotFactor
+      const factorBody = await res.json()
+      if (!res.ok) throw new Error(factorBody.error ?? 'Lỗi thêm yếu tố')
+      const factor = factorBody as SwotFactor
       const next = { ...factors, [q]: [...factors[q], factor] }
       setFactors(next); notify(next)
       setNewInput((p) => ({ ...p, [q]: '' }))
@@ -81,8 +82,9 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
     setLoadingCheck((p) => ({ ...p, [factor.id]: true }))
     try {
       const res = await fetch(`/api/swot-analyses/${analysisId}/factors/${factor.id}/quality-check`, { method: 'POST' })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const result = await res.json() as { score: number; feedback: string }
+      const checkBody = await res.json()
+      if (!res.ok) throw new Error(checkBody.error ?? 'Lỗi kiểm tra')
+      const result = checkBody as { score: number; feedback: string }
       const next = { ...factors, [q]: factors[q].map((f) => f.id === factor.id ? { ...f, quality_score: result.score } : f) }
       setFactors(next); notify(next)
       setFeedback((p) => ({ ...p, [factor.id]: result.feedback }))

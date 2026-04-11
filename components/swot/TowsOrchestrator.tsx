@@ -6,7 +6,7 @@ import { SwotFactorInput } from './SwotFactorInput'
 import { TowsCanvas } from './TowsCanvas'
 import { StrategyReviewTable } from './StrategyReviewTable'
 import type { SwotQuadrant } from '@/lib/swot/types'
-import type { SwotFactor, TowsStrategyWithFactorsRecord, StrategyStatus } from '@/lib/swot/tows-types'
+import type { SwotFactor, TowsStrategyWithFactorsRecord, StrategyStatus, BscPerspective } from '@/lib/swot/tows-types'
 
 interface TowsOrchestratorProps {
   analysisId: string
@@ -137,6 +137,9 @@ export function TowsOrchestrator({ analysisId, orgId, onComplete }: TowsOrchestr
             strategies={strategies}
             onStatusChange={(id: string, status: StrategyStatus) => {
               setStrategies((prev) => prev.map((s) => s.id === id ? { ...s, status } : s))
+            }}
+            onBscChange={(id: string, bsc: BscPerspective) => {
+              setStrategies((prev) => prev.map((s) => s.id === id ? { ...s, bsc_perspective: bsc } : s))
             }}
             onSendToXMatrix={(selected) => {
               trackEvent('tows_phase_completed', { phase: 3, count: selected.length, org_id: orgId })
