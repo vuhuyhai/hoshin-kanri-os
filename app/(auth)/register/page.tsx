@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/ui/logo'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -44,26 +43,37 @@ export default function RegisterPage() {
     if (Object.keys(validationErrors).length > 0) return
 
     setIsLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName.trim(), phone },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    setIsLoading(false)
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: fullName.trim(),
+          phone,
+        }),
+      })
+      const data = await res.json()
 
-    if (error) {
-      if (error.message.toLowerCase().includes('already registered')) {
-        setErrors({ email: 'Email này đã được đăng ký. Đăng nhập?' })
-      } else {
-        toast.error(error.message)
+      if (!res.ok) {
+        if (res.status === 409) {
+          setErrors({ email: 'Email này đã được đăng ký. Đăng nhập?' })
+        } else {
+          toast.error(data.error ?? 'Đăng ký thất bại. Vui lòng thử lại.')
+        }
+        return
       }
-      return
+
+      if (data.success && !data.emailSent) {
+        toast.warning('Tài khoản đã tạo nhưng không gửi được email. Hãy thử đăng nhập.')
+      }
+      setIsSuccess(true)
+    } catch {
+      toast.error('Lỗi kết nối. Vui lòng thử lại.')
+    } finally {
+      setIsLoading(false)
     }
-    setIsSuccess(true)
   }
 
   if (isSuccess) {

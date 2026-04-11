@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkOrgPql, formatPqlEmail } from '@/lib/pql/signals'
+import { sendEmail } from '@/lib/email/send'
 import type { Json } from '@/lib/supabase/types'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       const FOUNDER_EMAIL = process.env.FOUNDER_ALERT_EMAIL
       if (FOUNDER_EMAIL) {
         const { subject, html } = formatPqlEmail(signal)
-        await sendResendEmail({ to: FOUNDER_EMAIL, subject, html })
+        await sendEmail({ to: FOUNDER_EMAIL, subject, html })
       }
 
       triggered.push(orgId)
@@ -103,29 +104,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function sendResendEmail({
-  to,
-  subject,
-  html,
-}: {
-  to: string
-  subject: string
-  html: string
-}) {
-  const RESEND_API_KEY = process.env.RESEND_API_KEY
-  if (!RESEND_API_KEY) return
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-    },
-    body: JSON.stringify({
-      from: 'Hoshin Kanri OS <noreply@resend.dev>',
-      to,
-      subject,
-      html,
-    }),
-  })
-}

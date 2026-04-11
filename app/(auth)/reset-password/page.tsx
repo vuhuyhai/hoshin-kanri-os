@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/ui/logo'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -25,17 +24,24 @@ export default function ResetPasswordPage() {
     }
 
     setIsLoading(true)
-    const supabase = createClient()
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
-    })
-    setIsLoading(false)
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
 
-    if (resetError) {
-      toast.error('Không thể gửi link. Vui lòng thử lại sau.')
-      return
+      if (!res.ok) {
+        toast.error(data.error ?? 'Không thể gửi link. Vui lòng thử lại sau.')
+        return
+      }
+      setIsSent(true)
+    } catch {
+      toast.error('Lỗi kết nối. Vui lòng thử lại.')
+    } finally {
+      setIsLoading(false)
     }
-    setIsSent(true)
   }
 
   if (isSent) {
