@@ -6,7 +6,8 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
-  const type = searchParams.get('type') as 'magiclink' | 'email' | null
+  const type = searchParams.get('type') as 'magiclink' | 'email' | 'recovery' | 'signup' | null
+  const next = searchParams.get('next')
   const error = searchParams.get('error')
 
   // Supabase returned an error (e.g. expired link)
@@ -71,13 +72,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  // Upsert user record (non-fatal)
+  // Upsert user record with metadata (non-fatal)
+  const meta = user.user_metadata ?? {}
   await supabase.from('users').upsert(
-    { id: user.id, email: user.email! },
+    {
+      id: user.id,
+      email: user.email!,
+      full_name: meta.full_name ?? meta.name ?? null,
+      phone: meta.phone ?? null,
+    },
     { onConflict: 'id' }
   ).then(({ error: e }) => {
     if (e) console.error('[auth/callback] upsert error:', e.message)
   })
+
+  // Password recovery flow → redirect to update-password page
+  if (type === 'recovery' || next === '/update-password') {
+    return NextResponse.redirect(`${origin}/update-password`)
+  }
 
   // Check org membership
   const { data: membership } = await supabase

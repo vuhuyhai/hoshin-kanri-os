@@ -12,25 +12,40 @@ export function AuthListener() {
     const supabase = createClient()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
-        if (event === 'SIGNED_IN') {
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const user = session.user
+          const meta = user.user_metadata ?? {}
+
+          // Sync user data to users table (non-blocking)
+          const userData: Record<string, unknown> = {
+            id: user.id,
+            email: user.email,
+            full_name: (meta.full_name as string) ?? (meta.name as string) ?? null,
+            phone: (meta.phone as string) ?? null,
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          supabase.from('users').upsert(userData as any, { onConflict: 'id' })
+            .then(({ error }) => {
+              if (error) console.error('[auth-listener] user sync error:', error.message)
+            })
+
           router.refresh()
         }
+
+        if (event === 'PASSWORD_RECOVERY') {
+          router.push('/update-password')
+        }
+
         if (event === 'SIGNED_OUT') {
-          // Admin pages handle their own sign-out redirect
           if (pathname.startsWith('/admin')) return
           router.push('/login')
         }
       }
     )
 
-    // Handle hash fragment from magic link (implicit flow)
-    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
-      router.push('/auth/callback' + window.location.hash)
-    }
-
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, pathname])
 
   return null
 }
