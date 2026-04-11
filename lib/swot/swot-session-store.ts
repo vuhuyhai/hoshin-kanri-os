@@ -10,6 +10,7 @@ import type {
   DimensionInsight,
   ContextCard,
 } from './types'
+import type { SwotDraft } from './coaching-types'
 import {
   createInitialCoachingTracker,
   getNextDimension,
@@ -373,6 +374,10 @@ interface SwotStoreState extends SwotSession {
     percentage: number
   }
 
+  // Confirmed draft from Phase 1
+  confirmedDraft: SwotDraft | null
+  setConfirmedDraft: (draft: SwotDraft) => void
+
   // Intro screen actions
   startCoaching: (
     selectedDimensions: Record<FrameworkId, string[]>,
@@ -393,6 +398,9 @@ export const useSwotStore = create<SwotStoreState>()(
   setSwotPhase: (phase: SwotPhaseNumber) => {
     set({ swotPhase: phase })
   },
+
+  // Confirmed draft from Phase 1
+  confirmedDraft: null as SwotDraft | null,
 
   // Coaching state machine
   coachingTracker: createInitialCoachingTracker(),
@@ -621,6 +629,14 @@ export const useSwotStore = create<SwotStoreState>()(
 
   clearStale: () => {
     set({ staleSince: undefined, staleReason: undefined })
+  },
+
+  // ============================================================
+  // CONFIRMED DRAFT
+  // ============================================================
+
+  setConfirmedDraft: (draft: SwotDraft) => {
+    set({ confirmedDraft: draft })
   },
 
   // ============================================================
@@ -940,6 +956,7 @@ export const useSwotStore = create<SwotStoreState>()(
     set({
       ...createEmptySession(orgId),
       swotPhase: 1 as SwotPhaseNumber,
+      confirmedDraft: null,
       coachingTracker: createInitialCoachingTracker(),
       coachingMessages: [],
       coachingCoverage: createEmptyCoverage(),
@@ -1133,9 +1150,11 @@ export const useSwotStore = create<SwotStoreState>()(
       name: 'hoshin-swot-session',
       partialize: (state) => ({
         swotPhase: state.swotPhase,
+        confirmedDraft: state.confirmedDraft,
         coachingTracker: state.coachingTracker,
         coachingMessages: state.coachingMessages.slice(-20),
         coachingCoverage: state.coachingCoverage,
+        contextCards: state.evidence.contextCards,
         staleSince: state.staleSince,
         staleReason: state.staleReason,
       }),
@@ -1148,7 +1167,16 @@ export const useSwotStore = create<SwotStoreState>()(
             updates.requiredDimensionsMet = requiredDimensionsMet
             updates.canAdvanceToPhase2 = canAdvanceToPhase2
           }
-          updates.canAdvanceToPhase3 = (state.evidence?.contextCards?.length ?? 0) > 0
+          // Restore contextCards from persisted state back into evidence
+          const persistedCards = (state as unknown as Record<string, unknown>).contextCards as ContextCard[] | undefined
+          if (persistedCards?.length) {
+            updates.evidence = {
+              ...state.evidence,
+              contextCards: persistedCards,
+              contextCardsStatus: 'complete' as const,
+            }
+          }
+          updates.canAdvanceToPhase3 = (persistedCards?.length ?? state.evidence?.contextCards?.length ?? 0) > 0
           useSwotStore.setState(updates)
         }
       },

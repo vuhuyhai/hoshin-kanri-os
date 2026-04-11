@@ -12,9 +12,11 @@ import type {
   SwotSynthesisOutput,
   SwotItem,
   SwotQuadrant,
-  ContextCard,
-  EvidenceItem,
+  CoachingItem,
+  EvidenceItemV2,
+  SynthesisResult,
 } from '@/lib/swot/types'
+import type { QuadrantKey, SwotDraft } from '@/lib/swot/coaching-types'
 
 interface SynthesisPhaseProps {
   orgContext: OrgContext
@@ -50,21 +52,72 @@ const QUADRANT_CONFIG: Record<
   },
 }
 
-function contextCardsToEvidenceItems(cards: ContextCard[]): EvidenceItem[] {
+const QUADRANT_KEY_TO_CODE: Record<QuadrantKey, SwotQuadrant> = {
+  strengths: 'S',
+  weaknesses: 'W',
+  opportunities: 'O',
+  threats: 'T',
+}
+
+/** Convert confirmed draft items → CoachingItem[] for synthesis API */
+function draftToCoachingItems(draft: SwotDraft): CoachingItem[] {
+  const items: CoachingItem[] = []
+  for (const [key, quadrant] of Object.entries(QUADRANT_KEY_TO_CODE)) {
+    const qKey = key as QuadrantKey
+    for (const item of draft[qKey]) {
+      items.push({
+        id: item.id,
+        quadrant,
+        text: item.statement,
+        source: item.isUserAdded ? 'user_added' : 'ai_extracted',
+        framework_source: item.frameworkSource,
+        ai_confidence: item.confidence,
+      })
+    }
+  }
+  return items
+}
+
+/** Convert context cards → EvidenceItemV2[] for synthesis API */
+function contextCardsToEvidence(
+  cards: { id: string; title: string; insight: string; swot_quadrant: 'O' | 'T'; relevance_score: number }[]
+): EvidenceItemV2[] {
   return cards.map((card) => ({
-    source: 'Web' as const,
-    content: `${card.title}: ${card.insight}`,
-    relevance:
-      card.relevance_score >= 0.7
-        ? ('high' as const)
-        : ('medium' as const),
+    id: card.id,
+    quadrant: card.swot_quadrant,
+    text: `${card.title}: ${card.insight}`,
+    is_new_discovery: true,
+    source_name: 'AI Context Analysis',
+    confidence: card.relevance_score >= 0.7 ? 'high' as const : 'medium' as const,
+    credibility_score: Math.round(card.relevance_score * 10),
   }))
+}
+
+/** Convert SynthesisResult → SwotSynthesisOutput for UI rendering */
+function synthesisResultToOutput(result: SynthesisResult): SwotSynthesisOutput {
+  const output: SwotSynthesisOutput = { S: [], W: [], O: [], T: [], summary: '' }
+  for (const item of result.swot_items) {
+    const swotItem: SwotItem = {
+      id: item.id,
+      statement: item.statement,
+      implication: item.implication,
+      confidence: Math.min(1, Math.max(0, (item.credibility_score ?? 5) / 10)),
+      framework_source: item.evidence_source,
+    }
+    output[item.quadrant].push(swotItem)
+  }
+  const { stats } = result
+  output.summary = `Tổng hợp ${stats.total_input} inputs → ${stats.total_output} items (${stats.merged_count} merged, ${stats.discarded_count} loại bỏ)`
+  return output
 }
 
 export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
   const router = useRouter()
   const setSwotPhase = useSwotStore((s) => s.setSwotPhase)
   const contextCards = useSwotStore((s) => s.evidence.contextCards)
+  const confirmedDraft = useSwotStore((s) => s.confirmedDraft)
+  const setSynthesisItems = useSwotStore((s) => s.setSynthesisItems)
+  const completeSynthesis = useSwotStore((s) => s.completeSynthesis)
 
   const [status, setStatus] = useState<'loading' | 'complete' | 'error'>(
     'loading'
@@ -75,45 +128,55 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
   const [isSaving, setIsSaving] = useState(false)
   const started = useRef(false)
 
-  // Auto-trigger synthesis on mount
+  // Auto-trigger synthesis once confirmedDraft is available (may arrive after rehydration)
   useEffect(() => {
-    if (!started.current) {
+    if (!started.current && confirmedDraft) {
       started.current = true
       runSynthesis()
     }
-  }, [])
+  }, [confirmedDraft])
 
   const runSynthesis = async () => {
     setStatus('loading')
-    try {
-      // Build a minimal summary from coaching messages
-      const dummySummary = {
-        strengths: [] as { source: string; content: string }[],
-        weaknesses: [] as { source: string; content: string }[],
-        opportunities: [] as { source: string; content: string }[],
-        threats: [] as { source: string; content: string }[],
-      }
 
-      const evidenceItems = contextCardsToEvidenceItems(contextCards)
+    // Guard: need coaching data to synthesize
+    if (!confirmedDraft) {
+      toast.error('Chưa có dữ liệu coaching. Quay lại bước 1.')
+      setStatus('error')
+      return
+    }
+
+    try {
+      const coachingItems = draftToCoachingItems(confirmedDraft)
+      const evidenceItems = contextCardsToEvidence(contextCards)
 
       const response = await fetch('/api/swot/synthesis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          summary: dummySummary,
-          evidenceItems,
-          orgContext,
+          org_id: orgContext.orgId,
+          coaching_items: coachingItems,
+          evidence_items: evidenceItems,
         }),
       })
 
-      if (!response.ok) throw new Error('Synthesis failed')
-      const data = await response.json()
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error || 'Synthesis failed')
+      }
 
-      setSynthesis(data.synthesis)
+      // API returns flat SynthesisResult, not { synthesis: ... }
+      const data: SynthesisResult = await response.json()
+      const output = synthesisResultToOutput(data)
+
+      setSynthesis(output)
       setStatus('complete')
-    } catch {
+    } catch (err) {
+      console.error('[SynthesisPhase] error:', err)
       setStatus('error')
-      toast.error('Lỗi khi tổng hợp SWOT. Thử lại.')
+      toast.error(
+        err instanceof Error ? err.message : 'Lỗi khi tổng hợp SWOT. Thử lại.'
+      )
     }
   }
 
@@ -147,14 +210,26 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
     setEditText('')
   }
 
-  const handleSaveAndCreateXMatrix = async () => {
+  const handleSaveAndContinue = async () => {
     if (!synthesis) return
     setIsSaving(true)
     try {
-      // The synthesis API already saved to DB on initial call.
-      // Navigate to X-Matrix builder — the ONE allowed router.push.
-      toast.success('SWOT đã lưu. Chuyển sang X-Matrix.')
-      router.push('/dashboard/x-matrix/new')
+      // Convert SwotSynthesisOutput → store SwotItem[] format
+      const storeItems = (['S', 'W', 'O', 'T'] as const).flatMap((q) =>
+        synthesis[q].map((item) => ({
+          id: item.id,
+          category: q as import('@/lib/swot/swot-session-store').SwotCategory,
+          statement: item.statement,
+          evidence: { ceoInput: [], webSources: [] },
+          implication: item.implication,
+          rootCause: '',
+          priority: 1 as const,
+        }))
+      )
+      setSynthesisItems(storeItems)
+      completeSynthesis()
+      toast.success('SWOT đã lưu. Chuyển sang Strategy.')
+      router.push('/dashboard/discovery/swot/strategy')
     } catch {
       toast.error('Không thể lưu. Thử lại.')
     } finally {
@@ -345,11 +420,11 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
           ← Xem lại bối cảnh
         </Button>
         <Button
-          onClick={handleSaveAndCreateXMatrix}
+          onClick={handleSaveAndContinue}
           disabled={isSaving || totalItems === 0}
           className="flex-1"
         >
-          {isSaving ? 'Đang lưu...' : 'Lưu và tạo X-Matrix →'}
+          {isSaving ? 'Đang lưu...' : 'Lưu và tiếp tục →'}
         </Button>
       </div>
     </div>

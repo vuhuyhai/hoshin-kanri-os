@@ -28,6 +28,7 @@ export function CoachingPhase({ orgContext, userId }: CoachingPhaseProps) {
   const addDraftItem = useSwotCoachingStore((s) => s.addDraftItem)
   const removeDraftItem = useSwotCoachingStore((s) => s.removeDraftItem)
   const setSwotPhase = useSwotStore((s) => s.setSwotPhase)
+  const setConfirmedDraft = useSwotStore((s) => s.setConfirmedDraft)
 
   const orgProfile = {
     name: orgContext.orgName,
@@ -113,9 +114,10 @@ export function CoachingPhase({ orgContext, userId }: CoachingPhaseProps) {
   // ─── Confirm → advance to Phase 2 ─────────────────────────
   const handleConfirm = useCallback(async () => {
     await handleSaveDraft()
+    if (draft) setConfirmedDraft(draft)
     setStep('confirmed')
     setSwotPhase(2)
-  }, [handleSaveDraft, setStep, setSwotPhase])
+  }, [handleSaveDraft, draft, setConfirmedDraft, setStep, setSwotPhase])
 
   // ─── Render by step ────────────────────────────────────────
 
