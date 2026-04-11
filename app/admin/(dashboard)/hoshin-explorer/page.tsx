@@ -10,6 +10,10 @@ import { ConceptPanel } from './components/ConceptPanel'
 import { StepsView } from './components/StepsView'
 
 type Tab = 'concepts' | 'steps'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'concepts', label: 'Khái niệm (AI)' },
+  { key: 'steps', label: 'Các bước thực hiện' },
+]
 const LOADING_MSGS = ['Adler đang phân tích...', 'Kiểm tra tài liệu...', 'Feynman compression...']
 
 export default function HoshinExplorerPage() {
@@ -24,7 +28,6 @@ export default function HoshinExplorerPage() {
     setSelected(concept)
     setContent(null)
     if (cache.current[concept.id]) { setContent(cache.current[concept.id]); return }
-
     setLoading(true)
     let msgIdx = 0
     setLoadingMsg(LOADING_MSGS[0])
@@ -32,15 +35,10 @@ export default function HoshinExplorerPage() {
       msgIdx = Math.min(msgIdx + 1, LOADING_MSGS.length - 1)
       setLoadingMsg(LOADING_MSGS[msgIdx])
     }, 900)
-
     try {
       const res = await fetch('/api/admin/hoshin-explorer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conceptId: concept.id, conceptName: concept.name, conceptKanji: concept.kanji,
-          conceptDesc: concept.desc, books: concept.books, layer: concept.layer,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conceptId: concept.id, conceptName: concept.name, conceptKanji: concept.kanji, conceptDesc: concept.desc, books: concept.books, layer: concept.layer }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Có lỗi xảy ra')
@@ -52,15 +50,13 @@ export default function HoshinExplorerPage() {
     } finally { clearInterval(interval); setLoading(false) }
   }, [])
 
+  const handleBack = useCallback(() => setSelected(null), [])
+
   const handleConnectionClick = useCallback((name: string) => {
     const lower = name.toLowerCase()
     for (const cat of CONCEPTS) {
       const found = cat.items.find((c) => c.name.toLowerCase() === lower || c.id === lower || c.kanji === name)
-      if (found) {
-        loadConcept(found)
-        document.getElementById(`btn-${found.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        return
-      }
+      if (found) { loadConcept(found); document.getElementById(`btn-${found.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
     }
     toast.error(`Không tìm thấy khái niệm "${name}"`)
   }, [loadConcept])
@@ -68,28 +64,25 @@ export default function HoshinExplorerPage() {
   return (
     <div className="-m-8">
       {/* Header */}
-      <div className="flex items-center gap-5 flex-wrap px-7 py-4 bg-ink border-b-[3px] border-ink">
+      <div className="flex items-end justify-between px-4 md:px-8 py-4 md:py-6 border-b-2 border-ink">
         <div>
-          <h1 className="font-display font-black text-[28px] tracking-wider uppercase text-white leading-none">
+          <span className="heading-overline">Knowledge Base</span>
+          <h1 className="font-display font-black text-[clamp(24px,3vw,36px)] text-ink uppercase mt-1">
             Hoshin Kanri Explorer
           </h1>
-          <p className="font-body text-[12px] text-text-3 mt-1 tracking-wide">
-            Deep Learning Companion · Adler × Feynman
+          <p className="font-body text-[14px] md:text-[16px] text-text-3 mt-1">
+            Deep Learning Companion · Adler + Feynman
           </p>
         </div>
-        <span className="ml-auto badge-brutal text-[10px] bg-accent-brand text-white border-accent-brand">
-          AI Powered
-        </span>
+        <span className="badge-brutal badge-accent mb-1 hidden md:inline-block">⚡ AI Powered</span>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b-[3px] border-ink">
-        {([['concepts', 'Khái niệm (AI)'], ['steps', 'Các bước thực hiện']] as const).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-6 py-3 font-display font-bold text-[13px] uppercase tracking-wider border-r-[3px] border-ink transition-colors ${
-              tab === key ? 'bg-ink text-white' : 'bg-bg-warm text-ink hover:bg-bg-muted-warm'
+      {/* Tabs — scroll ngang trên mobile */}
+      <div className="flex overflow-x-auto border-b-2 border-ink">
+        {TABS.map(({ key, label }) => (
+          <button key={key} onClick={() => setTab(key)}
+            className={`px-4 md:px-6 py-3 font-display text-[13px] uppercase tracking-wider transition-colors border-b-2 whitespace-nowrap min-h-[44px] ${
+              tab === key ? 'font-bold text-ink border-b-accent-brand' : 'font-semibold text-text-3 border-b-transparent hover:text-ink'
             }`}
           >
             {label}
@@ -97,26 +90,36 @@ export default function HoshinExplorerPage() {
         ))}
       </div>
 
-      {/* Content */}
       {tab === 'steps' ? (
         <StepsView />
       ) : (
-        <div className="flex">
-          <ConceptSidebar selectedId={selected?.id ?? null} onSelect={loadConcept} />
-          <div className="flex-1 min-w-0 bg-bg-warm">
-            {!selected ? (
-              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center px-8">
-                <div className="font-display font-black text-7xl text-bg-muted-warm leading-none">方針</div>
-                <h2 className="font-display font-black text-2xl tracking-wider uppercase text-ink">Chọn một khái niệm</h2>
-                <p className="font-body text-sm text-text-2 max-w-sm leading-relaxed">
-                  Bấm vào bất kỳ khái niệm nào để Adler phân tích theo 3 tầng Feynman — kết nối thực tế với Ladysfit và tư vấn fitness.
-                </p>
+        <>
+          {/* Desktop: 2 columns */}
+          <div className="hidden lg:grid" style={{ gridTemplateColumns: '300px 1fr', height: 'calc(100vh - 120px)' }}>
+            <ConceptSidebar selectedId={selected?.id ?? null} onSelect={loadConcept} />
+            <div className="overflow-y-auto bg-bg-warm">
+              {!selected ? (
+                <ConceptPanel concept={null} loading={false} loadingMessage="" content={null} onConnectionClick={handleConnectionClick} onQuickPick={loadConcept} />
+              ) : (
+                <ConceptPanel concept={selected} loading={loading} loadingMessage={loadingMsg} content={content} onConnectionClick={handleConnectionClick} />
+              )}
+            </div>
+          </div>
+
+          {/* Mobile/Tablet: single column with detail view */}
+          <div className="lg:hidden">
+            {selected ? (
+              <div className="bg-bg-warm">
+                <button onClick={handleBack} className="flex items-center gap-2 px-4 py-3 font-display font-semibold text-[13px] uppercase tracking-wider text-text-3 hover:text-ink transition-colors min-h-[44px] border-b border-bg-muted-warm w-full text-left">
+                  ← Danh sách
+                </button>
+                <ConceptPanel concept={selected} loading={loading} loadingMessage={loadingMsg} content={content} onConnectionClick={handleConnectionClick} />
               </div>
             ) : (
-              <ConceptPanel concept={selected} loading={loading} loadingMessage={loadingMsg} content={content} onConnectionClick={handleConnectionClick} />
+              <ConceptSidebar selectedId={null} onSelect={loadConcept} mobile />
             )}
           </div>
-        </div>
+        </>
       )}
     </div>
   )
