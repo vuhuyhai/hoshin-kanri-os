@@ -5,6 +5,7 @@ import { getAdminStats, getCustomersOverview, getRegisteredUsers } from '@/lib/a
 import type { AdminStats, CustomerOverview, RegisteredUser } from '@/lib/admin/types'
 import { PlanBadge } from '../_components/PlanBadge'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 function formatVND(value: number): string {
   return value.toLocaleString('vi-VN') + ' đ'
@@ -17,19 +18,25 @@ function formatDate(iso: string): string {
 function StatCard({
   label,
   value,
-  color,
+  accent,
+  brutal,
 }: {
   label: string
   value: string
-  color?: string
+  accent?: boolean
+  brutal?: boolean
 }) {
+  const isEmpty = value === '0' || value === '0 đ'
   return (
-    <div className="border-[3px] border-ink bg-bg-warm p-5 shadow-[5px_5px_0_#2C2B2B]">
-      <p className="font-display text-xs font-bold uppercase tracking-widest text-text-3">
+    <div className={brutal ? 'card-brutal p-5' : 'card-subtle p-5'}>
+      <p className="font-display font-semibold text-[11px] uppercase tracking-wider text-text-3 mb-2">
         {label}
       </p>
       <p
-        className={`mt-1 font-display text-2xl font-black ${color ?? 'text-ink'}`}
+        className={cn(
+          'font-display font-black text-[40px] leading-none',
+          isEmpty ? 'text-text-3' : accent ? 'text-accent-brand' : 'text-ink'
+        )}
       >
         {value}
       </p>
@@ -40,22 +47,22 @@ function StatCard({
 function StatsRow({ stats }: { stats: AdminStats }) {
   return (
     <div className="grid grid-cols-5 gap-4">
-      <StatCard label="Tổng người dùng" value={String(stats.total_users)} color="text-blue-600" />
+      <StatCard label="Tổng người dùng" value={String(stats.total_users)} />
       <StatCard label="Tổng khách hàng" value={String(stats.total_customers)} />
       <StatCard
         label="Đang trả phí"
         value={String(stats.paying_customers)}
-        color="text-teal-600"
+        accent
       />
       <StatCard
         label="Mới tháng này"
         value={String(stats.new_this_month)}
-        color="text-purple-600"
       />
       <StatCard
         label="MRR ước tính"
         value={formatVND(stats.mrr_estimate)}
-        color="text-orange-600"
+        accent
+        brutal
       />
     </div>
   )
@@ -63,21 +70,21 @@ function StatsRow({ stats }: { stats: AdminStats }) {
 
 function RecentTable({ rows }: { rows: CustomerOverview[] }) {
   return (
-    <div className="border-[3px] border-ink bg-bg-warm shadow-[5px_5px_0_#2C2B2B]">
-      <div className="border-b-[3px] border-ink px-5 py-3">
-        <h2 className="font-display text-sm font-black uppercase tracking-wider text-ink">
+    <div className="card-brutal p-0 overflow-hidden">
+      <div className="px-4 py-4 border-b border-[var(--border)]">
+        <h2 className="font-display text-[16px] font-bold text-ink">
           10 khách hàng mới nhất
         </h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b-2 border-ink/10">
+            <tr className="bg-bg-muted-warm border-b border-[var(--border)]">
               {['Tên org', 'Owner', 'Plan', 'Trạng thái', 'Ngày tạo', ''].map(
                 (h) => (
                   <th
                     key={h}
-                    className="px-5 py-2.5 font-display text-[11px] font-bold uppercase tracking-widest text-text-3"
+                    className="px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-wider text-text-3"
                   >
                     {h}
                   </th>
@@ -89,27 +96,27 @@ function RecentTable({ rows }: { rows: CustomerOverview[] }) {
             {rows.map((c) => (
               <tr
                 key={c.org_id}
-                className="border-b border-ink/5 transition-colors hover:bg-bg-muted-warm"
+                className="border-b border-[var(--border-subtle)] transition-colors duration-150 hover:bg-bg-muted-warm"
               >
-                <td className="px-5 py-3 font-display text-sm font-bold text-ink">
+                <td className="px-4 py-3 font-display text-[16px] font-bold text-ink">
                   {c.org_name}
                 </td>
-                <td className="px-5 py-3 font-body text-sm text-text-2">
+                <td className="px-4 py-3 font-body text-[16px] text-ink">
                   {c.owner_email ?? '—'}
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-4 py-3">
                   <PlanBadge plan={c.plan} />
                 </td>
-                <td className="px-5 py-3 font-body text-sm text-text-2">
+                <td className="px-4 py-3 font-body text-[15px] text-emerald-600">
                   {c.sub_status}
                 </td>
-                <td className="px-5 py-3 font-body text-sm text-text-3">
+                <td className="px-4 py-3 font-body text-[16px] text-ink">
                   {formatDate(c.created_at)}
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-4 py-3">
                   <Link
                     href={`/admin/customers/${c.org_id}`}
-                    className="font-display text-xs font-bold uppercase tracking-wider text-accent-brand hover:underline"
+                    className="font-display text-[13px] font-bold uppercase tracking-wider text-accent-brand hover:text-accent-dark"
                   >
                     Xem
                   </Link>
@@ -120,7 +127,7 @@ function RecentTable({ rows }: { rows: CustomerOverview[] }) {
               <tr>
                 <td
                   colSpan={6}
-                  className="px-5 py-8 text-center font-body text-sm text-text-3"
+                  className="px-4 py-8 text-center font-body text-sm text-text-3"
                 >
                   Chưa có khách hàng nào.
                 </td>
@@ -135,11 +142,11 @@ function RecentTable({ rows }: { rows: CustomerOverview[] }) {
 
 function TableSkeleton() {
   return (
-    <div className="border-[3px] border-ink bg-bg-warm shadow-[5px_5px_0_#2C2B2B]">
-      <div className="border-b-[3px] border-ink px-5 py-3">
+    <div className="card-brutal p-0 overflow-hidden">
+      <div className="px-4 py-4 border-b border-[var(--border)]">
         <div className="h-4 w-48 animate-pulse bg-ink/10" />
       </div>
-      <div className="space-y-4 p-5">
+      <div className="space-y-4 p-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-4 animate-pulse bg-ink/10" />
         ))}
@@ -150,37 +157,37 @@ function TableSkeleton() {
 
 function UsersTable({ rows }: { rows: RegisteredUser[] }) {
   return (
-    <div className="border-[3px] border-ink bg-bg-warm shadow-[5px_5px_0_#2C2B2B]">
-      <div className="border-b-[3px] border-ink px-5 py-3">
-        <h2 className="font-display text-sm font-black uppercase tracking-wider text-ink">
+    <div className="card-brutal p-0 overflow-hidden">
+      <div className="px-4 py-4 border-b border-[var(--border)]">
+        <h2 className="font-display text-[16px] font-bold text-ink">
           Người dùng đã đăng ký
         </h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b-2 border-ink/10">
+            <tr className="bg-bg-muted-warm border-b border-[var(--border)]">
               {['Email', 'Họ tên', 'SĐT', 'Tổ chức', 'Ngày đăng ký'].map((h) => (
-                <th key={h} className="px-5 py-2.5 font-display text-[11px] font-bold uppercase tracking-widest text-text-3">{h}</th>
+                <th key={h} className="px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((u) => (
-              <tr key={u.id} className="border-b border-ink/5 transition-colors hover:bg-bg-muted-warm">
-                <td className="px-5 py-3 font-body text-sm text-ink">{u.email}</td>
-                <td className="px-5 py-3 font-body text-sm text-text-2">{u.full_name ?? '—'}</td>
-                <td className="px-5 py-3 font-body text-sm text-text-2">{u.phone ?? '—'}</td>
-                <td className="px-5 py-3 font-body text-sm">
+              <tr key={u.id} className="border-b border-[var(--border-subtle)] transition-colors duration-150 hover:bg-bg-muted-warm">
+                <td className="px-4 py-3 font-body text-[16px] text-ink">{u.email}</td>
+                <td className="px-4 py-3 font-body text-[16px] text-ink">{u.full_name ?? '—'}</td>
+                <td className="px-4 py-3 font-body text-[16px] text-ink">{u.phone ?? '—'}</td>
+                <td className="px-4 py-3 font-body text-[16px]">
                   {u.has_org
-                    ? <span className="text-teal-600 font-display font-bold text-xs">{u.org_name}</span>
+                    ? <span className="font-display font-bold text-ink">{u.org_name}</span>
                     : <span className="text-text-3 italic">Chưa tạo org</span>}
                 </td>
-                <td className="px-5 py-3 font-body text-sm text-text-3">{formatDate(u.created_at)}</td>
+                <td className="px-4 py-3 font-body text-[16px] text-ink">{formatDate(u.created_at)}</td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-8 text-center font-body text-sm text-text-3">Chưa có người dùng nào.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center font-body text-sm text-text-3">Chưa có người dùng nào.</td></tr>
             )}
           </tbody>
         </table>
@@ -209,9 +216,12 @@ async function DashboardContent() {
 export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-black uppercase tracking-wider text-ink">
-        Tổng quan hệ thống
-      </h1>
+      <div>
+        <span className="heading-overline">Admin</span>
+        <h1 className="font-display font-black text-[32px] text-ink uppercase">
+          Tổng quan hệ thống
+        </h1>
+      </div>
       <Suspense fallback={<TableSkeleton />}>
         <DashboardContent />
       </Suspense>

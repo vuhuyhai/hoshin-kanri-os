@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -22,20 +23,25 @@ export function AdminSidebar() {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-[240px] flex-col border-r-[3px] border-ink bg-bg-warm">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-56 flex-col border-r-[3px] border-ink bg-bg-warm">
       {/* Logo */}
-      <div className="px-4 py-5">
-        <Link href="/admin" className="flex items-center gap-2">
-          <span className="font-display text-lg font-black uppercase tracking-wider text-ink">
-            HK Admin
+      <div className="flex items-center gap-2 px-4 py-4 border-b-[3px] border-ink">
+        <Image
+          src="/images/logo-dark.png"
+          alt="Hoshin Kanri OS"
+          width={28}
+          height={28}
+          className="flex-shrink-0"
+        />
+        <div className="flex flex-col min-w-0">
+          <span className="font-display font-black text-[13px] text-ink uppercase tracking-wider whitespace-nowrap">
+            Hoshin Kanri OS
           </span>
-          <span className="inline-flex h-5 items-center border border-accent-brand bg-accent-brand/10 px-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-accent-brand">
-            Super Admin
+          <span className="badge-brutal border-accent-brand text-accent-brand text-[10px] mt-1 w-fit">
+            SUPER ADMIN
           </span>
-        </Link>
+        </div>
       </div>
-
-      <div className="border-t-[3px] border-ink" />
 
       {/* Navigation */}
       <nav className="mt-2 flex flex-col gap-0.5">

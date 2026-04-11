@@ -16,7 +16,15 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const firstName = user?.email?.split('@')[0] ?? 'bạn'
+  const { data: profile } = await supabase
+    .from('users')
+    .select('full_name')
+    .eq('id', user!.id)
+    .single()
+
+  const displayName = profile?.full_name
+    || user?.email?.split('@')[0]
+    || 'bạn'
 
   const { data: membership } = await supabase
     .from('org_members')
@@ -65,7 +73,7 @@ export default async function DashboardPage() {
       <div className="mb-8 pb-6 border-b-[3px] border-ink">
         <p className="heading-overline mb-1">Dashboard</p>
         <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
-          Chào {firstName}
+          Chào {displayName}
         </h1>
         <p className="font-body text-text-2 mt-1 text-base">
           Hoshin Kanri OS giúp bạn biến chiến lược thành hành động đo được.
