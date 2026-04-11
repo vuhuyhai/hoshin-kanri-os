@@ -12,11 +12,13 @@ const CELL_ORDER: ExtendedCellType[] = ['SO', 'ST', 'WO', 'WT']
 
 interface ExtendedSwotMatrixProps {
   items: SwotItem[]
+  orgId: string
   orgContext: { name: string; industry: string; headcount: number }
 }
 
 export function ExtendedSwotMatrix({
   items,
+  orgId,
   orgContext,
 }: ExtendedSwotMatrixProps) {
   const matrix = useSwotStore((s) => s.strategy.matrix)
@@ -54,6 +56,7 @@ export function ExtendedSwotMatrix({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'generate_cell',
+          org_id: orgId,
           cellType,
           strengths: linked.strengths,
           weaknesses: linked.weaknesses,

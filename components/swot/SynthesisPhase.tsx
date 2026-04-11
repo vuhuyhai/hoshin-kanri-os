@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { createClient } from '@/lib/supabase/client'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import type {
   OrgContext,
@@ -16,7 +17,7 @@ import type {
   EvidenceItemV2,
   SynthesisResult,
 } from '@/lib/swot/types'
-import type { QuadrantKey, SwotDraft } from '@/lib/swot/coaching-types'
+import type { QuadrantKey, SwotDraft, SwotDraftItem } from '@/lib/swot/coaching-types'
 
 interface SynthesisPhaseProps {
   orgContext: OrgContext
@@ -151,15 +152,95 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isRecovering, setIsRecovering] = useState(false)
   const started = useRef(hasCachedSynthesis)
+  const setConfirmedDraft = useSwotStore((s) => s.setConfirmedDraft)
 
-  // Auto-trigger synthesis once confirmedDraft is available — skip if already completed
+  /** Try to recover draft from swot_analyses DB (Phase 1 saved there with quadrant='draft') */
+  const recoverDraftFromDB = useCallback(async (): Promise<SwotDraft | null> => {
+    try {
+      setIsRecovering(true)
+      const supabase = createClient()
+
+      // First try discovery_sessions (new format)
+      const { data: sessionRow } = await supabase
+        .from('discovery_sessions')
+        .select('data_json')
+        .eq('org_id', orgContext.orgId)
+        .eq('step_completed', 'swot_coaching_draft')
+        .single()
+
+      if (sessionRow) {
+        const d = sessionRow.data_json as Record<string, unknown>
+        if (d.draft) return d.draft as SwotDraft
+      }
+
+      // Fallback: recover from swot_analyses with quadrant='draft' (old format)
+      const { data: draftRows } = await supabase
+        .from('swot_analyses')
+        .select('statement, evidence_json')
+        .eq('org_id', orgContext.orgId)
+        .eq('quadrant', 'draft')
+
+      if (draftRows?.length) {
+        const draft: SwotDraft = {
+          strengths: [], weaknesses: [], opportunities: [], threats: [],
+          generatedAt: new Date().toISOString(), frameworksUsed: [],
+        }
+        for (const row of draftRows) {
+          const ej = row.evidence_json as Record<string, unknown> | null
+          const quadrant = (ej?.quadrant as string) ?? 'strengths'
+          const item: SwotDraftItem = {
+            id: crypto.randomUUID(),
+            statement: row.statement ?? '',
+            rationale: (ej?.rationale as string) ?? '',
+            frameworkSource: '8Ms',
+            confidence: (ej?.confidence as 'high' | 'medium' | 'low') ?? 'medium',
+            isUserAdded: (ej?.isUserAdded as boolean) ?? false,
+          }
+          if (quadrant in draft) {
+            (draft[quadrant as QuadrantKey] as SwotDraftItem[]).push(item)
+          }
+        }
+        const total = draft.strengths.length + draft.weaknesses.length +
+          draft.opportunities.length + draft.threats.length
+        if (total > 0) return draft
+      }
+
+      return null
+    } catch (err) {
+      console.error('[SynthesisPhase] recoverDraftFromDB error:', err)
+      return null
+    } finally {
+      setIsRecovering(false)
+    }
+  }, [orgContext.orgId])
+
+  // Auto-trigger synthesis — try recovery if confirmedDraft is missing
   useEffect(() => {
-    if (!started.current && confirmedDraft) {
+    if (started.current) return
+
+    if (confirmedDraft) {
       started.current = true
       runSynthesis()
+      return
     }
-  }, [confirmedDraft])
+
+    // confirmedDraft is null — try DB recovery
+    let cancelled = false
+    recoverDraftFromDB().then((recovered) => {
+      if (cancelled || started.current) return
+      if (recovered) {
+        setConfirmedDraft(recovered)
+        // confirmedDraft change will re-trigger this effect
+      } else {
+        // No draft anywhere — show error
+        started.current = true
+        setStatus('error')
+      }
+    })
+    return () => { cancelled = true }
+  }, [confirmedDraft, recoverDraftFromDB, setConfirmedDraft])
 
   const runSynthesis = async () => {
     setStatus('loading')
@@ -272,40 +353,52 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
           🧠
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Đang tổng hợp SWOT</h2>
+          <h2 className="text-xl font-semibold">
+            {isRecovering ? 'Đang khôi phục dữ liệu...' : 'Đang tổng hợp SWOT'}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            AI đang kết hợp insights của bạn với bằng chứng từ thị trường...
+            {isRecovering
+              ? 'Đang tìm lại dữ liệu coaching từ hệ thống...'
+              : 'AI đang kết hợp insights của bạn với bằng chứng từ thị trường...'}
           </p>
         </div>
         <div className="text-xs text-muted-foreground">
-          Thường mất 20–30 giây
+          {isRecovering ? 'Vài giây...' : 'Thường mất 20–30 giây'}
         </div>
       </div>
     )
   }
 
   if (status === 'error') {
+    const hasDraft = !!confirmedDraft
     return (
       <div className="mx-auto max-w-lg space-y-6 py-12 text-center">
         <div className="text-6xl">⚠️</div>
         <div className="space-y-2">
           <h2 className="text-xl font-semibold">Không thể tổng hợp SWOT</h2>
           <p className="text-sm text-muted-foreground">
-            Vui lòng thử lại hoặc quay lại bước trước.
+            {hasDraft
+              ? 'Vui lòng thử lại hoặc quay lại bước trước.'
+              : 'Không tìm thấy dữ liệu coaching. Vui lòng quay lại bước 1 để tạo lại bản nháp SWOT.'}
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button
-            variant="outline"
-            onClick={() => {
-              started.current = false
-              runSynthesis()
-            }}
-          >
-            Thử lại
-          </Button>
+          {hasDraft && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                started.current = false
+                runSynthesis()
+              }}
+            >
+              Thử lại
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setSwotPhase(2)}>
             ← Xem lại bối cảnh
+          </Button>
+          <Button onClick={() => setSwotPhase(1)}>
+            ← Quay lại bước 1
           </Button>
         </div>
       </div>

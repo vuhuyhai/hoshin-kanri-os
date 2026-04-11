@@ -85,6 +85,7 @@ export function StrategyClient({ orgId, orgContext }: StrategyClientProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'synthesize_candidates',
+          org_id: orgId,
           selectedStrategies: {
             SO: matrix.SO.selectedStrategy ?? '',
             ST: matrix.ST.selectedStrategy ?? '',
@@ -226,7 +227,7 @@ export function StrategyClient({ orgId, orgContext }: StrategyClientProps) {
       </div>
 
       {/* Section 2 — Extended SWOT Matrix */}
-      <ExtendedSwotMatrix items={items} orgContext={orgContext} />
+      <ExtendedSwotMatrix items={items} orgId={orgId} orgContext={orgContext} />
 
       {/* Generate candidates CTA */}
       {allCellsSelected && candidates.length === 0 && (

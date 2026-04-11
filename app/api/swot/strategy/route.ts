@@ -15,6 +15,12 @@ export async function POST(req: Request) {
   const body = await req.json()
   const action = body.action as string | undefined
 
+  // Verify org membership for action-based requests
+  if (action && body.org_id) {
+    if (!await verifyOrgMembership(supabase, user.id, body.org_id as string))
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   // ─── Action: generate_cell ────────────────────────────────
   // Called by ExtendedSwotMatrix for each TOWS cell
   if (action === 'generate_cell') {
