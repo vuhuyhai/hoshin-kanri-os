@@ -7,13 +7,36 @@ import { CoachingPhase } from './CoachingPhase'
 import { ContextCardsPhase } from './ContextCardsPhase'
 import { SynthesisPhase } from './SynthesisPhase'
 import type { OrgContext, CoachingSummary } from '@/lib/swot/types'
+import { TowsOrchestrator } from './TowsOrchestrator'
+import type { TowsStrategyWithFactorsRecord } from '@/lib/swot/tows-types'
 
 interface SwotOrchestratorProps {
   orgContext: OrgContext
   userId: string
+  mode?: 'coaching' | 'tows'
+  analysisId?: string
+  orgId?: string
+  onTowsComplete?: (strategies: TowsStrategyWithFactorsRecord[]) => void
 }
 
-export function SwotOrchestrator({ orgContext, userId }: SwotOrchestratorProps) {
+export function SwotOrchestrator({ orgContext, userId, mode = 'coaching', analysisId, orgId, onTowsComplete }: SwotOrchestratorProps) {
+  if (mode === 'tows') {
+    if (!analysisId || !orgId) {
+      return (
+        <div style={{ padding: 24, border: '2px solid #c73937', color: '#c73937' }}>
+          Lỗi: TowsOrchestrator cần analysisId và orgId
+        </div>
+      )
+    }
+    return (
+      <TowsOrchestrator
+        analysisId={analysisId}
+        orgId={orgId}
+        onComplete={onTowsComplete}
+      />
+    )
+  }
+
   const swotPhase = useSwotStore((s) => s.swotPhase)
   const confirmedDraft = useSwotStore((s) => s.confirmedDraft)
 

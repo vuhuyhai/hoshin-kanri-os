@@ -10,6 +10,11 @@ function getPostHog(): PostHogInstance | null {
   return (window as Window & { posthog?: PostHogInstance }).posthog ?? null
 }
 
+// Generic event
+export function trackEvent(event: string, properties?: Record<string, unknown>) {
+  getPostHog()?.capture(event, properties)
+}
+
 // Activation events
 export function trackXRayCompleted(props: {
   overallScore: number
