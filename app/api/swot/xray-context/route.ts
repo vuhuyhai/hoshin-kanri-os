@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { mapXRayToSwotSeed } from '@/lib/swot/xray-to-swot-mapper'
 import type { XRayResult } from '@/lib/x-ray/types'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const xrayId = request.nextUrl.searchParams.get('xray_id')
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -26,12 +27,16 @@ export async function GET() {
       )
     }
 
-    const { data: rows } = await supabase
+    let query = supabase
       .from('xray_results')
       .select('id, result_json')
       .eq('org_id', membership.org_id)
-      .order('created_at', { ascending: false })
-      .limit(1)
+    if (xrayId) {
+      query = query.eq('id', xrayId)
+    } else {
+      query = query.order('created_at', { ascending: false })
+    }
+    const { data: rows } = await query.limit(1)
 
     const row = (rows as unknown as Array<{ id: string; result_json: unknown }>)?.[0]
 

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 const DISCOVERY_STEPS = [
+  { key: 'x-ray', label: 'Business X-Ray', href: '/x-ray' },
   { key: 'swot_coaching', label: 'Phân tích SWOT' },
   { key: 'pain_mapper', label: 'Pain → Goal Mapper' },
   { key: 'vision', label: 'Vision Workshop' },
@@ -171,9 +172,9 @@ export default async function DashboardPage() {
             <div className="space-y-2 mb-6">
               {DISCOVERY_STEPS.map((step, idx) => {
                 const done = completedSteps.has(step.key)
-                return (
+                const isXRay = 'href' in step
+                const inner = (
                   <div
-                    key={step.key}
                     className="flex min-h-[44px] items-center gap-3 border-2 border-ink px-4 py-3"
                   >
                     <div
@@ -193,8 +194,16 @@ export default async function DashboardPage() {
                       }
                     >
                       {step.label}
+                      {isXRay && done && (
+                        <span className="text-xs bg-[#c73937] text-white px-1 ml-2 normal-case tracking-normal">Nguyên liệu SWOT</span>
+                      )}
                     </span>
                   </div>
+                )
+                return isXRay && !done ? (
+                  <a key={step.key} href={step.href} target="_blank" rel="noopener noreferrer">{inner}</a>
+                ) : (
+                  <div key={step.key}>{inner}</div>
                 )
               })}
             </div>

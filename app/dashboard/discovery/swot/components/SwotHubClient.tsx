@@ -13,14 +13,16 @@ import {
   type PhaseStatus,
 } from '@/lib/swot/swot-session-store'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import { XRayContextBanner } from './XRayContextBanner'
 import type { XRaySeedContext } from '@/lib/swot/xray-to-swot-mapper'
 
 interface SwotHubClientProps {
   orgId: string
+  xrayId?: string
 }
 
-export function SwotHubClient({ orgId }: SwotHubClientProps) {
+export function SwotHubClient({ orgId, xrayId }: SwotHubClientProps) {
   const router = useRouter()
   const started = useRef(false)
 
@@ -44,13 +46,25 @@ export function SwotHubClient({ orgId }: SwotHubClientProps) {
   }, [orgId, initSession])
 
   useEffect(() => {
-    fetch('/api/swot/xray-context').then((r) => r.ok ? r.json() : null).then((d) => {
+    const url = xrayId ? `/api/swot/xray-context?xray_id=${xrayId}` : '/api/swot/xray-context'
+    fetch(url).then((r) => r.ok ? r.json() : null).then((d) => {
       if (d?.hasXRay) {
         setXrayContext(d.data as XRaySeedContext)
         sessionStorage.setItem('swot_xray_context', JSON.stringify(d.data))
+        // Background sync: mark x-ray step completed in discovery_sessions
+        const supabase = createClient()
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!user) return
+          supabase.from('discovery_sessions').upsert({
+            org_id: orgId,
+            user_id: user.id,
+            step_completed: 'x-ray',
+            data_json: { xray_result_id: d.data.xrayResultId, synced_at: new Date().toISOString() },
+          }, { onConflict: 'org_id,user_id,step_completed' }).then(null, () => {})
+        }).catch(() => {})
       }
     }).catch(() => {})
-  }, [])
+  }, [orgId])
 
   // Count completed phases
   const phases: { name: PhaseName; status: PhaseStatus }[] = [

@@ -10,6 +10,7 @@ interface SwotPageTabsProps {
   userId: string
   analysisId: string
   orgId: string
+  xrayId?: string
 }
 
 const TABS = [
@@ -17,7 +18,7 @@ const TABS = [
   { key: 'tows' as const, label: 'SWOT → TOWS → Strategy' },
 ]
 
-export function SwotPageTabs({ orgContext, userId, analysisId, orgId }: SwotPageTabsProps) {
+export function SwotPageTabs({ orgContext, userId, analysisId, orgId, xrayId }: SwotPageTabsProps) {
   const [activeTab, setActiveTab] = useState<'coaching' | 'tows'>('coaching')
 
   return (

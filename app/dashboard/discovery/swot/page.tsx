@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { SwotPageTabs } from './SwotPageTabs'
 import type { OrgContext } from '@/lib/swot/types'
 
-export default async function SwotPage() {
+export default async function SwotPage({ searchParams }: { searchParams: Promise<{ xray_id?: string }> }) {
+  const { xray_id: xrayId } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -77,6 +78,7 @@ export default async function SwotPage() {
         userId={user.id}
         analysisId={analysisId}
         orgId={membership.org_id}
+        xrayId={xrayId}
       />
     </div>
   )
