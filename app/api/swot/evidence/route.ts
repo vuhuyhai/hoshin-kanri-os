@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { generateQueriesForItem } from '@/lib/swot/query-generator'
 import { searchEvidenceForItem } from '@/lib/swot/evidence-searcher'
 import pLimit from 'p-limit'
@@ -29,6 +29,9 @@ export async function POST(req: Request) {
 
   const { items, org_id } = (await req.json()) as { items: CoachingItem[]; org_id: string }
   if (!items?.length) return Response.json({ error: 'Cần ít nhất 1 item' }, { status: 400 })
+
+  if (!org_id || !await verifyOrgMembership(supabase, user.id, org_id))
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: org } = await supabase.from('organizations')
     .select('name, industry, headcount, city').eq('id', org_id).single()

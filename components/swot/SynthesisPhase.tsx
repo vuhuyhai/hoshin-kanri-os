@@ -111,6 +111,24 @@ function synthesisResultToOutput(result: SynthesisResult): SwotSynthesisOutput {
   return output
 }
 
+/** Rebuild SwotSynthesisOutput from store items (for cached display) */
+function storeItemsToOutput(
+  items: import('@/lib/swot/swot-session-store').SwotItem[],
+): SwotSynthesisOutput {
+  const output: SwotSynthesisOutput = { S: [], W: [], O: [], T: [], summary: '' }
+  for (const item of items) {
+    output[item.category as SwotQuadrant]?.push({
+      id: item.id,
+      statement: item.statement,
+      implication: item.implication,
+      confidence: 0.8,
+      framework_source: undefined,
+    })
+  }
+  output.summary = `${items.length} insights từ phân tích trước đó`
+  return output
+}
+
 export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
   const router = useRouter()
   const setSwotPhase = useSwotStore((s) => s.setSwotPhase)
@@ -118,17 +136,24 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
   const confirmedDraft = useSwotStore((s) => s.confirmedDraft)
   const setSynthesisItems = useSwotStore((s) => s.setSynthesisItems)
   const completeSynthesis = useSwotStore((s) => s.completeSynthesis)
+  const synthesisStatus = useSwotStore((s) => s.synthesis.status)
+  const existingItems = useSwotStore((s) => s.synthesis.items)
+
+  // If synthesis already completed in store, show cached results
+  const hasCachedSynthesis = synthesisStatus === 'completed' && existingItems.length > 0
 
   const [status, setStatus] = useState<'loading' | 'complete' | 'error'>(
-    'loading'
+    hasCachedSynthesis ? 'complete' : 'loading'
   )
-  const [synthesis, setSynthesis] = useState<SwotSynthesisOutput | null>(null)
+  const [synthesis, setSynthesis] = useState<SwotSynthesisOutput | null>(
+    hasCachedSynthesis ? storeItemsToOutput(existingItems) : null
+  )
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const started = useRef(false)
+  const started = useRef(hasCachedSynthesis)
 
-  // Auto-trigger synthesis once confirmedDraft is available (may arrive after rehydration)
+  // Auto-trigger synthesis once confirmedDraft is available — skip if already completed
   useEffect(() => {
     if (!started.current && confirmedDraft) {
       started.current = true

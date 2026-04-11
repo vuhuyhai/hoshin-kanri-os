@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { synthesizeSwot } from '@/lib/swot/synthesis-engine'
 import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
 
@@ -12,6 +12,9 @@ export async function POST(req: Request) {
   }
   if (!coaching_items?.length)
     return Response.json({ error: 'Cần ít nhất 1 coaching item' }, { status: 400 })
+
+  if (!await verifyOrgMembership(supabase, user.id, org_id))
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: org } = await supabase.from('organizations')
     .select('name, industry, headcount, city').eq('id', org_id).single()
@@ -42,7 +45,13 @@ export async function POST(req: Request) {
 
     await supabase.from('discovery_sessions').upsert({
       org_id, user_id: user.id, step_completed: 'swot_synthesis',
-      data_json: { stats: result.stats, merge_log: result.merge_log },
+      data_json: {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        items: result.swot_items,
+        stats: result.stats,
+        merge_log: result.merge_log,
+      },
     }, { onConflict: 'org_id,step_completed' })
 
     return Response.json(result)

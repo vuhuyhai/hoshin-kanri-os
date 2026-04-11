@@ -435,12 +435,14 @@ export const useSwotStore = create<SwotStoreState>()(
         .eq('org_id', orgId)
         .in('step_completed', [
           'swot_coaching',
+          'swot_coaching_draft',
           'swot_evidence',
           'swot_synthesis',
           'swot_strategy',
         ])
 
       const session = createEmptySession(orgId)
+      let restoredDraft: SwotDraft | null = null
 
       for (const row of rows ?? []) {
         const d = row.data_json as Record<string, unknown>
@@ -463,6 +465,14 @@ export const useSwotStore = create<SwotStoreState>()(
             }
             break
           }
+          case 'swot_coaching_draft': {
+            // Restore confirmedDraft from DB — survives localStorage clear
+            const draft = d.draft as SwotDraft | undefined
+            if (draft) {
+              restoredDraft = draft
+            }
+            break
+          }
           case 'swot_evidence': {
             session.evidence = {
               status: (d.status as PhaseStatus) ?? 'not_started',
@@ -475,10 +485,21 @@ export const useSwotStore = create<SwotStoreState>()(
             break
           }
           case 'swot_synthesis': {
+            // DB stores SynthesizedSwotItem[] (quadrant field) — transform to store SwotItem[] (category field)
+            const rawItems = (d.items as Array<Record<string, unknown>>) ?? []
+            const storeItems: SwotItem[] = rawItems.map((item) => ({
+              id: (item.id as string) ?? crypto.randomUUID(),
+              category: (item.category ?? item.quadrant ?? 'S') as SwotCategory,
+              statement: (item.statement as string) ?? '',
+              evidence: (item.evidence as SwotItemEvidence) ?? { ceoInput: [], webSources: [] },
+              implication: (item.implication as string) ?? '',
+              rootCause: (item.rootCause as string) ?? '',
+              priority: (item.priority as 1 | 2 | 3) ?? 1,
+            }))
             session.synthesis = {
               status: (d.status as PhaseStatus) ?? 'not_started',
               completedAt: (d.completedAt as string) ?? undefined,
-              items: (d.items as SwotItem[]) ?? [],
+              items: storeItems,
             }
             break
           }
@@ -495,7 +516,14 @@ export const useSwotStore = create<SwotStoreState>()(
         }
       }
 
-      set({ ...session, orgId, isLoading: false })
+      // Merge restored draft — prefer localStorage (more recent) over DB
+      const currentDraft = get().confirmedDraft
+      set({
+        ...session,
+        orgId,
+        isLoading: false,
+        confirmedDraft: currentDraft ?? restoredDraft,
+      })
     } catch (err) {
       console.error('[swot-store] initSession error:', err)
       set({ ...createEmptySession(orgId), isLoading: false })

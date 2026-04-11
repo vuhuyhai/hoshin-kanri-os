@@ -111,13 +111,30 @@ export function CoachingPhase({ orgContext, userId }: CoachingPhaseProps) {
     }
   }, [draft, orgContext.orgId])
 
-  // ─── Confirm → advance to Phase 2 ─────────────────────────
+  // ─── Confirm → persist draft to DB + advance to Phase 2 ───
   const handleConfirm = useCallback(async () => {
     await handleSaveDraft()
-    if (draft) setConfirmedDraft(draft)
+    if (draft) {
+      setConfirmedDraft(draft)
+      // Persist confirmedDraft to discovery_sessions for cross-session recovery
+      try {
+        const supabase = createClient()
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        if (currentUser) {
+          await supabase.from('discovery_sessions').upsert({
+            org_id: orgContext.orgId,
+            user_id: currentUser.id,
+            step_completed: 'swot_coaching_draft',
+            data_json: { draft, savedAt: new Date().toISOString() } as unknown as Json,
+          }, { onConflict: 'org_id,step_completed' } as never)
+        }
+      } catch (err) {
+        console.error('[CoachingPhase] persist draft error:', err)
+      }
+    }
     setStep('confirmed')
     setSwotPhase(2)
-  }, [handleSaveDraft, draft, setConfirmedDraft, setStep, setSwotPhase])
+  }, [handleSaveDraft, draft, setConfirmedDraft, setStep, setSwotPhase, orgContext.orgId])
 
   // ─── Render by step ────────────────────────────────────────
 

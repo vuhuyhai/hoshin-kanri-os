@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import {
   generateTowsStrategy,
   generateCellStrategies,
@@ -87,6 +87,9 @@ export async function POST(req: Request) {
     org_id: string; swot_items: SynthesizedSwotItem[]
   }
 
+  if (!org_id || !await verifyOrgMembership(supabase, user.id, org_id))
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+
   const { data: step3 } = await supabase.from('discovery_sessions')
     .select('id').eq('org_id', org_id).eq('step_completed', 'swot_synthesis').single()
   if (!step3)
@@ -127,6 +130,9 @@ export async function PUT(req: Request) {
   }
   if (!selected_candidate_ranks?.length || selected_candidate_ranks.length > 5)
     return Response.json({ error: 'Chọn từ 1 đến 5 Hoshin Candidates' }, { status: 400 })
+
+  if (!org_id || !await verifyOrgMembership(supabase, user.id, org_id))
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: session } = await supabase.from('discovery_sessions')
     .select('data_json').eq('org_id', org_id).eq('step_completed', 'swot_strategy').single()
