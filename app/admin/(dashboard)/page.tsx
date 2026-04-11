@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { getAdminStats, getCustomersOverview, getRegisteredUsers } from '@/lib/admin/queries'
 import type { AdminStats, CustomerOverview, RegisteredUser } from '@/lib/admin/types'

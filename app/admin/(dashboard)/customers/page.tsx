@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { getCustomersOverview } from '@/lib/admin/queries'
 import { Badge } from '@/components/ui/badge'
