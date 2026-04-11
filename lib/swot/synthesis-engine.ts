@@ -124,21 +124,32 @@ export async function synthesizeSwot(
   evidenceItems: EvidenceItemV2[],
   org: OrgContext,
 ): Promise<SynthesisResult> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 55000)
+
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      system: `Bạn là chuyên gia tư vấn chiến lược Hoshin Kanri.
+    const message = await anthropic.messages.create(
+      {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: `Bạn là chuyên gia tư vấn chiến lược Hoshin Kanri.
 Nguyên tắc: "No one benefits from vague statements. Be clear and detailed.
 Put figures on the current condition." — Melander (2021)
 Chỉ trả về JSON hợp lệ.`,
-      messages: [{ role: 'user', content: buildSynthesisPrompt(coachingItems, evidenceItems, org) }],
-    })
+        messages: [{ role: 'user', content: buildSynthesisPrompt(coachingItems, evidenceItems, org) }],
+      },
+      { signal: controller.signal },
+    )
+    clearTimeout(timeoutId)
 
     const block = message.content[0]
     if (block.type !== 'text') return parseAndEnrichSynthesis('{}', coachingItems, evidenceItems)
     return parseAndEnrichSynthesis(block.text, coachingItems, evidenceItems)
-  } catch {
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('AI synthesis timeout sau 55 giây. Vui lòng thử lại.')
+    }
     return parseAndEnrichSynthesis('{}', coachingItems, evidenceItems)
   }
 }

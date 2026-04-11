@@ -1,3 +1,11 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "app/api/swot/synthesis/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/swot/coaching/route.ts": {
+      "maxDuration": 60
+    }
+  }
 }

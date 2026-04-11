@@ -252,6 +252,9 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
       return
     }
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 58000)
+
     try {
       const coachingItems = draftToCoachingItems(confirmedDraft)
       const evidenceItems = contextCardsToEvidence(contextCards)
@@ -264,7 +267,9 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
           coaching_items: coachingItems,
           evidence_items: evidenceItems,
         }),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
@@ -278,11 +283,16 @@ export function SynthesisPhase({ orgContext }: SynthesisPhaseProps) {
       setSynthesis(output)
       setStatus('complete')
     } catch (err) {
+      clearTimeout(timeoutId)
       console.error('[SynthesisPhase] error:', err)
       setStatus('error')
-      toast.error(
-        err instanceof Error ? err.message : 'Lỗi khi tổng hợp SWOT. Thử lại.'
-      )
+      if (err instanceof Error && err.name === 'AbortError') {
+        toast.error('Tổng hợp SWOT mất quá lâu (>58s). Vui lòng thử lại.')
+      } else {
+        toast.error(
+          err instanceof Error ? err.message : 'Lỗi khi tổng hợp SWOT. Thử lại.'
+        )
+      }
     }
   }
 

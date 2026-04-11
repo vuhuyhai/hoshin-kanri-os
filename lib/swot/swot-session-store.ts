@@ -386,6 +386,15 @@ interface SwotStoreState extends SwotSession {
   jumpToDimension: (dimension: string) => void
 }
 
+// Module-level synthesis recovery timer — resets stuck 'in_progress' status
+let _synthesisRecoveryTimer: ReturnType<typeof setTimeout> | null = null
+function clearSynthesisRecovery() {
+  if (_synthesisRecoveryTimer) {
+    clearTimeout(_synthesisRecoveryTimer)
+    _synthesisRecoveryTimer = null
+  }
+}
+
 export const useSwotStore = create<SwotStoreState>()(
   persist(
     (set, get) => ({
@@ -791,6 +800,7 @@ export const useSwotStore = create<SwotStoreState>()(
   // ============================================================
 
   setSynthesisItems: (items: SwotItem[]) => {
+    clearSynthesisRecovery()
     set((state) => ({
       synthesis: {
         ...state.synthesis,
@@ -798,6 +808,14 @@ export const useSwotStore = create<SwotStoreState>()(
         items,
       },
     }))
+    // Auto-recovery: if still 'in_progress' after 65s → reset to 'error'
+    _synthesisRecoveryTimer = setTimeout(() => {
+      if (get().synthesis.status === 'in_progress') {
+        set((state) => ({
+          synthesis: { ...state.synthesis, status: 'error' as PhaseStatus },
+        }))
+      }
+    }, 65000)
     debouncedSave(get().saveSession)
   },
 
@@ -814,6 +832,7 @@ export const useSwotStore = create<SwotStoreState>()(
   },
 
   completeSynthesis: () => {
+    clearSynthesisRecovery()
     set((state) => ({
       synthesis: {
         ...state.synthesis,
@@ -1183,6 +1202,7 @@ export const useSwotStore = create<SwotStoreState>()(
         coachingMessages: state.coachingMessages.slice(-20),
         coachingCoverage: state.coachingCoverage,
         contextCards: state.evidence.contextCards,
+        synthesis: state.synthesis,
         staleSince: state.staleSince,
         staleReason: state.staleReason,
       }),
@@ -1205,6 +1225,13 @@ export const useSwotStore = create<SwotStoreState>()(
             }
           }
           updates.canAdvanceToPhase3 = (persistedCards?.length ?? state.evidence?.contextCards?.length ?? 0) > 0
+          // Recovery: if synthesis was stuck at 'in_progress' (crash/refresh), reset to 'error'
+          if (state.synthesis?.status === 'in_progress') {
+            updates.synthesis = {
+              ...state.synthesis,
+              status: 'error' as const,
+            }
+          }
           useSwotStore.setState(updates)
         }
       },

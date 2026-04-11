@@ -2,6 +2,8 @@ import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { synthesizeSwot } from '@/lib/swot/synthesis-engine'
 import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
 
+export const maxDuration = 60
+
 export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
