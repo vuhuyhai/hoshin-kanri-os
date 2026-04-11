@@ -78,15 +78,17 @@ export default function HoshinExplorerPage() {
   return (
     <div className="-m-8">
       {/* Header bar */}
-      <div className="flex items-baseline gap-4 flex-wrap px-7 py-4 bg-black border-b-[3px] border-ink">
-        <h1 className="font-mono font-black text-[30px] tracking-[2px] text-[#FFD93D] leading-none uppercase">
-          Hoshin Kanri Explorer
-        </h1>
-        <span className="font-mono text-[10px] tracking-[1px] text-gray-500">
-          DEEP LEARNING COMPANION · ADLER × FEYNMAN
-        </span>
-        <span className="ml-auto font-mono text-[10px] font-bold tracking-[1px] bg-[#FFD93D] text-black px-2.5 py-1">
-          AI POWERED
+      <div className="flex items-center gap-5 flex-wrap px-7 py-4 bg-ink border-b-[3px] border-ink">
+        <div>
+          <h1 className="font-display font-black text-[28px] tracking-wider uppercase text-white leading-none">
+            Hoshin Kanri Explorer
+          </h1>
+          <p className="font-body text-[12px] text-text-3 mt-1 tracking-wide">
+            Deep Learning Companion · Adler × Feynman
+          </p>
+        </div>
+        <span className="ml-auto badge-brutal text-[10px] bg-accent-brand text-white border-accent-brand">
+          AI Powered
         </span>
       </div>
 
@@ -94,12 +96,14 @@ export default function HoshinExplorerPage() {
       <div className="flex">
         <ConceptSidebar selectedId={selected?.id ?? null} onSelect={loadConcept} />
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 bg-bg-warm">
           {!selected ? (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-8">
-              <div className="font-mono font-black text-7xl text-gray-200 leading-none">方針</div>
-              <div className="font-mono font-black text-2xl tracking-[2px] uppercase">Chọn một khái niệm</div>
-              <p className="font-mono text-xs text-muted-foreground max-w-xs leading-relaxed">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center px-8">
+              <div className="font-display font-black text-7xl text-bg-muted-warm leading-none">方針</div>
+              <h2 className="font-display font-black text-2xl tracking-wider uppercase text-ink">
+                Chọn một khái niệm
+              </h2>
+              <p className="font-body text-sm text-text-2 max-w-sm leading-relaxed">
                 Bấm vào bất kỳ khái niệm nào để Adler phân tích theo 3 tầng Feynman — kết nối thực tế với Ladysfit và tư vấn fitness.
               </p>
             </div>
