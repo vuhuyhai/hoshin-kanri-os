@@ -1,5 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { generateTowsStrategy } from '@/lib/swot/strategy-engine'
+import {
+  generateTowsStrategy,
+  generateCellStrategies,
+  synthesizeHoshinCandidates,
+} from '@/lib/swot/strategy-engine'
+import type { CellType, CellSwotItem } from '@/lib/swot/strategy-engine'
 import type { SynthesizedSwotItem } from '@/lib/swot/types'
 
 export async function POST(req: Request) {
@@ -7,7 +12,78 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { org_id, swot_items } = (await req.json()) as {
+  const body = await req.json()
+  const action = body.action as string | undefined
+
+  // ─── Action: generate_cell ────────────────────────────────
+  // Called by ExtendedSwotMatrix for each TOWS cell
+  if (action === 'generate_cell') {
+    const { cellType, strengths, weaknesses, opportunities, threats, orgContext } = body as {
+      cellType: CellType
+      strengths: CellSwotItem[]
+      weaknesses: CellSwotItem[]
+      opportunities: CellSwotItem[]
+      threats: CellSwotItem[]
+      orgContext: { name: string; industry: string; headcount: number }
+    }
+
+    if (!cellType || !orgContext) {
+      return Response.json({ error: 'Thiếu cellType hoặc orgContext' }, { status: 400 })
+    }
+
+    try {
+      const strategies = await generateCellStrategies(
+        cellType, strengths ?? [], weaknesses ?? [], opportunities ?? [], threats ?? [], orgContext,
+      )
+
+      if (strategies.length === 0) {
+        return Response.json({ error: 'AI không tạo được chiến lược. Thử lại.' }, { status: 500 })
+      }
+
+      return Response.json({ strategies })
+    } catch (error) {
+      console.error(`[strategy] generate_cell ${cellType} error:`, error)
+      return Response.json({ error: 'Lỗi tạo chiến lược ô. Thử lại.' }, { status: 500 })
+    }
+  }
+
+  // ─── Action: synthesize_candidates ────────────────────────
+  // Called by StrategyClient after all 4 cells have selected strategies
+  if (action === 'synthesize_candidates') {
+    const { selectedStrategies, allSwotItems, orgContext } = body as {
+      selectedStrategies: Record<CellType, string>
+      allSwotItems: CellSwotItem[]
+      orgContext: { name: string; industry: string; headcount: number }
+    }
+
+    if (!selectedStrategies || !allSwotItems?.length || !orgContext) {
+      return Response.json({ error: 'Thiếu dữ liệu chiến lược' }, { status: 400 })
+    }
+
+    const hasAnyStrategy = Object.values(selectedStrategies).some((v) => v?.trim())
+    if (!hasAnyStrategy) {
+      return Response.json({ error: 'Cần chọn ít nhất 1 chiến lược từ các ô TOWS' }, { status: 400 })
+    }
+
+    try {
+      const candidates = await synthesizeHoshinCandidates(
+        selectedStrategies, allSwotItems, orgContext,
+      )
+
+      if (candidates.length === 0) {
+        return Response.json({ error: 'AI không tạo được Hoshin Candidates. Thử lại.' }, { status: 500 })
+      }
+
+      return Response.json({ candidates })
+    } catch (error) {
+      console.error('[strategy] synthesize_candidates error:', error)
+      return Response.json({ error: 'Lỗi tạo Hoshin Candidates. Thử lại.' }, { status: 500 })
+    }
+  }
+
+  // ─── Legacy: full TOWS generation (no action field) ───────
+  // Backward compat: { org_id, swot_items }
+  const { org_id, swot_items } = body as {
     org_id: string; swot_items: SynthesizedSwotItem[]
   }
 

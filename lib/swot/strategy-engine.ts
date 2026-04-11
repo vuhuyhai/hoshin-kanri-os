@@ -3,6 +3,10 @@ import type { SynthesizedSwotItem, OrgContext, TowsResult, HoshinCandidate } fro
 
 const anthropic = new Anthropic()
 
+// ============================================================
+// FULL TOWS GENERATION (original — used by legacy POST route)
+// ============================================================
+
 function buildTowsPrompt(items: SynthesizedSwotItem[], org: OrgContext): string {
   const byQ = (q: string) =>
     items
@@ -109,5 +113,192 @@ Chỉ trả về JSON hợp lệ.`,
     return parseTowsResult(block.text, swotItems)
   } catch {
     return parseTowsResult('{}', swotItems)
+  }
+}
+
+// ============================================================
+// CELL-LEVEL STRATEGY GENERATION (for ExtendedSwotMatrix UI)
+// ============================================================
+
+export interface CellSwotItem {
+  id: string
+  category: string
+  statement: string
+}
+
+export type CellType = 'SO' | 'ST' | 'WO' | 'WT'
+
+const CELL_LOGIC: Record<CellType, { name: string; desc: string }> = {
+  SO: { name: 'TẤN CÔNG', desc: 'Dùng điểm mạnh khai thác cơ hội' },
+  ST: { name: 'BẢO VỆ', desc: 'Dùng điểm mạnh chống lại thách thức' },
+  WO: { name: 'CẢI THIỆN', desc: 'Tận dụng cơ hội để khắc phục điểm yếu' },
+  WT: { name: 'PHÒNG THỦ', desc: 'Giảm thiểu rủi ro từ điểm yếu + thách thức' },
+}
+
+function buildCellPrompt(
+  cellType: CellType,
+  strengths: CellSwotItem[],
+  weaknesses: CellSwotItem[],
+  opportunities: CellSwotItem[],
+  threats: CellSwotItem[],
+  orgContext: { name: string; industry: string; headcount: number },
+): string {
+  const fmtItems = (items: CellSwotItem[]) =>
+    items.length > 0
+      ? items.map((i) => `  - ${i.statement}`).join('\n')
+      : '  (không có)'
+
+  const logic = CELL_LOGIC[cellType]
+
+  return `Doanh nghiệp: ${orgContext.name} | Ngành: ${orgContext.industry} | ${orgContext.headcount} nhân viên
+
+Ô ${cellType} — Chiến lược ${logic.name}: ${logic.desc}
+
+${strengths.length > 0 ? `STRENGTHS:\n${fmtItems(strengths)}` : ''}
+${weaknesses.length > 0 ? `WEAKNESSES:\n${fmtItems(weaknesses)}` : ''}
+${opportunities.length > 0 ? `OPPORTUNITIES:\n${fmtItems(opportunities)}` : ''}
+${threats.length > 0 ? `THREATS:\n${fmtItems(threats)}` : ''}
+
+Tạo ĐÚNG 3 chiến lược ${logic.name} cho ô ${cellType}.
+Mỗi chiến lược:
+- Tối đa 20 từ
+- Bắt đầu bằng động từ hành động
+- Cụ thể, đo lường được, phù hợp quy mô ${orgContext.headcount} người
+- Kết nối trực tiếp các SWOT items phía trên
+
+OUTPUT: Chỉ JSON, không markdown.
+{ "strategies": ["Chiến lược 1", "Chiến lược 2", "Chiến lược 3"] }`
+}
+
+export async function generateCellStrategies(
+  cellType: CellType,
+  strengths: CellSwotItem[],
+  weaknesses: CellSwotItem[],
+  opportunities: CellSwotItem[],
+  threats: CellSwotItem[],
+  orgContext: { name: string; industry: string; headcount: number },
+): Promise<string[]> {
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      system: `Bạn là chuyên gia chiến lược Hoshin Kanri cho SME Việt Nam. Chỉ trả về JSON hợp lệ.`,
+      messages: [{
+        role: 'user',
+        content: buildCellPrompt(cellType, strengths, weaknesses, opportunities, threats, orgContext),
+      }],
+    })
+
+    const block = message.content[0]
+    if (block.type !== 'text') return []
+
+    const cleaned = block.text.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(cleaned) as { strategies: string[] }
+    return (parsed.strategies ?? []).slice(0, 3)
+  } catch (err) {
+    console.error(`[strategy-engine] generateCellStrategies ${cellType} error:`, err)
+    return []
+  }
+}
+
+// ============================================================
+// HOSHIN CANDIDATES FROM SELECTED STRATEGIES (for StrategyClient UI)
+// ============================================================
+
+// Reuses HoshinCandidate from swot-session-store (single source of truth)
+import type { HoshinCandidate as StoreHoshinCandidate } from '@/lib/swot/swot-session-store'
+
+function buildCandidatesPrompt(
+  selectedStrategies: Record<CellType, string>,
+  allItems: CellSwotItem[],
+  orgContext: { name: string; industry: string; headcount: number },
+): string {
+  const fmtItems = (cat: string) =>
+    allItems.filter((i) => i.category === cat).map((i) => `  - [${i.id.slice(0, 8)}] ${i.statement}`).join('\n')
+
+  return `Doanh nghiệp: ${orgContext.name} | Ngành: ${orgContext.industry} | ${orgContext.headcount} nhân viên
+
+SWOT ITEMS:
+S:\n${fmtItems('S')}
+W:\n${fmtItems('W')}
+O:\n${fmtItems('O')}
+T:\n${fmtItems('T')}
+
+CHIẾN LƯỢC ĐÃ CHỌN:
+SO: ${selectedStrategies.SO || '(chưa chọn)'}
+ST: ${selectedStrategies.ST || '(chưa chọn)'}
+WO: ${selectedStrategies.WO || '(chưa chọn)'}
+WT: ${selectedStrategies.WT || '(chưa chọn)'}
+
+═══ NHIỆM VỤ: TẠO HOSHIN CANDIDATES ═══
+
+Từ 4 chiến lược đã chọn, tổng hợp thành 3-5 Hoshin Candidates.
+Mỗi candidate là một MỤC TIÊU ĐỘT PHÁ có thể đưa vào X-Matrix.
+
+OUTPUT JSON:
+{
+  "candidates": [{
+    "name": "Động từ + mục tiêu — tối đa 10 từ",
+    "description": "1-2 câu mô tả cụ thể mục tiêu và cách đạt được",
+    "sourceCellType": "SO|ST|WO|WT",
+    "sourceItemIds": ["id1", "id2"],
+    "priority": 1,
+    "suggestedKpis": ["KPI 1", "KPI 2"]
+  }]
+}
+
+RÀNG BUỘC:
+- Name BẮT ĐẦU bằng động từ: "Mở rộng", "Xây dựng", "Tối ưu", "Triển khai"
+- Tối đa 5 candidates, xếp theo priority (1 = cao nhất)
+- suggestedKpis: 2-3 KPIs đo lường được
+- sourceItemIds: danh sách ID các SWOT items liên quan (dùng 8 ký tự đầu)
+- Ưu tiên SO > WT > ST/WO`
+}
+
+export async function synthesizeHoshinCandidates(
+  selectedStrategies: Record<CellType, string>,
+  allItems: CellSwotItem[],
+  orgContext: { name: string; industry: string; headcount: number },
+): Promise<StoreHoshinCandidate[]> {
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: `Bạn là chuyên gia Hoshin Kanri. Nguyên tắc Jackson (2006): "Keep breakthroughs between 3-5."
+Chỉ trả về JSON hợp lệ.`,
+      messages: [{
+        role: 'user',
+        content: buildCandidatesPrompt(selectedStrategies, allItems, orgContext),
+      }],
+    })
+
+    const block = message.content[0]
+    if (block.type !== 'text') return []
+
+    const cleaned = block.text.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(cleaned) as {
+      candidates: Array<{
+        name: string
+        description: string
+        sourceCellType: CellType
+        sourceItemIds: string[]
+        priority: number
+        suggestedKpis: string[]
+      }>
+    }
+
+    return (parsed.candidates ?? []).slice(0, 5).map((c, i) => ({
+      id: crypto.randomUUID(),
+      name: c.name,
+      description: c.description,
+      sourceCellType: c.sourceCellType,
+      sourceItemIds: c.sourceItemIds ?? [],
+      priority: Math.min(5, Math.max(1, c.priority ?? (i + 1))) as 1 | 2 | 3 | 4 | 5,
+      suggestedKpis: c.suggestedKpis ?? [],
+      isSelectedForXMatrix: false,
+    }))
+  } catch (err) {
+    console.error('[strategy-engine] synthesizeHoshinCandidates error:', err)
+    return []
   }
 }
