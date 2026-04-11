@@ -11,10 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Check, Eye, EyeOff, Loader2 } from 'lucide-react'
 
-const ERROR_MESSAGES: Record<string, string> = {
-  auth_failed: 'Đăng nhập thất bại. Vui lòng thử lại.',
-  invalid_credentials: 'Email hoặc mật khẩu không đúng.',
-}
+const ERROR_MESSAGES: Record<string, string> = { auth_failed: 'Đăng nhập thất bại. Vui lòng thử lại.', invalid_credentials: 'Email hoặc mật khẩu không đúng.' }
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -25,7 +22,6 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
 
   useEffect(() => {
     const err = searchParams.get('error')
@@ -46,15 +42,14 @@ function LoginForm() {
     if (authError) {
       const msg = authError.message.toLowerCase()
       if (msg.includes('invalid') || msg.includes('credentials')) {
-        setError('Email hoặc mật khẩu không đúng')
+        toast.error('Email hoặc mật khẩu không đúng')
       } else if (msg.includes('not confirmed') || msg.includes('email')) {
-        setError('Vui lòng xác nhận email trước khi đăng nhập')
+        toast.error('Vui lòng xác nhận email trước khi đăng nhập')
       } else {
         toast.error(authError.message)
       }
       return
     }
-    setSent(true)
     router.push('/dashboard')
   }
 
@@ -71,20 +66,6 @@ function LoginForm() {
     }
   }
 
-  if (sent) {
-    return (
-      <div className="card-brutal p-8 text-center w-full max-w-md">
-        <span className="text-4xl block mb-4">✉️</span>
-        <h2 className="font-display font-bold text-xl text-ink">
-          Kiểm tra email của bạn!
-        </h2>
-        <p className="font-body text-[18px] text-text-2 mt-2">
-          Link đăng nhập đã được gửi. Hiệu lực 10 phút.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-6">
@@ -98,10 +79,6 @@ function LoginForm() {
           Tiếp tục hành trình hoạch định chiến lược
         </p>
       </div>
-
-      <span className="badge-brutal badge-accent mb-6 inline-block">
-        ✉️ Magic Link — Không cần mật khẩu
-      </span>
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-1.5">
@@ -125,7 +102,7 @@ function LoginForm() {
         {error && <p className="font-body text-xs text-red-600">{error}</p>}
 
         <Button type="submit" className="btn-primary w-full justify-center" disabled={isLoading || isGoogleLoading}>
-          {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang gửi...</> : 'Đăng nhập'}
+          {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang đăng nhập...</> : 'Đăng nhập'}
         </Button>
       </form>
 
