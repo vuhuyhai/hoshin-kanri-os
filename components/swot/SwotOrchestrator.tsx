@@ -64,7 +64,7 @@ export function SwotOrchestrator({ orgContext, userId, mode = 'coaching', analys
   }, [confirmedDraft])
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-4">
+    <div className="max-w-screen-xl mx-auto px-6 py-4">
       <PhaseStepperHeader />
 
       <div>
