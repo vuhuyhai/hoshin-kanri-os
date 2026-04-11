@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   BarChart3,
   FileText,
+  HelpCircle,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -132,8 +133,24 @@ function SidebarContent({
           </div>
         ))}
 
-        {/* Settings — separated */}
+        {/* Help & Settings — separated */}
         <div className="my-4 border-t border-white/20" />
+        <Link href="/dashboard/help" onClick={onNavigate}>
+          <div
+            className={cn(
+              'flex min-h-[44px] items-center gap-3 px-3 py-2.5',
+              'font-body text-[16px]',
+              'cursor-pointer transition-all duration-150',
+              pathname === '/dashboard/help' ||
+                pathname.startsWith('/dashboard/help/')
+                ? 'bg-accent-brand text-white font-medium'
+                : 'text-white/60 hover:bg-white/10 hover:text-white'
+            )}
+          >
+            <HelpCircle className="w-4 h-4 flex-shrink-0" />
+            Hướng dẫn
+          </div>
+        </Link>
         <Link href="/dashboard/settings" onClick={onNavigate}>
           <div
             className={cn(
