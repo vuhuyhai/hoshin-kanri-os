@@ -73,12 +73,12 @@ function SidebarContent({
     <div className="flex h-full flex-col bg-bg-dark">
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-white/20 px-6">
-        <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2">
-          <Image src="/images/logo-dark.png" alt="Hoshin Kanri OS" width={40} height={40} priority />
-          <span className="font-display font-black text-lg text-white uppercase tracking-wider">
+        <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2 overflow-hidden">
+          <Image src="/images/logo-dark.png" alt="Hoshin Kanri OS" width={32} height={32} className="flex-shrink-0" priority />
+          <span className="font-display font-black text-[15px] text-white uppercase tracking-wide whitespace-nowrap overflow-hidden">
             Hoshin Kanri OS
           </span>
-          <span className="badge-brutal border-white/40 text-white/60 text-[10px] ml-2">
+          <span className="badge-brutal border-white/40 text-white/60 text-[10px] flex-shrink-0">
             BETA
           </span>
         </Link>

@@ -78,7 +78,7 @@ export default async function DashboardPage() {
           {/* KPI alert */}
           {(kpiCount ?? 0) > 0 && (
             <Link href="/dashboard/kpi">
-              <div className="card-brutal flex min-h-[44px] items-center gap-4 p-5 cursor-pointer">
+              <div className="card-brutal flex min-h-[44px] items-center gap-4 p-5 mb-4 cursor-pointer">
                 <span className="text-3xl">📊</span>
                 <div className="flex-1">
                   <p className="font-display text-sm font-bold uppercase tracking-wider">
@@ -95,35 +95,35 @@ export default async function DashboardPage() {
             </Link>
           )}
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <Link href="/dashboard/kpi">
-              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-6 flex flex-col items-center gap-3 cursor-pointer transition-[background,box-shadow] duration-150 hover:shadow-sm">
                 <span className="text-3xl">📈</span>
-                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                <p className="font-display font-bold text-[13px] uppercase tracking-wider text-ink text-center mt-1">
                   KPI Tracker
                 </p>
               </div>
             </Link>
             <Link href="/dashboard/report">
-              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-6 flex flex-col items-center gap-3 cursor-pointer transition-[background,box-shadow] duration-150 hover:shadow-sm">
                 <span className="text-3xl">📄</span>
-                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                <p className="font-display font-bold text-[13px] uppercase tracking-wider text-ink text-center mt-1">
                   Báo cáo tháng
                 </p>
               </div>
             </Link>
             <Link href="/dashboard/discovery">
-              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-6 flex flex-col items-center gap-3 cursor-pointer transition-[background,box-shadow] duration-150 hover:shadow-sm">
                 <span className="text-3xl">🔍</span>
-                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                <p className="font-display font-bold text-[13px] uppercase tracking-wider text-ink text-center mt-1">
                   Discovery Hub
                 </p>
               </div>
             </Link>
             <Link href="/dashboard/x-matrix/new">
-              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-6 flex flex-col items-center gap-3 cursor-pointer transition-[background,box-shadow] duration-150 hover:shadow-sm">
                 <span className="text-3xl">📊</span>
-                <p className="font-display text-sm font-bold uppercase tracking-wider">
+                <p className="font-display font-bold text-[13px] uppercase tracking-wider text-ink text-center mt-1">
                   X-Matrix
                 </p>
               </div>
