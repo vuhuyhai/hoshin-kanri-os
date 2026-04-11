@@ -424,7 +424,7 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
       const warnings = data.dataWarnings as string[] | undefined
       if (warnings && warnings.length > 0) {
         toast.warning(
-          `Thieu du lieu tu: ${warnings.join(', ')}. Ket qua co the chua day du.`,
+          `Thiếu dữ liệu từ: ${warnings.join(', ')}. Kết quả có thể chưa đầy đủ.`,
           { duration: 6000 }
         )
       }
@@ -432,11 +432,11 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
       // Save warning
       if (data.savedSuccessfully === false) {
         toast.error(
-          'Khong the luu ket qua. Vui long chup man hinh truoc khi roi trang.',
+          'Không thể lưu kết quả. Vui lòng chụp màn hình trước khi rời trang.',
           { duration: 8000 }
         )
       } else {
-        toast.success('Discovery hoan thanh! X-Matrix san sang.')
+        toast.success('Discovery hoàn thành! X-Matrix sẵn sàng.')
       }
     } catch (error) {
       console.error('Synthesis error:', error)

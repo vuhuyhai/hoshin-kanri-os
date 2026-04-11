@@ -44,9 +44,9 @@ const STATUS_CLASSES: Record<DimensionStatus, string> = {
 }
 
 const GROUP_LABELS: Record<FrameworkId, string> = {
-  '8M': 'Noi bo',
-  Porter: 'Thi truong',
-  PESTEL: 'Vi mo',
+  '8M': 'Nội bộ',
+  Porter: 'Thị trường',
+  PESTEL: 'Vĩ mô',
 }
 
 export function DimensionPills({
@@ -158,16 +158,16 @@ export function DimensionPills({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Chuyen sang chu de khac?</AlertDialogTitle>
+            <AlertDialogTitle>Chuyển sang chủ đề khác?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bo qua cac cau hoi con lai va chuyen sang{' '}
+              Bỏ qua các câu hỏi còn lại và chuyển sang{' '}
               <strong>{jumpTarget?.label}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Tiep tuc hien tai</AlertDialogCancel>
+            <AlertDialogCancel>Tiếp tục hiện tại</AlertDialogCancel>
             <AlertDialogAction onClick={confirmJump}>
-              Chuyen ngay
+              Chuyển ngay
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

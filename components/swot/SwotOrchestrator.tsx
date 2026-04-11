@@ -16,7 +16,7 @@ export function SwotOrchestrator({ orgContext, userId }: SwotOrchestratorProps) 
   const swotPhase = useSwotStore((s) => s.swotPhase)
 
   return (
-    <div className="max-w-3xl mx-auto py-6 px-4">
+    <div className="max-w-5xl mx-auto px-6 py-4">
       <PhaseStepperHeader />
 
       <div>

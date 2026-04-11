@@ -102,9 +102,9 @@ export function useCoachingPersistence(orgId: string, userId: string) {
     })
       .then(() => {
         setLastSaved(now)
-        toast.success('Da luu phien lam viec')
+        toast.success('Đã lưu phiên làm việc')
       })
-      .catch(() => toast.error('Khong the luu. Thu lai.'))
+      .catch(() => toast.error('Không thể lưu. Thử lại.'))
   }, [orgId, userId])
 
   // Save on phase complete (before navigation) — awaitable

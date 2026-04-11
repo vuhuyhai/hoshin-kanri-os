@@ -1,10 +1,11 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 
 const PHASES = [
   { number: 1, label: 'Khám phá' },
-  { number: 2, label: 'Bối cảnh' },
+  { number: 2, label: 'Soi chiếu' },
   { number: 3, label: 'Tổng hợp' },
 ] as const
 
@@ -21,36 +22,32 @@ export function PhaseStepperHeader() {
   }
 
   return (
-    <div className="flex items-center gap-0 w-full mb-8">
+    <div className="flex items-center gap-0 mb-6 max-w-md mx-auto">
       {PHASES.map((phase, index) => {
-        const isComplete = phaseStatuses[phase.number] === 'completed'
-        const isCurrent = swotPhase === phase.number
-        const isLocked = swotPhase < phase.number && !isComplete
+        const isDone = phaseStatuses[phase.number] === 'completed'
+        const isActive = swotPhase === phase.number && !isDone
+        const isInactive = !isDone && !isActive
 
         return (
-          <div key={phase.number} className="flex items-center flex-1">
-            {/* Step node */}
-            <div className="flex flex-col items-center gap-1.5">
+          <div key={phase.number} className="contents">
+            {/* Step node + label */}
+            <div className="flex flex-col items-center">
               <div
                 className={[
-                  'w-8 h-8 border-2 flex items-center justify-center text-sm font-medium',
-                  isComplete
-                    ? 'bg-foreground border-foreground text-background'
-                    : isCurrent
-                      ? 'bg-background border-foreground text-foreground'
-                      : 'bg-background border-foreground/30 text-foreground/30',
+                  'w-8 h-8 flex items-center justify-center border-2 font-display font-bold text-sm',
+                  isDone
+                    ? 'bg-[var(--ink)] text-white border-[var(--ink)]'
+                    : isActive
+                      ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                      : 'bg-[var(--bg)] text-[var(--text-3)] border-[var(--ink)]/30',
                 ].join(' ')}
               >
-                {isComplete ? '✓' : phase.number}
+                {isDone ? <Check className="w-4 h-4" strokeWidth={3} /> : phase.number}
               </div>
               <span
                 className={[
-                  'text-xs whitespace-nowrap',
-                  isCurrent
-                    ? 'text-foreground font-medium'
-                    : isComplete
-                      ? 'text-foreground/70'
-                      : 'text-foreground/40',
+                  'font-display font-semibold text-[11px] uppercase tracking-wider mt-2 text-center',
+                  isActive ? 'text-[var(--ink)]' : 'text-[var(--text-3)]',
                 ].join(' ')}
               >
                 {phase.label}
@@ -61,8 +58,8 @@ export function PhaseStepperHeader() {
             {index < PHASES.length - 1 && (
               <div
                 className={[
-                  'flex-1 h-0.5 mx-2 mb-5',
-                  isComplete ? 'bg-foreground' : 'bg-foreground/20',
+                  'flex-1 h-[2px] -mt-4',
+                  isDone || isActive ? 'bg-[var(--ink)]' : 'bg-[var(--ink)]/20',
                 ].join(' ')}
               />
             )}

@@ -82,7 +82,7 @@ export function Phase1Coaching({
               : [
                   {
                     role: 'user',
-                    content: 'Xin chao, hay bat dau phan tich.',
+                    content: 'Xin chào, hãy bắt đầu phân tích.',
                   },
                 ],
           orgContext,
@@ -126,7 +126,7 @@ export function Phase1Coaching({
         })
       }
     } catch {
-      toast.error('Ket noi AI gian doan. Thu lai.')
+      toast.error('Kết nối AI gián đoạn. Thử lại.')
       onStateChange({ ...state, messages: newMessages, isLoading: false })
     }
   }
@@ -165,8 +165,8 @@ export function Phase1Coaching({
             <div className="inline-flex items-center gap-2 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-primary">
               <span className="text-lg">✅</span>
               <span>
-                AI da hieu kha ro ve doanh nghiep cua ban. Ban co the tiep tuc
-                chia se hoac chuyen sang buoc tiep theo.
+                AI đã hiểu khá rõ về doanh nghiệp của bạn. Bạn có thể tiếp tục
+                chia sẻ hoặc chuyển sang bước tiếp theo.
               </span>
             </div>
           </div>
@@ -188,7 +188,7 @@ export function Phase1Coaching({
               />
             </div>
             <span className="text-[11px] font-display font-semibold text-muted-foreground tabular-nums shrink-0">
-              Da kham pha {answeredCount}/{MIN_COVERAGE_TO_ADVANCE} chu de
+              Đã khám phá {answeredCount}/{MIN_COVERAGE_TO_ADVANCE} chủ đề
             </span>
           </div>
         </div>
@@ -200,10 +200,10 @@ export function Phase1Coaching({
           <div className="text-center space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-display font-semibold text-primary">
-                Phan tich hoan tat
+                Phân tích hoàn tất
               </p>
               <p className="text-xs text-muted-foreground">
-                Da thu thap insight tu buoi phan tich
+                Đã thu thập insight từ buổi phân tích
               </p>
             </div>
             <div className="flex gap-3 justify-center">
@@ -215,7 +215,7 @@ export function Phase1Coaching({
                 }
                 className="font-display text-xs font-semibold uppercase tracking-wider"
               >
-                Xem tom tat
+                Xem tóm tắt
               </Button>
               {onNavigateNext && (
                 <Button
@@ -223,7 +223,7 @@ export function Phase1Coaching({
                   onClick={onNavigateNext}
                   className="font-display text-xs font-semibold uppercase tracking-wider"
                 >
-                  Sang buoc 2 &rarr;
+                  Sang bước 2 &rarr;
                 </Button>
               )}
             </div>
@@ -236,7 +236,7 @@ export function Phase1Coaching({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Nhap cau tra loi cua ban..."
+              placeholder="Nhập câu trả lời của bạn..."
               disabled={state.isLoading}
               rows={1}
               className="flex-1 px-4 py-2.5 text-sm border-2 border-foreground/20 bg-background resize-none focus:outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground disabled:opacity-50"
@@ -249,7 +249,7 @@ export function Phase1Coaching({
               {state.isLoading ? (
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
-                  Gui
+                  Gửi
                 </span>
               ) : (
                 'Gui'
@@ -258,7 +258,7 @@ export function Phase1Coaching({
           </div>
           <div className="flex items-center justify-between mt-1.5 max-w-4xl mx-auto">
             <p className="text-xs text-muted-foreground">
-              Enter de gui · Shift+Enter xuong dong
+              Enter để gửi · Shift+Enter xuống dòng
             </p>
             {onAdvanceToPhase2 && (
               <Button
@@ -269,11 +269,11 @@ export function Phase1Coaching({
                 title={
                   canAdvanceToPhase2
                     ? undefined
-                    : 'Hay chia se them de AI hieu ro hon ve doanh nghiep cua ban'
+                    : 'Hãy chia sẻ thêm để AI hiểu rõ hơn về doanh nghiệp của bạn'
                 }
                 className="font-display text-[10px] font-semibold uppercase tracking-wider"
               >
-                Tiep tuc sang buoc tiep theo &rarr;
+                Tiếp tục sang bước tiếp theo &rarr;
               </Button>
             )}
           </div>
