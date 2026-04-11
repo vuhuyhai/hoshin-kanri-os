@@ -5,11 +5,12 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { LayoutDashboard, Users, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, BookOpen, LogOut } from 'lucide-react'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Khách hàng', href: '/admin/customers', icon: Users },
+  { label: 'HK Explorer', href: '/admin/hoshin-explorer', icon: BookOpen },
 ] as const
 
 export function AdminSidebar() {

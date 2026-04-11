@@ -493,6 +493,12 @@ main > * {
   .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
 }
 
+/* HK Explorer loading bar */
+@keyframes loadFill {
+  from { width: 15%; margin-left: 0; }
+  to   { width: 65%; margin-left: 35%; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
