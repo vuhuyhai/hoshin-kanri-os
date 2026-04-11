@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { createClient } from '@/lib/supabase/client'
-import { Logo } from '@/components/ui/logo'
+import Image from 'next/image'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { MobileSidebarContent, type SidebarProps } from '@/components/layout/sidebar'
 import {
@@ -14,10 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Menu, Sun, Moon } from 'lucide-react'
+import { Menu, Bell, Sun, Moon } from 'lucide-react'
 
-/** Map pathname segments to Vietnamese breadcrumb labels */
-const BREADCRUMB_MAP: Record<string, string> = {
+/** Map pathname segments to Vietnamese page titles */
+const PAGE_TITLE_MAP: Record<string, string> = {
   dashboard: 'Dashboard',
   discovery: 'Khám phá',
   swot: 'SWOT Analysis',
@@ -35,26 +35,14 @@ const BREADCRUMB_MAP: Record<string, string> = {
   strategy: 'Chiến lược',
 }
 
-function Breadcrumb() {
+function PageTitle() {
   const pathname = usePathname()
   const segments = pathname.split('/').filter(Boolean)
-
-  // Skip "dashboard" as root, show the rest
-  const crumbs = segments.slice(1).map((seg) => BREADCRUMB_MAP[seg] || seg)
-
-  if (crumbs.length === 0) return null
+  const crumbs = segments.slice(1).map((seg) => PAGE_TITLE_MAP[seg] || seg)
+  const title = crumbs[crumbs.length - 1] || 'Dashboard'
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5">
-      {crumbs.map((crumb, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && (
-            <span className="font-body text-sm text-text-3">/</span>
-          )}
-          <span className="font-body text-sm text-text-2">{crumb}</span>
-        </span>
-      ))}
-    </nav>
+    <h1 className="font-display font-extrabold text-lg text-ink">{title}</h1>
   )
 }
 
@@ -85,9 +73,8 @@ export function Header({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-[var(--header-height)] shrink-0 items-center border-b-[3px] border-ink bg-bg-warm">
-      {/* Mobile: hamburger + logo + avatar */}
-      {/* Tablet/Mobile left: hamburger */}
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center border-b-2 border-ink bg-bg-warm">
+      {/* Mobile left: hamburger */}
       <div className="flex items-center gap-3 px-4 lg:hidden">
         <button
           onClick={() => setSheetOpen(true)}
@@ -98,18 +85,27 @@ export function Header({
         </button>
       </div>
 
-      {/* Mobile center: logo icon only */}
+      {/* Mobile center: logo */}
       <div className="flex flex-1 items-center justify-center lg:hidden">
-        <Logo size="sm" showText={false} />
+        <Image src="/images/logo-light.png" alt="Hoshin Kanri OS" width={40} height={40} priority />
       </div>
 
-      {/* Desktop left: breadcrumb */}
+      {/* Desktop left: page title */}
       <div className="hidden flex-1 items-center px-6 lg:flex">
-        <Breadcrumb />
+        <PageTitle />
       </div>
 
-      {/* Right side: theme toggle + avatar */}
-      <div className="flex items-center gap-2 px-4 lg:px-6">
+      {/* Right side: bell + theme toggle + avatar */}
+      <div className="flex items-center gap-3 px-4 lg:px-6">
+        {/* Notification bell */}
+        <button
+          className="relative flex h-9 w-9 items-center justify-center"
+          aria-label="Thông báo"
+        >
+          <Bell className="w-5 h-5 text-text-2" />
+          <span className="absolute top-1 right-1 w-2 h-2 bg-accent-brand" />
+        </button>
+
         {/* Dark mode toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -128,7 +124,7 @@ export function Header({
 
         {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-9 w-9 items-center justify-center border-2 border-ink bg-accent-brand text-white font-display text-xs font-black shadow-brutal-sm btn-brutal hover:shadow-brutal-md">
+          <DropdownMenuTrigger className="flex h-9 w-9 items-center justify-center bg-accent-brand text-white font-display font-bold text-sm">
             {initials}
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -159,12 +155,12 @@ export function Header({
         </DropdownMenu>
       </div>
 
-      {/* Sheet sidebar for tablet/mobile */}
+      {/* Sheet sidebar for mobile */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-[85vw] max-w-[280px] p-0 border-r-[3px] border-ink bg-bg-warm md:max-w-[280px]"
+          className="w-[85vw] max-w-[280px] p-0 border-r-[3px] border-ink bg-bg-dark md:max-w-[280px]"
         >
           <MobileSidebarContent
             userRole={userRole}

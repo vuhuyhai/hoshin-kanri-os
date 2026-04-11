@@ -4,12 +4,12 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Logo } from '@/components/ui/logo'
+import Image from 'next/image'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Check, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 const ERROR_MESSAGES: Record<string, string> = {
   auth_failed: 'Đăng nhập thất bại. Vui lòng thử lại.',
@@ -25,6 +25,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+  const [sent, setSent] = useState(false)
 
   useEffect(() => {
     const err = searchParams.get('error')
@@ -53,6 +54,7 @@ function LoginForm() {
       }
       return
     }
+    setSent(true)
     router.push('/dashboard')
   }
 
@@ -69,30 +71,48 @@ function LoginForm() {
     }
   }
 
+  if (sent) {
+    return (
+      <div className="card-brutal p-8 text-center w-full max-w-md">
+        <span className="text-4xl block mb-4">✉️</span>
+        <h2 className="font-display font-bold text-xl text-ink">
+          Kiểm tra email của bạn!
+        </h2>
+        <p className="font-body text-[18px] text-text-2 mt-2">
+          Link đăng nhập đã được gửi. Hiệu lực 10 phút.
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className="card-brutal w-full max-w-md p-8">
+    <div className="w-full max-w-md">
       <div className="text-center mb-6">
-        <div className="mx-auto mb-4">
-          <Logo size="lg" showText={false} className="justify-center" />
+        <div className="mx-auto mb-4 flex justify-center">
+          <Image src="/images/logo-light.png" alt="Hoshin Kanri OS" width={40} height={40} priority />
         </div>
         <h1 className="font-display text-xl font-black uppercase tracking-wider text-ink">
           Đăng nhập Hoshin Kanri OS
         </h1>
-        <p className="font-body text-sm text-text-2 mt-1">
+        <p className="font-body text-[18px] text-text-2 mt-1">
           Tiếp tục hành trình hoạch định chiến lược
         </p>
       </div>
 
+      <span className="badge-brutal badge-accent mb-6 inline-block">
+        ✉️ Magic Link — Không cần mật khẩu
+      </span>
+
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="font-display text-xs font-semibold uppercase tracking-wider">Email</Label>
-          <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} autoComplete="email" className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base" />
+          <Label htmlFor="email" className="label-brutal">Email</Label>
+          <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} autoComplete="email" className="input-brutal" />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="font-display text-xs font-semibold uppercase tracking-wider">Mật khẩu</Label>
+          <Label htmlFor="password" className="label-brutal">Mật khẩu</Label>
           <div className="relative">
-            <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Nhập mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} autoComplete="current-password" className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base pr-11" />
+            <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Nhập mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} autoComplete="current-password" className="input-brutal pr-11" />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-3 hover:text-ink" tabIndex={-1} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -104,19 +124,19 @@ function LoginForm() {
 
         {error && <p className="font-body text-xs text-red-600">{error}</p>}
 
-        <Button type="submit" className="btn-brutal-primary w-full min-h-[44px] text-sm" disabled={isLoading || isGoogleLoading}>
-          {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang đăng nhập...</> : 'Đăng nhập'}
+        <Button type="submit" className="btn-primary w-full justify-center" disabled={isLoading || isGoogleLoading}>
+          {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang gửi...</> : 'Đăng nhập'}
         </Button>
       </form>
 
       {/* Divider */}
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-ink/20" /></div>
-        <div className="relative flex justify-center"><span className="bg-white px-3 font-body text-xs text-text-3 uppercase">hoặc</span></div>
+        <div className="relative flex justify-center"><span className="bg-bg-warm px-3 font-body text-xs text-text-3 uppercase">hoặc</span></div>
       </div>
 
       {/* Google OAuth */}
-      <button onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading} className="flex w-full items-center justify-center gap-3 min-h-[44px] border-2 border-ink bg-white font-display text-sm font-semibold uppercase tracking-wider text-ink shadow-[4px_4px_0px_#000] hover:bg-gray-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50">
+      <button onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading} className="flex w-full items-center justify-center gap-3 min-h-[44px] border-2 border-ink bg-white font-display text-sm font-semibold uppercase tracking-wider text-ink shadow-[4px_4px_0px_var(--ink)] hover:bg-gray-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_var(--ink)] transition-all disabled:opacity-50">
         {isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
         Đăng nhập bằng Google
       </button>
@@ -142,8 +162,41 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg-muted-warm px-4">
-      <Suspense><LoginForm /></Suspense>
+    <div className="flex min-h-screen">
+      {/* Brand panel — desktop only */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col bg-bg-dark px-12 py-16">
+        <div className="flex flex-1 flex-col justify-center">
+          <div className="flex items-center gap-3">
+            <Image src="/images/logo-dark.png" alt="Hoshin Kanri OS" width={40} height={40} priority />
+            <span className="font-display font-black text-2xl text-white uppercase">
+              Hoshin Kanri OS
+            </span>
+          </div>
+          <div className="w-12 h-[3px] bg-accent-brand my-6" />
+          <ul className="space-y-4">
+            {[
+              'AI hỗ trợ từng bước',
+              'X-Matrix tự động',
+              'KPI Tracker thời gian thực',
+            ].map((text) => (
+              <li key={text} className="flex items-center gap-3">
+                <Check className="h-4 w-4 text-accent-brand shrink-0" />
+                <span className="font-body text-[18px] text-white/70">{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="font-body text-[15px] text-white/40">
+          Hoshin Kanri — Phương pháp quản lý chiến lược của Toyota
+        </p>
+      </div>
+
+      {/* Form panel */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center min-h-screen bg-bg-warm px-6">
+        <Suspense>
+          <LoginForm />
+        </Suspense>
+      </div>
     </div>
   )
 }

@@ -1,8 +1,7 @@
 'use client'
 
-import { OPEX_PILLARS, getQuestionsForPillar } from '@/lib/x-ray/questions'
+import { OPEX_PILLARS, getQuestionsForPillar, PILLAR_ORDER } from '@/lib/x-ray/questions'
 import type { OpexPillar } from '@/lib/x-ray/types'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface QuestionStepProps {
@@ -14,6 +13,8 @@ interface QuestionStepProps {
   isFirstStep: boolean
 }
 
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
+
 export function QuestionStep({
   pillar,
   answers,
@@ -24,80 +25,87 @@ export function QuestionStep({
 }: QuestionStepProps) {
   const meta = OPEX_PILLARS[pillar]
   const questions = getQuestionsForPillar(pillar)
-
+  const pillarIndex = PILLAR_ORDER.indexOf(pillar)
   const allAnswered = questions.every((q) => answers[q.id] !== undefined)
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-1 text-center">
-        <div className="text-4xl" aria-hidden="true">{meta.icon}</div>
-        <h2 className="font-display text-xl font-bold uppercase tracking-wider text-ink">
-          {meta.label}
-        </h2>
-        <p className="font-body text-sm text-text-2">{meta.description}</p>
-      </div>
+    <div>
+      <span className="badge-brutal badge-ink mb-4 inline-block">
+        {pillarIndex + 1}/{PILLAR_ORDER.length} · {meta.label}
+      </span>
 
-      <div className="space-y-6">
-        {questions.map((q, qIdx) => (
-          <div key={q.id} className="space-y-3">
-            <div>
-              <p className="font-body text-base font-medium leading-relaxed text-ink">
-                {qIdx + 1}. {q.question}
-              </p>
-              {q.helpText && (
-                <p className="mt-1 font-body text-sm text-text-3">
-                  {q.helpText}
-                </p>
-              )}
-            </div>
+      {questions.map((q, qIdx) => (
+        <div key={q.id}>
+          {qIdx > 0 && <div className="border-b border-bg-muted-warm my-6" />}
 
-            <div className="grid gap-2">
-              {q.options.map((option) => {
-                const isSelected = answers[q.id] === option.value
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => onAnswer(q.id, option.value)}
+          <p className="font-display font-bold text-lg text-ink mb-2">
+            {qIdx + 1}. {q.question}
+          </p>
+          {q.helpText && (
+            <p className="font-body text-[15px] text-text-3 mb-4">
+              {q.helpText}
+            </p>
+          )}
+
+          <div className="grid gap-2">
+            {q.options.map((option, optIdx) => {
+              const isSelected = answers[q.id] === option.value
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    'flex items-start gap-3 p-4 cursor-pointer min-h-[52px]',
+                    'transition-all duration-100',
+                    isSelected
+                      ? 'bg-accent-brand text-white border-2 border-ink shadow-brutal-sm'
+                      : 'bg-white border border-bg-muted-warm hover:bg-bg-muted-warm'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name={q.id}
+                    value={option.value}
+                    checked={isSelected}
+                    onChange={() => onAnswer(q.id, option.value)}
+                    className="sr-only"
+                  />
+                  <span
                     className={cn(
-                      'w-full text-left p-4 flex items-start gap-3',
-                      'border-[2px] font-body text-base',
-                      'transition-all duration-150 cursor-pointer min-h-[44px]',
+                      'w-6 h-6 flex-shrink-0 flex items-center justify-center border-2',
+                      'font-display font-bold text-xs',
                       isSelected
-                        ? 'bg-accent-brand border-accent-brand text-white shadow-[3px_3px_0_#9e1f1e]'
-                        : 'bg-bg-warm border-ink text-ink hover:bg-bg-muted-warm hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#2C2B2B]'
+                        ? 'bg-ink text-white border-ink'
+                        : 'border-ink'
                     )}
                   >
-                    <span
-                      className={cn(
-                        'w-5 h-5 border-[2px] flex-shrink-0 mt-0.5 flex items-center justify-center',
-                        isSelected
-                          ? 'bg-white border-white'
-                          : 'bg-bg-warm border-ink'
-                      )}
-                    >
-                      {isSelected && (
-                        <span className="text-accent-brand text-xs font-bold">✓</span>
-                      )}
-                    </span>
+                    {isSelected ? '✓' : LETTERS[optIdx]}
+                  </span>
+                  <span className="font-body text-[18px] leading-[1.75]">
                     {option.label}
-                  </button>
-                )
-              })}
-            </div>
+                  </span>
+                </label>
+              )
+            })}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
-      <div className="flex gap-3 pt-2">
-        {!isFirstStep && (
-          <Button variant="outline" onClick={onBack} className="flex-1 btn-brutal-secondary min-h-[44px]">
-            ← Quay lại
-          </Button>
-        )}
-        <Button onClick={onNext} disabled={!allAnswered} className="flex-1 btn-brutal-primary min-h-[44px]">
-          Tiếp theo →
-        </Button>
-      </div>
+      <button
+        onClick={onNext}
+        disabled={!allAnswered}
+        className="btn-primary w-full justify-center mt-6"
+      >
+        Tiếp theo →
+      </button>
+
+      {!isFirstStep && (
+        <button
+          onClick={onBack}
+          className="font-body text-[15px] text-text-3 hover:text-ink mt-3 inline-block"
+        >
+          ← Quay lại
+        </button>
+      )}
     </div>
   )
 }

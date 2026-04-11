@@ -4,7 +4,22 @@ import { PHProvider } from '@/components/providers/posthog-provider'
 import { Toaster } from 'sonner'
 import { AuthListener } from '@/components/providers/auth-listener'
 import { Footer } from '@/components/layout/footer'
+import { Montserrat, Barlow_Condensed } from 'next/font/google'
 import './globals.css'
+
+const montserrat = Montserrat({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-display',
+  display: 'swap',
+})
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-body',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title:
@@ -18,22 +33,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi" className="light" suppressHydrationWarning>
+    <html lang="vi" className={`${montserrat.variable} ${barlowCondensed.variable} light`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k="hoshin-theme-v2";var t=localStorage.getItem(k);if(!t||t==="system"||t==="dark"){localStorage.setItem(k,"light")}document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");document.documentElement.setAttribute("data-theme","light")}catch(e){}})()`,
           }}
-        />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@300;400;500;600;700&subset=vietnamese&display=swap"
-          rel="stylesheet"
         />
       </head>
       <body className="min-h-full font-body antialiased bg-bg-warm text-ink">

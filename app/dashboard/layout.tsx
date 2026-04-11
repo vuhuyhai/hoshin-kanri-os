@@ -62,7 +62,7 @@ export default async function DashboardLayout({
       />
 
       {/* Sidebar — desktop only (lg+) */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)] lg:flex-col lg:border-r-[3px] lg:border-ink lg:bg-bg-warm lg:overflow-y-auto">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:border-r-[3px] lg:border-ink lg:overflow-y-auto">
         <Sidebar
           userRole={userRole}
           orgName={orgName}
@@ -73,7 +73,7 @@ export default async function DashboardLayout({
       </aside>
 
       {/* Main area — offset by sidebar on desktop */}
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[var(--sidebar-width)]">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <Header
           orgName={orgName}
           userEmail={userEmail}
@@ -82,7 +82,7 @@ export default async function DashboardLayout({
           userName={userName}
         />
 
-        <main className="flex-1 overflow-y-auto pb-[76px] lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           {children}
         </main>
       </div>

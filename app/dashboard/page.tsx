@@ -63,7 +63,7 @@ export default async function DashboardPage() {
     <div className="w-full min-h-full p-6 lg:p-8">
       {/* Page header */}
       <div className="mb-8 pb-6 border-b-[3px] border-ink">
-        <p className="overline mb-1">Dashboard</p>
+        <p className="heading-overline mb-1">Dashboard</p>
         <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
           Chào {firstName}
         </h1>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/dashboard/kpi">
-              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
                 <span className="text-3xl">📈</span>
                 <p className="font-display text-sm font-bold uppercase tracking-wider">
                   KPI Tracker
@@ -105,7 +105,7 @@ export default async function DashboardPage() {
               </div>
             </Link>
             <Link href="/dashboard/report">
-              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
                 <span className="text-3xl">📄</span>
                 <p className="font-display text-sm font-bold uppercase tracking-wider">
                   Báo cáo tháng
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
               </div>
             </Link>
             <Link href="/dashboard/discovery">
-              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
                 <span className="text-3xl">🔍</span>
                 <p className="font-display text-sm font-bold uppercase tracking-wider">
                   Discovery Hub
@@ -121,7 +121,7 @@ export default async function DashboardPage() {
               </div>
             </Link>
             <Link href="/dashboard/x-matrix/new">
-              <div className="card-brutal p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
+              <div className="card-subtle p-5 text-center space-y-2 cursor-pointer min-h-[120px] flex flex-col items-center justify-center">
                 <span className="text-3xl">📊</span>
                 <p className="font-display text-sm font-bold uppercase tracking-wider">
                   X-Matrix

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Logo } from '@/components/ui/logo'
+import Image from 'next/image'
 
 export default function LandingPage() {
   return (
@@ -7,8 +7,9 @@ export default function LandingPage() {
       {/* ─── NAVBAR ─── */}
       <header className="sticky top-0 z-50 border-b-[3px] border-ink bg-bg-warm">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-6 lg:px-12">
-          <Link href="/" aria-label="Trang chủ Hoshin Kanri OS">
-            <Logo size="sm" showText />
+          <Link href="/" aria-label="Trang chủ Hoshin Kanri OS" className="flex items-center gap-2">
+            <Image src="/images/logo-light.png" alt="Hoshin Kanri OS" width={40} height={40} priority />
+            <span className="font-display font-black text-sm uppercase tracking-wider">Hoshin Kanri OS</span>
           </Link>
           <nav aria-label="Menu chính" className="flex items-center gap-3">
             <Link
@@ -32,7 +33,7 @@ export default function LandingPage() {
           <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-8 px-6 py-16 md:py-24 lg:grid-cols-2 lg:gap-16 lg:px-12 lg:py-32">
             {/* Text */}
             <div>
-              <p className="overline mb-3">Chiến lược cho SME Việt Nam</p>
+              <p className="heading-overline mb-3">Chiến lược cho SME Việt Nam</p>
               <h1
                 className="font-display font-black uppercase text-ink leading-[1.05]"
                 style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}
@@ -56,7 +57,7 @@ export default function LandingPage() {
                   </span>
                 </Link>
               </div>
-              <p className="mt-4 font-body text-sm text-text-3">
+              <p className="mt-4 font-body text-[15px] text-text-3">
                 Business X-Ray — 5 phút, miễn phí, không cần đăng ký
               </p>
             </div>
@@ -123,7 +124,7 @@ export default function LandingPage() {
         <section className="w-full bg-bg-muted-warm">
           <div className="mx-auto max-w-[1440px] px-6 py-16 lg:px-12 lg:py-24">
             <div className="mb-12 text-center">
-              <p className="overline mb-2">Quy trình</p>
+              <p className="heading-overline mb-2">Quy trình</p>
               <h2 className="font-display text-3xl font-black uppercase text-ink md:text-4xl">
                 3 bước tới chiến lược rõ ràng
               </h2>
@@ -156,7 +157,7 @@ export default function LandingPage() {
                   <h3 className="font-display text-lg font-bold uppercase tracking-wider text-ink">
                     {step.title}
                   </h3>
-                  <p className="mt-2 font-body text-sm text-text-2">
+                  <p className="mt-2 font-body text-[18px] leading-[1.75] text-text-2">
                     {step.desc}
                   </p>
                 </div>
@@ -169,7 +170,7 @@ export default function LandingPage() {
         <section className="w-full bg-bg-warm">
           <div className="mx-auto max-w-[1440px] px-6 py-16 lg:px-12 lg:py-24">
             <div className="mb-12 text-center">
-              <p className="overline mb-2">Tính năng</p>
+              <p className="heading-overline mb-2">Tính năng</p>
               <h2 className="font-display text-3xl font-black uppercase text-ink md:text-4xl">
                 Mọi thứ bạn cần
               </h2>
@@ -207,14 +208,14 @@ export default function LandingPage() {
                   desc: 'AI giúp bạn xây dựng tầm nhìn và mục tiêu năm. Chỉ cần trả lời 5 câu hỏi.',
                 },
               ].map((f) => (
-                <div key={f.title} className="card-brutal p-6">
+                <div key={f.title} className="card-subtle p-6">
                   <span className="text-4xl" role="img" aria-label={f.title}>
                     {f.icon}
                   </span>
                   <h3 className="mt-4 font-display text-base font-bold uppercase tracking-wider text-ink">
                     {f.title}
                   </h3>
-                  <p className="mt-2 font-body text-sm text-text-2">
+                  <p className="mt-2 font-body text-[18px] leading-[1.75] text-text-2">
                     {f.desc}
                   </p>
                 </div>
@@ -250,8 +251,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand */}
             <div>
-              <Logo size="sm" showText className="[&_span]:text-white" />
-              <p className="mt-3 font-body text-sm text-white/50">
+              <div className="flex items-center gap-2">
+                <Image src="/images/logo-dark.png" alt="Hoshin Kanri OS" width={40} height={40} priority />
+                <span className="font-display font-black text-sm uppercase tracking-wider text-white">Hoshin Kanri OS</span>
+              </div>
+              <p className="mt-3 font-body text-[15px] text-white/50">
                 Công cụ quản lý chiến lược Hoshin Kanri cho SME Việt Nam.
               </p>
             </div>

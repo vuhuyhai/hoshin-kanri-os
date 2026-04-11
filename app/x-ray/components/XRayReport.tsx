@@ -23,6 +23,12 @@ function getScoreLabel(score: number): string {
   return 'Tốt'
 }
 
+function getOverallDisplayColor(score: number): string {
+  if (score >= 70) return '#00C851'
+  if (score >= 50) return '#c73937'
+  return '#2C2B2B'
+}
+
 // ============================================================
 // SVG SCORE GAUGE
 // ============================================================
@@ -175,121 +181,19 @@ function SidebarNavItem({
 // ============================================================
 
 function PillarCard({ pillar }: { pillar: PillarScore }) {
-  const color = getScoreColor(pillar.score)
-  const label = getScoreLabel(pillar.score)
-
   return (
-    <div
-      id={`pillar-${pillar.pillar}`}
-      style={{
-        background: '#F7F5F2',
-        border: '3px solid #2C2B2B',
-        boxShadow: '5px 5px 0 #2C2B2B',
-        padding: 0,
-      }}
-    >
-      {/* Card header */}
-      <div
-        className="flex items-center justify-between gap-3 px-5 py-4"
-        style={{ borderBottom: '2px solid #2C2B2B' }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{pillar.icon}</span>
-          <h3
-            className="text-base"
-            style={{
-              fontFamily: '"Montserrat", sans-serif',
-              fontWeight: 700,
-              color: '#2C2B2B',
-            }}
-          >
-            {pillar.label}
-          </h3>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span
-            style={{
-              fontFamily: '"Montserrat", sans-serif',
-              fontWeight: 900,
-              fontSize: 24,
-              color,
-            }}
-          >
-            {pillar.score}
-          </span>
-          <span
-            className="px-2 py-0.5 text-white"
-            style={{
-              fontFamily: '"Montserrat", sans-serif',
-              fontWeight: 600,
-              fontSize: 11,
-              textTransform: 'uppercase',
-              background: color,
-            }}
-          >
-            {label}
-          </span>
-        </div>
-      </div>
-
-      <div className="px-5 py-4 space-y-4">
-        {/* Progress bar */}
+    <div id={`pillar-${pillar.pillar}`} className="card-subtle p-6">
+      <h3 className="font-display font-bold text-base text-ink">
+        {pillar.icon} {pillar.label}
+      </h3>
+      <p className="font-display font-black text-2xl text-accent-brand mt-1">
+        {pillar.score}
+      </p>
+      <div className="h-2 border border-bg-muted-warm overflow-hidden mt-3">
         <div
-          className="h-2 w-full overflow-hidden"
-          style={{ background: '#ECEAE6', border: '2px solid #2C2B2B' }}
-        >
-          <div
-            className="h-full transition-all duration-1000"
-            style={{ width: `${pillar.score}%`, background: color }}
-          />
-        </div>
-
-        {/* Summary */}
-        <p
-          className="leading-relaxed"
-          style={{
-            fontFamily: '"Barlow Condensed", sans-serif',
-            fontWeight: 400,
-            fontSize: 15,
-            color: '#5A5757',
-            lineHeight: 1.7,
-          }}
-        >
-          {pillar.summary}
-        </p>
-
-        {/* Top issue */}
-        <div
-          className="px-4 py-3"
-          style={{
-            background: '#ECEAE6',
-            borderLeft: `4px solid ${color}`,
-          }}
-        >
-          <span
-            className="block mb-1"
-            style={{
-              fontFamily: '"Montserrat", sans-serif',
-              fontWeight: 600,
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '.12em',
-              color,
-            }}
-          >
-            Vấn đề chính
-          </span>
-          <p
-            style={{
-              fontFamily: '"Barlow Condensed", sans-serif',
-              fontWeight: 500,
-              fontSize: 14,
-              color: '#2C2B2B',
-            }}
-          >
-            {pillar.topIssue}
-          </p>
-        </div>
+          className="h-full bg-accent-brand transition-all duration-500"
+          style={{ width: `${pillar.score}%` }}
+        />
       </div>
     </div>
   )
@@ -419,28 +323,23 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
           {/* Score badge */}
           <div className="text-center shrink-0">
             <span
-              className="block"
+              className="block font-display font-black"
               style={{
-                fontFamily: '"Montserrat", sans-serif',
-                fontWeight: 900,
-                fontSize: 64,
-                color: scoreColor,
+                fontSize: 72,
+                color: getOverallDisplayColor(result.overallScore),
                 lineHeight: 1,
               }}
             >
               {result.overallScore}
             </span>
             <span
-              className="block mt-1"
+              className="badge-brutal text-xl px-6 py-2 mt-4 block w-fit mx-auto"
               style={{
-                fontFamily: '"Montserrat", sans-serif',
-                fontWeight: 600,
-                fontSize: 14,
-                textTransform: 'uppercase',
-                color: '#8A8787',
+                background: getOverallDisplayColor(result.overallScore),
+                color: '#FFFFFF',
               }}
             >
-              Điểm tổng thể
+              {getScoreLabel(result.overallScore)}
             </span>
           </div>
         </div>
@@ -600,7 +499,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
           </div>
 
           {/* Pillar cards — 2-col grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
             {result.pillarScores.map((p) => (
               <PillarCard key={p.pillar} pillar={p} />
             ))}
@@ -721,56 +620,22 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
 
           {/* ============ CTA BANNER ============ */}
           <div
-            className="no-print w-full"
-            style={{
-              background: '#c73937',
-              borderTop: '3px solid #2C2B2B',
-            }}
+            className="no-print card-brutal p-8 text-center mt-8"
+            style={{ background: 'var(--bg-dark)' }}
           >
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-8 md:px-12 py-10">
-              <div>
-                <h2
-                  style={{
-                    fontFamily: '"Montserrat", sans-serif',
-                    fontWeight: 800,
-                    fontSize: 'clamp(20px, 3vw, 28px)',
-                    color: '#FFFFFF',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  Biến phân tích thành hành động — bắt đầu lập X-Matrix ngay
-                </h2>
-              </div>
-              <div className="shrink-0 text-center space-y-3">
-                <button
-                  onClick={handleStartPlanning}
-                  className="btn-brutal block px-8 py-3"
-                  style={{
-                    fontFamily: '"Montserrat", sans-serif',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    textTransform: 'uppercase',
-                    background: '#FFFFFF',
-                    color: '#c73937',
-                    border: '2px solid #FFFFFF',
-                    boxShadow: '5px 5px 0 #9e1f1e',
-                  }}
-                >
-                  Tạo tài khoản miễn phí &rarr;
-                </button>
-                <p
-                  style={{
-                    fontFamily: '"Barlow Condensed", sans-serif',
-                    fontWeight: 400,
-                    fontSize: 13,
-                    color: '#FFFFFF',
-                    opacity: 0.7,
-                  }}
-                >
-                  Miễn phí · Không cần thẻ tín dụng · Setup trong 5 phút
-                </p>
-              </div>
-            </div>
+            <h2 className="font-display font-extrabold text-xl text-white">
+              Biến phân tích thành hành động — bắt đầu lập X-Matrix ngay
+            </h2>
+            <p className="font-body text-[18px] text-white/70 mt-2">
+              Miễn phí · Không cần thẻ tín dụng · Setup trong 5 phút
+            </p>
+            <button
+              onClick={handleStartPlanning}
+              className="btn-primary mt-6"
+              style={{ boxShadow: '5px 5px 0 var(--accent)' }}
+            >
+              Tạo tài khoản miễn phí →
+            </button>
           </div>
 
           {/* ============ BOTTOM BUTTONS (mobile) ============ */}

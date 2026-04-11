@@ -154,7 +154,7 @@ export function XRayForm() {
             <h2 className="font-display text-2xl font-extrabold uppercase tracking-wider text-ink">
               {nextMeta.label}
             </h2>
-            <p className="font-body text-sm text-text-2">
+            <p className="font-body text-[18px] text-text-2">
               {nextMeta.description}
             </p>
           </div>
@@ -164,35 +164,36 @@ export function XRayForm() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-8 px-4 py-8">
-      <div className="space-y-1 text-center">
-        <p className="overline mb-1">Chẩn đoán miễn phí</p>
-        <h1 className="font-display text-2xl font-black uppercase tracking-wider text-ink md:text-3xl">
-          Business X-Ray
-        </h1>
-        <p className="font-body text-sm text-text-2">
-          Chẩn đoán sức khỏe doanh nghiệp theo 7 trụ cột OPEX · ~7 phút
-        </p>
-      </div>
-
+    <>
       <XRayProgress currentStep={state.currentStep} />
+      <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
+        <div className="space-y-1 text-center">
+          <p className="heading-overline mb-1">Chẩn đoán miễn phí</p>
+          <h1 className="font-display text-2xl font-black uppercase tracking-wider text-ink md:text-3xl">
+            Business X-Ray
+          </h1>
+          <p className="font-body text-[18px] text-text-2">
+            Chẩn đoán sức khỏe doanh nghiệp theo 7 trụ cột OPEX · ~7 phút
+          </p>
+        </div>
 
-      {isEmailStep ? (
-        <EmailCaptureStep
-          onSubmit={handleCompanySubmit}
-          onBack={handleBack}
-          isLoading={state.isLoading}
-        />
-      ) : (
-        <QuestionStep
-          pillar={currentPillar}
-          answers={state.answers}
-          onAnswer={handleAnswer}
-          onNext={handleNext}
-          onBack={handleBack}
-          isFirstStep={state.currentStep === 0}
-        />
-      )}
-    </div>
+        {isEmailStep ? (
+          <EmailCaptureStep
+            onSubmit={handleCompanySubmit}
+            onBack={handleBack}
+            isLoading={state.isLoading}
+          />
+        ) : (
+          <QuestionStep
+            pillar={currentPillar}
+            answers={state.answers}
+            onAnswer={handleAnswer}
+            onNext={handleNext}
+            onBack={handleBack}
+            isFirstStep={state.currentStep === 0}
+          />
+        )}
+      </div>
+    </>
   )
 }
