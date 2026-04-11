@@ -1,6 +1,9 @@
+import { ADMIN_SECTION } from './help-data-admin'
+
 export type HelpSectionId =
   | 'overview' | 'quickstart' | 'xray' | 'discovery'
   | 'xmatrix' | 'kpi' | 'report' | 'faq'
+  | 'admin'
 
 export interface HelpStep { text: string }
 
@@ -21,6 +24,7 @@ export interface HelpSection {
   subtitle?: string
   cards: HelpCard[]
   faqs?: FaqItem[]
+  superAdminOnly?: boolean
 }
 
 export const HELP_SECTIONS: HelpSection[] = [
@@ -171,4 +175,5 @@ export const HELP_SECTIONS: HelpSection[] = [
         answer: 'Toggle ở header (góc phải). Cài đặt lưu trong localStorage (key <code>hoshin-theme-v2</code>). Mặc định là light mode.' },
     ],
   },
+  ADMIN_SECTION,
 ]

@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, Rocket, ScanLine, Compass, Grid2x2,
-  BarChart3, FileText, HelpCircle, ChevronDown, ChevronUp,
+  BarChart3, FileText, HelpCircle, Shield, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { HELP_SECTIONS, type HelpSectionId, type HelpCard } from './help-data'
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, Rocket, ScanLine, Compass, Grid2x2,
-  BarChart3, FileText, HelpCircle,
+  BarChart3, FileText, HelpCircle, Shield,
 }
 
 const CARD_VARIANTS = {
@@ -50,10 +50,17 @@ function CardItem({ card }: { card: HelpCard }) {
   )
 }
 
-export default function HelpPageClient() {
+interface HelpPageClientProps {
+  isSuperAdmin: boolean
+}
+
+export default function HelpPageClient({ isSuperAdmin }: HelpPageClientProps) {
   const [activeSection, setActiveSection] = useState<HelpSectionId>('overview')
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
-  const currentSection = HELP_SECTIONS.find(s => s.id === activeSection)!
+  const visibleSections = HELP_SECTIONS.filter(
+    (s) => !s.superAdminOnly || isSuperAdmin
+  )
+  const currentSection = visibleSections.find(s => s.id === activeSection)!
 
   return (
     <div>
@@ -70,7 +77,7 @@ export default function HelpPageClient() {
       <div className="flex flex-col md:flex-row gap-6">
         {/* Desktop tab navigation */}
         <div className="hidden md:flex flex-col gap-1 w-52 flex-shrink-0">
-          {HELP_SECTIONS.map(s => {
+          {visibleSections.map(s => {
             const Icon = ICON_MAP[s.icon]
             const isActive = s.id === activeSection
             return (
@@ -84,7 +91,12 @@ export default function HelpPageClient() {
                 }`}
               >
                 {Icon && <Icon size={16} className="flex-shrink-0" />}
-                {s.label}
+                <span>{s.label}</span>
+                {s.superAdminOnly && (
+                  <span className="ml-auto text-[10px] font-bold uppercase tracking-wide bg-[var(--color-ink)] text-white px-1 py-0.5 leading-none">
+                    SA
+                  </span>
+                )}
               </button>
             )
           })}
@@ -96,7 +108,7 @@ export default function HelpPageClient() {
           onChange={e => { setActiveSection(e.target.value as HelpSectionId); setOpenFaqIndex(null) }}
           className="w-full border-2 border-[var(--color-ink)] px-3 py-2 text-sm font-semibold uppercase bg-white focus:outline-none mb-4 md:hidden font-display"
         >
-          {HELP_SECTIONS.map(s => (
+          {visibleSections.map(s => (
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
         </select>
