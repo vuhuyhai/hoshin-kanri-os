@@ -1,7 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { XRayResult, PillarScore } from '@/lib/x-ray/types'
+import { createClient } from '@/lib/supabase/client'
 import { XRayRadarChart } from './XRayRadarChart'
 import { XRayBarChart } from './XRayBarChart'
 
@@ -210,6 +213,14 @@ interface XRayReportProps {
 
 export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
   const router = useRouter()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data }) => {
+      setIsLoggedIn(!!data.session)
+    })
+  }, [])
 
   const handlePrint = () => window.print()
   const handleStartPlanning = () => router.push('/dashboard/discovery')
@@ -594,7 +605,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
                     → Vào Dashboard xem lịch sử X-Ray
                   </button>
                 </div>
-              ) : (
+              ) : !isLoggedIn ? (
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <p
                     style={{
@@ -614,7 +625,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
                     → Tạo tài khoản miễn phí
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -623,19 +634,39 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
             className="no-print card-brutal p-8 text-center mt-8"
             style={{ background: 'var(--bg-dark)' }}
           >
-            <h2 className="font-display font-extrabold text-xl text-white">
-              Biến phân tích thành hành động — bắt đầu lập X-Matrix ngay
-            </h2>
-            <p className="font-body text-[18px] text-white/70 mt-2">
-              Miễn phí · Không cần thẻ tín dụng · Setup trong 5 phút
-            </p>
-            <button
-              onClick={handleStartPlanning}
-              className="btn-primary mt-6"
-              style={{ boxShadow: '5px 5px 0 var(--accent)' }}
-            >
-              Tạo tài khoản miễn phí →
-            </button>
+            {isLoggedIn ? (
+              <>
+                <h2 className="font-display font-extrabold text-xl text-white">
+                  Sẵn sàng lập kế hoạch chiến lược?
+                </h2>
+                <p className="font-body text-[18px] text-white/70 mt-2">
+                  Dùng kết quả X-Ray này làm nền tảng cho SWOT và X-Matrix của bạn.
+                </p>
+                <Link
+                  href="/dashboard/discovery/swot"
+                  className="btn-primary mt-6 inline-block"
+                  style={{ boxShadow: '5px 5px 0 var(--accent)' }}
+                >
+                  Vào Dashboard →
+                </Link>
+              </>
+            ) : (
+              <>
+                <h2 className="font-display font-extrabold text-xl text-white">
+                  Biến phân tích thành hành động — bắt đầu lập X-Matrix ngay
+                </h2>
+                <p className="font-body text-[18px] text-white/70 mt-2">
+                  Miễn phí · Không cần thẻ tín dụng · Setup trong 5 phút
+                </p>
+                <button
+                  onClick={handleStartPlanning}
+                  className="btn-primary mt-6"
+                  style={{ boxShadow: '5px 5px 0 var(--accent)' }}
+                >
+                  Tạo tài khoản miễn phí →
+                </button>
+              </>
+            )}
           </div>
 
           {/* ============ BOTTOM BUTTONS (mobile) ============ */}
@@ -655,21 +686,23 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
             >
               Tải PDF
             </button>
-            <button
-              onClick={handleStartPlanning}
-              className="btn-brutal flex-1 py-3 text-sm"
-              style={{
-                fontFamily: '"Montserrat", sans-serif',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                background: '#c73937',
-                border: '2px solid #c73937',
-                boxShadow: '5px 5px 0 #2C2B2B',
-                color: '#FFFFFF',
-              }}
-            >
-              Bắt đầu lập kế hoạch &rarr;
-            </button>
+            {!isLoggedIn && (
+              <button
+                onClick={handleStartPlanning}
+                className="btn-brutal flex-1 py-3 text-sm"
+                style={{
+                  fontFamily: '"Montserrat", sans-serif',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  background: '#c73937',
+                  border: '2px solid #c73937',
+                  boxShadow: '5px 5px 0 #2C2B2B',
+                  color: '#FFFFFF',
+                }}
+              >
+                Bắt đầu lập kế hoạch &rarr;
+              </button>
+            )}
           </div>
         </main>
       </div>
