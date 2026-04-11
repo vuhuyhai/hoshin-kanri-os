@@ -98,7 +98,7 @@ function LoginForm() {
             </button>
           </div>
           <div className="text-right">
-            <Link href="/auth/reset-password" className="font-body text-xs text-accent-brand hover:underline">Quên mật khẩu?</Link>
+            <Link href="/reset-password" className="font-body text-xs text-accent-brand hover:underline">Quên mật khẩu?</Link>
           </div>
         </div>
 
