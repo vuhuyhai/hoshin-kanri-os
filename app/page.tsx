@@ -314,9 +314,9 @@ export default function LandingPage() {
               </p>
               <ul className="space-y-2">
                 {[
-                  { label: 'Điều khoản sử dụng', href: '#' },
-                  { label: 'Chính sách bảo mật', href: '#' },
-                  { label: 'Liên hệ', href: '#' },
+                  { label: 'Điều khoản sử dụng', href: '/dieu-khoan' },
+                  { label: 'Chính sách bảo mật', href: '/chinh-sach-bao-mat' },
+                  { label: 'Liên hệ', href: '/lien-he' },
                 ].map((link) => (
                   <li key={link.label}>
                     <Link
