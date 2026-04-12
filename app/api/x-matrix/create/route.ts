@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import {
+  createClient,
+  requireOrgRole,
+  ADMIN_ROLES,
+} from '@/lib/supabase/server'
 import type { XMatrixData } from '@/lib/x-matrix/types'
 import { validateXMatrix } from '@/lib/x-matrix/utils'
 import type { Json } from '@/lib/supabase/types'
@@ -21,16 +25,12 @@ export async function POST(request: NextRequest) {
       orgId: string
     }
 
-    // Verify user belongs to org
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('org_id, role')
-      .eq('user_id', user.id)
-      .eq('org_id', orgId)
-      .single()
-
-    if (!membership)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    // X-Matrix creation is CEO-only (migration 016). Return 403 early
+    // instead of letting the row-level INSERT policy throw a generic 500.
+    const check = await requireOrgRole(supabase, user.id, orgId, ADMIN_ROLES)
+    if (!check.ok) {
+      return NextResponse.json({ error: check.error }, { status: check.status })
+    }
 
     // Validate
     const errors = validateXMatrix(data)

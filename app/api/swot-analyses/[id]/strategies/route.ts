@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import {
+  createClient,
+  requireOrgRoleForAnalysis,
+  ALL_ROLES,
+  WRITE_ROLES,
+} from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
 import type {
   TowsStrategyWithFactorsRecord,
@@ -8,28 +13,6 @@ import type {
 } from '@/lib/swot/tows-types'
 
 type FactorRow = Database['public']['Tables']['swot_factors']['Row']
-
-async function verifyAnalysisOwnership(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  analysisId: string,
-) {
-  const { data: analysis } = await supabase
-    .from('swot_analyses')
-    .select('org_id')
-    .eq('id', analysisId)
-    .single()
-  if (!analysis) return null
-
-  const { data: member } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', userId)
-    .eq('org_id', analysis.org_id)
-    .single()
-
-  return member ? analysis.org_id : null
-}
 
 export async function GET(
   _req: Request,
@@ -41,8 +24,8 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const orgId = await verifyAnalysisOwnership(supabase, user.id, analysisId)
-    if (!orgId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const check = await requireOrgRoleForAnalysis(supabase, user.id, analysisId, ALL_ROLES)
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
 
     const { data: strategies, error } = await supabase
       .from('tows_strategies')
@@ -95,8 +78,9 @@ export async function PATCH(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const orgId = await verifyAnalysisOwnership(supabase, user.id, analysisId)
-    if (!orgId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const check = await requireOrgRoleForAnalysis(supabase, user.id, analysisId, WRITE_ROLES)
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
+    const { orgId } = check
 
     const body = (await req.json()) as {
       id: string

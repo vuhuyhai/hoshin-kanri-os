@@ -1,31 +1,25 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import {
+  createClient,
+  requireOrgRole,
+  WRITE_ROLES,
+} from '@/lib/supabase/server'
 import type { SwotFactor } from '@/lib/swot/tows-types'
 
 type UpdatableFields = Partial<
   Pick<SwotFactor, 'content' | 'evidence_text' | 'is_key_factor' | 'quality_score'>
 >
 
-async function getFactorWithOwnership(
+async function getFactorOrgId(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
   factorId: string,
-) {
+): Promise<string | null> {
   const { data: factor } = await supabase
     .from('swot_factors')
-    .select('id, org_id')
+    .select('org_id')
     .eq('id', factorId)
     .single()
-  if (!factor) return null
-
-  const { data: member } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', userId)
-    .eq('org_id', factor.org_id)
-    .single()
-
-  return member ? factor.org_id : null
+  return factor?.org_id ?? null
 }
 
 export async function PATCH(
@@ -38,8 +32,13 @@ export async function PATCH(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const orgId = await getFactorWithOwnership(supabase, user.id, factorId)
-    if (!orgId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const factorOrgId = await getFactorOrgId(supabase, factorId)
+    if (!factorOrgId) {
+      return NextResponse.json({ error: 'Yếu tố không tồn tại' }, { status: 404 })
+    }
+    const check = await requireOrgRole(supabase, user.id, factorOrgId, WRITE_ROLES)
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
+    const { orgId } = check
 
     const body = (await req.json()) as UpdatableFields
 
@@ -85,8 +84,13 @@ export async function DELETE(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const orgId = await getFactorWithOwnership(supabase, user.id, factorId)
-    if (!orgId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const factorOrgId = await getFactorOrgId(supabase, factorId)
+    if (!factorOrgId) {
+      return NextResponse.json({ error: 'Yếu tố không tồn tại' }, { status: 404 })
+    }
+    const check = await requireOrgRole(supabase, user.id, factorOrgId, WRITE_ROLES)
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
+    const { orgId } = check
 
     const { error } = await supabase
       .from('swot_factors')

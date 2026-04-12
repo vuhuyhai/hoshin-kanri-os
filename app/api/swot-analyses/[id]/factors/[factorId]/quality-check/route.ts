@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import {
+  createClient,
+  requireOrgRole,
+  WRITE_ROLES,
+} from '@/lib/supabase/server'
 import type { SwotQuadrant } from '@/lib/swot/types'
 import { buildQualityCheckPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
@@ -17,7 +21,7 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Fetch factor and verify ownership
+    // Fetch factor, then verify role (writes quality_score, so WRITE_ROLES).
     const { data: factor } = await supabase
       .from('swot_factors')
       .select('id, org_id, content, quadrant')
@@ -25,13 +29,8 @@ export async function POST(
       .single()
     if (!factor) return NextResponse.json({ error: 'Yếu tố không tồn tại' }, { status: 404 })
 
-    const { data: member } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .eq('org_id', factor.org_id)
-      .single()
-    if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const check = await requireOrgRole(supabase, user.id, factor.org_id, WRITE_ROLES)
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
 
     const prompt = buildQualityCheckPrompt(
       factor.content,

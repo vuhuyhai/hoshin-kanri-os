@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import {
+  createClient,
+  requireOrgRoleForAnalysis,
+  WRITE_ROLES,
+} from '@/lib/supabase/server'
 import type { TowsQuadrant, AiStrategyItem } from '@/lib/swot/tows-types'
 import { generateCombinedCode } from '@/lib/swot/factor-utils'
 import { buildTowsPrompt } from '@/lib/swot/tows-prompts'
@@ -36,21 +40,9 @@ export async function POST(
       return NextResponse.json({ error: 'Quadrant TOWS không hợp lệ' }, { status: 400 })
     }
 
-    // Verify analysis ownership
-    const { data: analysis } = await supabase
-      .from('swot_analyses')
-      .select('org_id')
-      .eq('id', analysisId)
-      .single()
-    if (!analysis) return NextResponse.json({ error: 'Phân tích không tồn tại' }, { status: 404 })
-
-    const { data: member } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .eq('org_id', analysis.org_id)
-      .single()
-    if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const check = await requireOrgRoleForAnalysis(supabase, user.id, analysisId, WRITE_ROLES)
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
+    const { orgId } = check
 
     // Fetch SW factors
     const { data: swFactors, error: swErr } = await supabase
@@ -68,7 +60,7 @@ export async function POST(
 
     // Verify all factors belong to the same org
     const allFactors = [...(swFactors ?? []), ...(otFactors ?? [])]
-    if (allFactors.some((f) => f.org_id !== analysis.org_id)) {
+    if (allFactors.some((f) => f.org_id !== orgId)) {
       return NextResponse.json({ error: 'Yếu tố không thuộc org này' }, { status: 403 })
     }
 
@@ -76,7 +68,7 @@ export async function POST(
     const { data: org } = await supabase
       .from('organizations')
       .select('industry, headcount, city')
-      .eq('id', analysis.org_id)
+      .eq('id', orgId)
       .single()
     if (!org) return NextResponse.json({ error: 'Tổ chức không tồn tại' }, { status: 404 })
 
@@ -132,7 +124,7 @@ export async function POST(
       const { data: row, error: insertErr } = await supabase
         .from('tows_strategies')
         .insert({
-          org_id: analysis.org_id,
+          org_id: orgId,
           swot_analysis_id: analysisId,
           quadrant: body.quadrant,
           sw_factor_ids: body.sw_factor_ids,

@@ -56,9 +56,12 @@ export interface XMatrixData {
 // ============================================================
 // Org member (for KPI owner select)
 // ============================================================
-// Role values must match the CHECK constraint on org_members.role
-// (see supabase/migrations/001_initial_schema.sql).
-export type OrgRole = 'CEO' | 'Manager' | 'Member'
+// OrgRole lives in lib/supabase/server.ts as the canonical definition
+// (role checks in API routes import it from there). Re-exported here
+// for convenience so x-matrix consumers don't have to reach into the
+// supabase layer.
+import type { OrgRole } from '@/lib/supabase/server'
+export type { OrgRole }
 
 export interface OrgMember {
   userId: string
