@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { postJson } from '@/lib/http/fetch-json'
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('')
@@ -25,20 +26,11 @@ export default function ResetPasswordPage() {
 
     setIsLoading(true)
     try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Không thể gửi link. Vui lòng thử lại sau.')
-        return
-      }
+      await postJson('/api/auth/forgot-password', { email })
       setIsSent(true)
-    } catch {
-      toast.error('Lỗi kết nối. Vui lòng thử lại.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể gửi link. Vui lòng thử lại sau.'
+      toast.error(msg)
     } finally {
       setIsLoading(false)
     }

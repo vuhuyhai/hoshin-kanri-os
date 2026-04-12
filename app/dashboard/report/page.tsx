@@ -9,6 +9,7 @@ import type {
   MonthlyReportKpi,
 } from '@/app/api/report/monthly/route'
 import { cn } from '@/lib/utils'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 const LIGHT: Record<string, { emoji: string; class: string }> = {
   green: { emoji: '🟢', class: 'text-green-600 dark:text-green-400' },
@@ -74,8 +75,7 @@ export default function ReportPage() {
 
   useEffect(() => {
     setIsLoading(true)
-    fetch(`/api/report/monthly?month=${selectedMonth}`)
-      .then((r) => r.json())
+    fetchJson<{ report: MonthlyReportData }>(`/api/report/monthly?month=${selectedMonth}`)
       .then(({ report: data }) => setReport(data))
       .catch(() => toast.error('Không thể tải báo cáo'))
       .finally(() => setIsLoading(false))

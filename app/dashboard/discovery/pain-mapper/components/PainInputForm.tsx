@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { PainPoint, HoshinCandidate } from '@/lib/discovery/types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface PainInputFormProps {
   orgContext: { industry: string; city: string; orgName: string }
@@ -46,14 +47,10 @@ export function PainInputForm({ orgContext, onComplete }: PainInputFormProps) {
 
     setIsLoading(true)
     try {
-      const response = await fetch('/api/discovery/pain-mapper', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ painPoints: filledPains, orgContext }),
-      })
-
-      if (!response.ok) throw new Error()
-      const { candidates } = await response.json()
+      const { candidates } = await postJson<{ candidates: HoshinCandidate[] }>(
+        '/api/discovery/pain-mapper',
+        { painPoints: filledPains, orgContext },
+      )
       onComplete(candidates)
     } catch {
       toast.error('Không thể phân tích. Thử lại.')

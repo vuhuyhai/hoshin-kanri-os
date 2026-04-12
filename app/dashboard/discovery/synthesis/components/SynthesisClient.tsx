@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { XMatrixPrefill, PrefillHoshin } from '@/lib/discovery/types'
 import { cn } from '@/lib/utils'
+import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
 
 // ============================================================
 // TYPES
@@ -386,29 +387,11 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
     }
 
     try {
-      const response = await fetch('/api/discovery/synthesis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orgId,
-          orgContext,
-          selectedKpis,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        if (data.missing) {
-          setMissingData({
-            vision: data.missing.vision ?? false,
-            painMapper: data.missing.painMapper ?? false,
-          })
-          setStatus('missing')
-          return
-        }
-        throw new Error(data.error ?? 'Synthesis failed')
-      }
+      const data = await postJson<{
+        prefill: XMatrixPrefill
+        dataWarnings?: string[]
+        savedSuccessfully?: boolean
+      }>('/api/discovery/synthesis', { orgId, orgContext, selectedKpis })
 
       setPrefill(data.prefill)
       setStatus('done')
@@ -440,8 +423,23 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
       }
     } catch (error) {
       console.error('Synthesis error:', error)
+      // Server may return 400/422 with { missing: { vision, painMapper } }
+      // to signal that prerequisite Discovery steps are incomplete.
+      // Surface that as the dedicated 'missing' UI branch instead of a
+      // generic error toast.
+      if (error instanceof FetchJsonError && error.body && typeof error.body === 'object') {
+        const body = error.body as { missing?: { vision?: boolean; painMapper?: boolean } }
+        if (body.missing) {
+          setMissingData({
+            vision: body.missing.vision ?? false,
+            painMapper: body.missing.painMapper ?? false,
+          })
+          setStatus('missing')
+          return
+        }
+      }
       setStatus('error')
-      toast.error('Không thể tổng hợp. Thử lại.')
+      toast.error(error instanceof Error ? error.message : 'Không thể tổng hợp. Thử lại.')
     }
   }
 

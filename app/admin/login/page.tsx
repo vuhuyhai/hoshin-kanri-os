@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -33,17 +34,22 @@ export default function AdminLoginPage() {
     }
 
     // Check is_super_admin via server API (bypasses RLS)
-    const res = await fetch('/api/admin/verify')
-    const { isSuperAdmin } = await res.json()
-
-    if (!isSuperAdmin) {
+    try {
+      const { isSuperAdmin } = await fetchJson<{ isSuperAdmin: boolean }>(
+        '/api/admin/verify'
+      )
+      if (!isSuperAdmin) {
+        await supabase.auth.signOut()
+        setIsLoading(false)
+        toast.error('Không có quyền truy cập')
+        return
+      }
+      router.push('/admin')
+    } catch {
       await supabase.auth.signOut()
       setIsLoading(false)
       toast.error('Không có quyền truy cập')
-      return
     }
-
-    router.push('/admin')
   }
 
   return (

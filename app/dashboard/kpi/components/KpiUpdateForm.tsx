@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { trackKpiEntryAdded } from '@/lib/analytics/events'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface KpiUpdateFormProps {
   kpiId: string
@@ -44,22 +45,12 @@ export function KpiUpdateForm({
     const today = new Date().toISOString().split('T')[0]
 
     try {
-      const res = await fetch('/api/kpi/entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kpiId,
-          value: parsedValue,
-          note: note.trim() || undefined,
-          periodDate: today,
-        }),
+      await postJson('/api/kpi/entry', {
+        kpiId,
+        value: parsedValue,
+        note: note.trim() || undefined,
+        periodDate: today,
       })
-
-      if (!res.ok) {
-        const { error } = await res.json()
-        throw new Error(error)
-      }
-
       toast.success(`${kpiName}: ${parsedValue} ${unit} ✓`)
       trackKpiEntryAdded({ kpiId, value: parsedValue, deptLevel: 'company' })
       onSaved(parsedValue, today)

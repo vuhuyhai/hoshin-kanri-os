@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { VisionAnswers, VisionDraft } from '@/lib/discovery/types'
+import { postJson } from '@/lib/http/fetch-json'
 
 const VISION_PROMPTS = [
   {
@@ -67,18 +68,10 @@ export function VisionGuide({
   const handleGenerate = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/discovery/vision-draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers, orgContext }),
-      })
-
-      if (!response.ok) {
-        const { error } = await response.json()
-        throw new Error(error ?? 'Lỗi khi tạo Vision draft')
-      }
-
-      const { draft } = await response.json()
+      const { draft } = await postJson<{ draft: VisionDraft }>(
+        '/api/discovery/vision-draft',
+        { answers, orgContext },
+      )
       onDraftReady(answers, draft)
     } catch (error) {
       const msg =

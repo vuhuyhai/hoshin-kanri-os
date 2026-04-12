@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
 
 interface FormErrors {
   full_name?: string
@@ -44,33 +45,22 @@ export default function RegisterPage() {
 
     setIsLoading(true)
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: fullName.trim(),
-          phone,
-        }),
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          setErrors({ email: 'Email này đã được đăng ký. Đăng nhập?' })
-        } else {
-          toast.error(data.error ?? 'Đăng ký thất bại. Vui lòng thử lại.')
-        }
-        return
-      }
+      const data = await postJson<{ success: boolean; emailSent?: boolean }>(
+        '/api/auth/register',
+        { email, password, full_name: fullName.trim(), phone },
+      )
 
       if (data.success && !data.emailSent) {
         toast.warning('Tài khoản đã tạo nhưng không gửi được email. Hãy thử đăng nhập.')
       }
       setIsSuccess(true)
-    } catch {
-      toast.error('Lỗi kết nối. Vui lòng thử lại.')
+    } catch (err) {
+      if (err instanceof FetchJsonError && err.status === 409) {
+        setErrors({ email: 'Email này đã được đăng ký. Đăng nhập?' })
+      } else {
+        const msg = err instanceof Error ? err.message : 'Đăng ký thất bại. Vui lòng thử lại.'
+        toast.error(msg)
+      }
     } finally {
       setIsLoading(false)
     }

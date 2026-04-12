@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { postJson } from '@/lib/http/fetch-json'
 
 const INDUSTRIES = [
   'Fitness',
@@ -61,25 +62,13 @@ export default function SetupOrgPage() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/settings/org', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), industry, headcount, city }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        toast.error(data.error || 'Không thể tạo công ty. Thử lại.')
-        setIsLoading(false)
-        return
-      }
-
+      await postJson('/api/settings/org', { name: name.trim(), industry, headcount, city })
       toast.success(`Chào mừng ${name.trim()}!`)
       router.push('/dashboard')
-    } catch {
-      toast.error('Lỗi kết nối. Vui lòng thử lại.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể tạo công ty. Thử lại.'
+      toast.error(msg)
       setIsLoading(false)
-      return
     }
   }
 

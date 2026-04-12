@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { PILLAR_ORDER, OPEX_PILLARS, getQuestionsForPillar } from '@/lib/x-ray/questions'
-import type { XRayFormState, CompanyInfo } from '@/lib/x-ray/types'
+import type { XRayFormState, CompanyInfo, XRayResult } from '@/lib/x-ray/types'
+import { postJson } from '@/lib/http/fetch-json'
 import { XRayProgress } from './XRayProgress'
 import { QuestionStep } from './QuestionStep'
 import { EmailCaptureStep } from './EmailCaptureStep'
@@ -110,17 +111,10 @@ export function XRayForm() {
     setState((prev) => ({ ...prev, isLoading: true, error: null, companyInfo }))
 
     try {
-      const response = await fetch('/api/x-ray/score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: state.answers, companyInfo }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error ?? 'Có lỗi xảy ra')
-      }
+      const data = await postJson<{ result: XRayResult; savedSuccessfully?: boolean }>(
+        '/api/x-ray/score',
+        { answers: state.answers, companyInfo },
+      )
 
       localStorage.removeItem(LOCALSTORAGE_KEY)
       setSavedSuccessfully(data.savedSuccessfully ?? false)

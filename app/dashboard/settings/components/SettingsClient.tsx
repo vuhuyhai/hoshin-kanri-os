@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { createClient } from '@/lib/supabase/client'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 interface OrgData {
   name: string
@@ -63,15 +64,11 @@ export function SettingsClient({
     if (!isDirty || !isCeo) return
     setIsSaving(true)
     try {
-      const res = await fetch('/api/settings/org', {
+      await fetchJson('/api/settings/org', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) {
-        const { error } = await res.json()
-        throw new Error(error)
-      }
       toast.success('Đã cập nhật thông tin công ty')
       router.refresh()
     } catch (err) {

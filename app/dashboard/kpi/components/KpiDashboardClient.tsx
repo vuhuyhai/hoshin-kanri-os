@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { trackKpiDashboardViewed } from '@/lib/analytics/events'
 import type { KpiWithEntries } from '@/app/api/kpi/list/route'
 import { cn } from '@/lib/utils'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 type ViewTab = 'company' | 'dept'
 
@@ -19,9 +20,9 @@ export function KpiDashboardClient() {
 
   const loadKpis = useCallback(async () => {
     try {
-      const res = await fetch('/api/kpi/list')
-      if (!res.ok) throw new Error()
-      const { kpis: data } = await res.json()
+      const { kpis: data } = await fetchJson<{ kpis: KpiWithEntries[] }>(
+        '/api/kpi/list'
+      )
       setKpis(data)
     } catch {
       toast.error('Không thể tải KPIs')

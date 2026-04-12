@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import type { VisionAnswers, VisionDraft } from '@/lib/discovery/types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface VisionEditorProps {
   orgId: string
@@ -57,22 +58,12 @@ export function VisionEditor({
     setIsSaving(true)
 
     try {
-      const response = await fetch('/api/discovery/vision-save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          finalVision: vision.trim(),
-          finalGoals: validGoals,
-          answers,
-          draft,
-        }),
+      await postJson('/api/discovery/vision-save', {
+        finalVision: vision.trim(),
+        finalGoals: validGoals,
+        answers,
+        draft,
       })
-
-      if (!response.ok) {
-        const { error } = await response.json()
-        throw new Error(error ?? 'Lỗi khi lưu')
-      }
-
       toast.success('Vision đã được lưu!')
       router.push('/dashboard/discovery/benchmark')
     } catch (error) {

@@ -8,6 +8,7 @@ import type { HKExplorerContent } from '@/app/api/admin/hoshin-explorer/route'
 import { ConceptSidebar } from './components/ConceptSidebar'
 import { ConceptPanel } from './components/ConceptPanel'
 import { StepsView } from './components/StepsView'
+import { postJson } from '@/lib/http/fetch-json'
 
 type Tab = 'concepts' | 'steps'
 const TABS: { key: Tab; label: string }[] = [
@@ -36,12 +37,17 @@ export default function HoshinExplorerPage() {
       setLoadingMsg(LOADING_MSGS[msgIdx])
     }, 900)
     try {
-      const res = await fetch('/api/admin/hoshin-explorer', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conceptId: concept.id, conceptName: concept.name, conceptKanji: concept.kanji, conceptDesc: concept.desc, books: concept.books, layer: concept.layer }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Có lỗi xảy ra')
+      const data = await postJson<HKExplorerContent>(
+        '/api/admin/hoshin-explorer',
+        {
+          conceptId: concept.id,
+          conceptName: concept.name,
+          conceptKanji: concept.kanji,
+          conceptDesc: concept.desc,
+          books: concept.books,
+          layer: concept.layer,
+        },
+      )
       cache.current[concept.id] = data
       setContent(data)
     } catch (err) {
