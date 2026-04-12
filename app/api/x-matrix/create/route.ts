@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { XMatrixData } from '@/lib/x-matrix/types'
 import { validateXMatrix } from '@/lib/x-matrix/utils'
@@ -80,6 +81,13 @@ export async function POST(request: NextRequest) {
         if (!kpiError) kpisCreated++
       }
     }
+
+    // Invalidate RSC caches so the dashboard flips to the
+    // "X-Matrix exists" state immediately after redirect.
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/x-matrix')
+    revalidatePath('/dashboard/x-matrix/new')
+    revalidatePath('/dashboard/kpi')
 
     return NextResponse.json({
       success: true,

@@ -58,6 +58,11 @@ export function XMatrixReview({ data, orgId, onBack }: XMatrixReviewProps) {
       toast.success(
         `X-Matrix đã lưu! ${json.kpisCreated} KPIs tự động tạo.`
       )
+      // Invalidate client router cache before navigating so the
+      // dashboard server component re-runs with the new x_matrix row.
+      // Without this, Next.js serves the pre-save RSC from cache and
+      // the dashboard still shows the "SẴN SÀNG TẠO X-MATRIX" empty state.
+      router.refresh()
       router.push('/dashboard')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Lỗi không xác định')
