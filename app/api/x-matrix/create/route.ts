@@ -38,6 +38,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errors[0] }, { status: 400 })
     }
 
+    // Atomic dedupe: archive any existing active matrices for this org
+    // and deactivate their KPIs BEFORE inserting the new one. Without
+    // this, repeat saves stack up multiple active rows and the dashboard
+    // query (maybeSingle) returns null on >1 match → empty state. The
+    // partial unique index in migration 015 is the DB-level backstop.
+    const { data: existingActive } = await supabase
+      .from('x_matrices')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('status', 'active')
+
+    const existingActiveIds = (existingActive ?? []).map((m) => m.id)
+    if (existingActiveIds.length > 0) {
+      await supabase
+        .from('x_matrices')
+        .update({
+          status: 'archived',
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', existingActiveIds)
+
+      // kpis.x_matrix_id is SET NULL on FK delete, but we're archiving
+      // (soft delete), so we must explicitly deactivate to prevent the
+      // dashboard KPI count from double-counting old + new.
+      await supabase
+        .from('kpis')
+        .update({ is_active: false })
+        .in('x_matrix_id', existingActiveIds)
+        .eq('is_active', true)
+    }
+
     // Create X-Matrix
     const { data: xMatrix, error: insertError } = await supabase
       .from('x_matrices')

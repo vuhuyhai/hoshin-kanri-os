@@ -49,12 +49,19 @@ export default async function DashboardPage() {
     completedSteps.has(s.key)
   ).length
 
-  // Check for existing X-Matrix
+  // Check for existing X-Matrix. Defensive: order by updated_at + limit(1)
+  // so that a pre-existing data pollution (>1 active) doesn't crash the
+  // query on .maybeSingle() — we always pick the latest. The create route
+  // archives old rows on new inserts and migration 015 enforces a unique
+  // partial index at the DB level, but this belt-and-suspenders matches
+  // the pattern the prefill API already uses.
   const { data: xMatrix } = await supabase
     .from('x_matrices')
     .select('id')
     .eq('org_id', orgId ?? '')
     .eq('status', 'active')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   const hasXMatrix = !!xMatrix
