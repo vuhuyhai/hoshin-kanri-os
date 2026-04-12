@@ -20,14 +20,14 @@ export async function GET() {
       return NextResponse.json({ error: 'No org' }, { status: 403 })
     }
 
-    const { data: history } = await supabase
+    const { data: history, count } = await supabase
       .from('xray_results')
-      .select('id, overall_score, overall_level, result_json, created_at')
+      .select('id, overall_score, overall_level, result_json, created_at', { count: 'exact' })
       .eq('org_id', membership.org_id)
       .order('created_at', { ascending: false })
       .limit(10)
 
-    return NextResponse.json({ history: history ?? [] })
+    return NextResponse.json({ history: history ?? [], total: count ?? 0 })
   } catch (error) {
     console.error('X-Ray history error:', error)
     return NextResponse.json(

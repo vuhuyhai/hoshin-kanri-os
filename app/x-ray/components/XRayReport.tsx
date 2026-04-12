@@ -26,12 +26,6 @@ function getScoreLabel(score: number): string {
   return 'Tốt'
 }
 
-function getOverallDisplayColor(score: number): string {
-  if (score >= 70) return '#00C851'
-  if (score >= 50) return '#c73937'
-  return '#2C2B2B'
-}
-
 // ============================================================
 // SVG SCORE GAUGE
 // ============================================================
@@ -184,20 +178,38 @@ function SidebarNavItem({
 // ============================================================
 
 function PillarCard({ pillar }: { pillar: PillarScore }) {
+  const color = getScoreColor(pillar.score)
   return (
     <div id={`pillar-${pillar.pillar}`} className="card-subtle p-6">
-      <h3 className="font-display font-bold text-base text-ink">
-        {pillar.icon} {pillar.label}
-      </h3>
-      <p className="font-display font-black text-2xl text-accent-brand mt-1">
-        {pillar.score}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-display font-bold text-base text-ink">
+          {pillar.icon} {pillar.label}
+        </h3>
+        <span className="font-display font-black text-2xl leading-none" style={{ color }}>
+          {pillar.score}
+        </span>
+      </div>
       <div className="h-2 border border-bg-muted-warm overflow-hidden mt-3">
         <div
-          className="h-full bg-accent-brand transition-all duration-500"
-          style={{ width: `${pillar.score}%` }}
+          className="h-full transition-all duration-500"
+          style={{ width: `${pillar.score}%`, background: color }}
         />
       </div>
+      {pillar.summary && (
+        <p className="font-body text-sm text-text-2 mt-4 leading-relaxed">
+          {pillar.summary}
+        </p>
+      )}
+      {pillar.topIssue && (
+        <div className="mt-3 pt-3 border-t border-ink/10">
+          <p className="font-display text-[11px] font-bold uppercase tracking-wider text-ink/60">
+            Ưu tiên xử lý
+          </p>
+          <p className="font-body text-sm text-ink mt-1 leading-relaxed">
+            {pillar.topIssue}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -337,7 +349,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
               className="block font-display font-black"
               style={{
                 fontSize: 72,
-                color: getOverallDisplayColor(result.overallScore),
+                color: getScoreColor(result.overallScore),
                 lineHeight: 1,
               }}
             >
@@ -346,7 +358,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
             <span
               className="badge-brutal text-xl px-6 py-2 mt-4 block w-fit mx-auto"
               style={{
-                background: getOverallDisplayColor(result.overallScore),
+                background: getScoreColor(result.overallScore),
                 color: '#FFFFFF',
               }}
             >

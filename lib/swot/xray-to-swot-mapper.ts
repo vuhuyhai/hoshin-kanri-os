@@ -24,9 +24,14 @@ export interface XRaySeedContext {
   summaryForAI: string
 }
 
-function scoreToQuadrant(score: number): 'S' | 'W' | 'T' | null {
+// Pragmatic mapping of internal pillar scores → SWOT quadrants.
+// X-Ray measures internal OPEX, so real "external opportunities" can't be
+// derived from it. We treat the moderate band (50–69) as "improvement
+// opportunities" — pillars with room to grow but not in crisis. Downstream
+// AI (TOWS coaching) still augments with truly external O/T.
+function scoreToQuadrant(score: number): 'S' | 'W' | 'O' | 'T' | null {
   if (score >= 70) return 'S'
-  if (score >= 50) return null
+  if (score >= 50) return 'O'
   if (score >= 30) return 'W'
   return 'T'
 }
@@ -56,6 +61,7 @@ export function mapXRayToSwotSeed(
   const fmt = (d: XRayDimensionSeed) => `${d.dimensionLabel} (${d.score} điểm)`
 
   const strengths = sorted.filter((d) => d.swotQuadrant === 'S').slice(0, 3).map(fmt)
+  const opportunityDims = sorted.filter((d) => d.swotQuadrant === 'O').slice(0, 3).map(fmt)
   const weakDims = sorted.filter((d) => d.swotQuadrant === 'W').slice(0, 3).map(fmt)
   const threatDims = sorted.filter((d) => d.swotQuadrant === 'T').slice(0, 2).map(fmt)
 
@@ -65,10 +71,10 @@ export function mapXRayToSwotSeed(
     overallLevel: xrayResult.overallLevel,
     dimensions,
     swotHints: {
-      strengths: strengths.slice(0, 3),
-      weaknesses: weakDims.slice(0, 3),
-      opportunities: [],
-      threats: threatDims.slice(0, 2),
+      strengths,
+      weaknesses: weakDims,
+      opportunities: opportunityDims,
+      threats: threatDims,
     },
     summaryForAI: buildSummary(xrayResult, strengths, weakDims, threatDims),
   }

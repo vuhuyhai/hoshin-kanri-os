@@ -50,14 +50,16 @@ export default async function XRayHistoryPage() {
 
   if (!membership) return null
 
-  const { data: rawHistory } = await supabase
+  const { data: rawHistory, count } = await supabase
     .from('xray_results')
-    .select('id, overall_score, overall_level, result_json, created_at')
+    .select('id, overall_score, overall_level, result_json, created_at', { count: 'exact' })
     .eq('org_id', membership.org_id)
     .order('created_at', { ascending: false })
     .limit(10)
 
   const history = (rawHistory ?? []) as unknown as ResultRow[]
+  const totalRuns = count ?? history.length
+  const oldestShownRunNumber = totalRuns - history.length + 1
 
   if (history.length === 0) {
     return (
@@ -78,7 +80,7 @@ export default async function XRayHistoryPage() {
   const chartData = [...history]
     .reverse()
     .map((r, idx) => ({
-      run: `Lần ${idx + 1}`,
+      run: `Lần ${oldestShownRunNumber + idx}`,
       score: r.overall_score,
       date: new Date(r.created_at).toLocaleDateString('vi-VN'),
       color: getScoreColor(r.overall_score),
@@ -121,7 +123,7 @@ export default async function XRayHistoryPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">
-                  {new Date(result.created_at).toLocaleDateString('vi-VN')} · Lần {history.length - idx}
+                  {new Date(result.created_at).toLocaleDateString('vi-VN')} · Lần {totalRuns - idx}
                 </span>
               </div>
               <div className="flex items-center gap-2">

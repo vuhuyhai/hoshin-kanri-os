@@ -1,19 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, calculatePillarScore } from '@/lib/x-ray/questions'
-import type { XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
+import type { OpexPillar, PillarScore, ScoreLevel, XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
 import type { Json } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { xRayReportEmailTemplate } from '@/lib/email/templates'
 import { AI_MODELS } from '@/lib/ai/models'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { isValidEmail } from '@/lib/validation'
+
+const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_WINDOW_SECONDS = 600
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request.headers)
+    const rl = await checkRateLimit({
+      key: `xray-score:${ip}`,
+      limit: RATE_LIMIT_MAX,
+      windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+    })
+    if (!rl.allowed) {
+      const retryAfter = Math.max(1, Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000))
+      return NextResponse.json(
+        {
+          error: `Bạn đã chạy X-Ray quá nhiều lần. Vui lòng thử lại sau ${Math.ceil(retryAfter / 60)} phút.`,
+        },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      )
+    }
+
     const body: XRayScoreRequest = await request.json()
     const { answers, companyInfo } = body
 
-    if (!companyInfo?.email || !companyInfo.email.includes('@')) {
+    if (!companyInfo?.email || !isValidEmail(companyInfo.email)) {
       return NextResponse.json(
         { error: 'Email không hợp lệ' },
         { status: 400 }
@@ -141,21 +163,28 @@ LƯU Ý:
       .map((block) => block.text)
       .join('')
 
-    const cleanJson = responseText.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(cleanJson)
+    const validated = parseAndValidateAIResponse(responseText)
+    if (!validated) {
+      console.error('X-Ray AI response validation failed. Raw response:', responseText)
+      return NextResponse.json(
+        { error: 'AI trả về kết quả không hợp lệ. Vui lòng thử lại sau ít phút.' },
+        { status: 502 }
+      )
+    }
 
     const result: XRayResult = {
       orgName: companyInfo.companyName,
       industry: companyInfo.industry,
-      overallScore: parsed.overallScore,
-      overallLevel: parsed.overallLevel,
-      executiveSummary: parsed.executiveSummary,
-      pillarScores: parsed.pillarScores,
-      topActions: parsed.topActions,
+      overallScore: validated.overallScore,
+      overallLevel: validated.overallLevel,
+      executiveSummary: validated.executiveSummary,
+      pillarScores: validated.pillarScores,
+      topActions: validated.topActions,
       generatedAt: new Date().toISOString(),
     }
 
-    // Save results (fire-and-forget, don't block response)
+    // Auth lookup uses cookie-based client (needs user session).
+    // All writes use admin client — server-initiated, bypasses RLS.
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -170,19 +199,21 @@ LƯU Ý:
     }
 
     const savedResultId = await saveXRayResult(
-      supabase, orgId, user?.id ?? null, answers, result
+      orgId, user?.id ?? null, answers, result
     )
 
     if (orgId && user) {
       markDiscoveryComplete(
-        supabase, orgId, user.id, savedResultId, result
+        orgId, user.id, savedResultId, result
       ).catch((err) => console.error('Failed to mark discovery:', err))
     }
 
-    // Also save lead for non-logged-in users
-    saveLead(supabase, companyInfo, answers, result).catch((err) =>
-      console.error('Failed to save X-Ray lead:', err)
-    )
+    // Save lead only for anonymous visitors — logged-in users already live in xray_results.
+    if (!user) {
+      saveLead(companyInfo, answers, result).catch((err) =>
+        console.error('Failed to save X-Ray lead:', err)
+      )
+    }
 
     // Send report email (fire-and-forget, don't block response)
     const { subject, html } = xRayReportEmailTemplate({
@@ -213,14 +244,14 @@ LƯU Ý:
 }
 
 async function saveXRayResult(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   orgId: string | null,
   userId: string | null,
   answers: Record<string, number>,
   result: XRayResult
 ): Promise<string | null> {
   try {
-    const { data, error } = await supabase
+    const admin = createAdminClient()
+    const { data, error } = await admin
       .from('xray_results')
       .insert({
         org_id: orgId,
@@ -245,13 +276,13 @@ async function saveXRayResult(
 }
 
 async function markDiscoveryComplete(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   orgId: string,
   userId: string,
   resultId: string | null,
   result: XRayResult
 ) {
-  await supabase
+  const admin = createAdminClient()
+  await admin
     .from('discovery_sessions')
     .upsert(
       {
@@ -273,13 +304,13 @@ async function markDiscoveryComplete(
 }
 
 async function saveLead(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   companyInfo: XRayScoreRequest['companyInfo'],
   answers: XRayScoreRequest['answers'],
   result: XRayResult
 ) {
   try {
-    await supabase.from('xray_leads').insert({
+    const admin = createAdminClient()
+    await admin.from('xray_leads').insert({
       email: companyInfo.email,
       company_name: companyInfo.companyName,
       industry: companyInfo.industry,
@@ -291,5 +322,89 @@ async function saveLead(
     })
   } catch (err) {
     console.error('Supabase lead save error:', err)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AI response validation — strict shape check before trusting any field.
+// Returns null on any mismatch; caller should surface a 502 to the user.
+// ---------------------------------------------------------------------------
+
+function isScoreLevel(v: unknown): v is ScoreLevel {
+  return v === 'critical' || v === 'weak' || v === 'moderate' || v === 'strong'
+}
+
+function isOpexPillar(v: unknown): v is OpexPillar {
+  return (
+    v === 'lean' ||
+    v === 'six_sigma' ||
+    v === 'workplace' ||
+    v === 'value_chain' ||
+    v === 'cx' ||
+    v === 'value_innovation' ||
+    v === 'value_ai'
+  )
+}
+
+function parseAndValidateAIResponse(responseText: string): {
+  overallScore: number
+  overallLevel: ScoreLevel
+  executiveSummary: string
+  pillarScores: PillarScore[]
+  topActions: string[]
+} | null {
+  const cleanJson = responseText.replace(/```json|```/g, '').trim()
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleanJson)
+  } catch {
+    return null
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null
+  const r = parsed as Record<string, unknown>
+
+  if (typeof r.overallScore !== 'number' || !Number.isFinite(r.overallScore)) return null
+  const overallScore = Math.max(0, Math.min(100, Math.round(r.overallScore)))
+
+  if (!isScoreLevel(r.overallLevel)) return null
+  if (typeof r.executiveSummary !== 'string' || r.executiveSummary.trim().length === 0) return null
+
+  if (!Array.isArray(r.pillarScores) || r.pillarScores.length !== PILLAR_ORDER.length) return null
+  const pillarScores: PillarScore[] = []
+  for (const p of r.pillarScores) {
+    if (!p || typeof p !== 'object') return null
+    const pp = p as Record<string, unknown>
+    if (!isOpexPillar(pp.pillar)) return null
+    if (typeof pp.label !== 'string' || pp.label.trim().length === 0) return null
+    if (typeof pp.icon !== 'string') return null
+    if (typeof pp.score !== 'number' || !Number.isFinite(pp.score)) return null
+    if (!isScoreLevel(pp.level)) return null
+    if (typeof pp.summary !== 'string' || pp.summary.trim().length === 0) return null
+    if (typeof pp.topIssue !== 'string' || pp.topIssue.trim().length === 0) return null
+    pillarScores.push({
+      pillar: pp.pillar,
+      label: pp.label,
+      icon: pp.icon,
+      score: Math.max(0, Math.min(100, Math.round(pp.score))),
+      level: pp.level,
+      summary: pp.summary,
+      topIssue: pp.topIssue,
+    })
+  }
+
+  if (!Array.isArray(r.topActions)) return null
+  const topActions = r.topActions.filter(
+    (a): a is string => typeof a === 'string' && a.trim().length > 0
+  )
+  if (topActions.length === 0) return null
+
+  return {
+    overallScore,
+    overallLevel: r.overallLevel,
+    executiveSummary: r.executiveSummary,
+    pillarScores,
+    topActions,
   }
 }

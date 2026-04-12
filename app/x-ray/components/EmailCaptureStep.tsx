@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { CompanyInfo } from '@/lib/x-ray/types'
+import { isValidEmail } from '@/lib/validation'
 
 const INDUSTRY_OPTIONS = [
   'Fitness & Gym',
@@ -45,13 +46,13 @@ export function EmailCaptureStep({
   })
   const [touched, setTouched] = useState<Record<string, boolean>>({})
 
-  const isValidEmail = form.email.includes('@') && form.email.includes('.')
+  const emailOk = isValidEmail(form.email)
   const isFormValid =
-    isValidEmail &&
+    emailOk &&
     form.companyName.trim().length >= 2 &&
     form.industry.length > 0
 
-  const showEmailError = touched.email && form.email.length > 0 && !isValidEmail
+  const showEmailError = touched.email && form.email.length > 0 && !emailOk
   const showNameError =
     touched.companyName &&
     form.companyName.length > 0 &&

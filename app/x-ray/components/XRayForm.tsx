@@ -13,6 +13,7 @@ import { AnalyzingLoader } from './AnalyzingLoader'
 
 const LOCALSTORAGE_KEY = 'hoshin_xray_progress_v2'
 const RESULT_SESSION_KEY = 'hoshin_xray_result'
+const PROGRESS_TTL_MS = 24 * 60 * 60 * 1000 // 24h
 
 const initialState: XRayFormState = {
   currentStep: 0,
@@ -49,13 +50,22 @@ export function XRayForm() {
 
       const saved = localStorage.getItem(LOCALSTORAGE_KEY)
       if (saved) {
-        const parsed = JSON.parse(saved) as Partial<XRayFormState>
-        if (parsed.answers && parsed.currentStep !== undefined) {
+        const parsed = JSON.parse(saved) as {
+          answers?: Record<string, number>
+          currentStep?: number
+          savedAt?: number
+        }
+        const isFresh =
+          typeof parsed.savedAt === 'number' &&
+          Date.now() - parsed.savedAt < PROGRESS_TTL_MS
+        if (isFresh && parsed.answers && parsed.currentStep !== undefined) {
           setState((prev) => ({
             ...prev,
             answers: parsed.answers as Record<string, number>,
             currentStep: parsed.currentStep as number,
           }))
+        } else {
+          localStorage.removeItem(LOCALSTORAGE_KEY)
         }
       }
     } catch {
@@ -71,6 +81,7 @@ export function XRayForm() {
         JSON.stringify({
           answers: state.answers,
           currentStep: state.currentStep,
+          savedAt: Date.now(),
         })
       )
     }
@@ -84,6 +95,7 @@ export function XRayForm() {
   }
 
   const handleNext = () => {
+    if (showTransition) return // ignore re-entrant clicks during the 1.2s animation
     const nextStep = state.currentStep + 1
     // Show transition screen when moving to a new pillar
     if (nextStep < PILLAR_ORDER.length) {
