@@ -188,28 +188,25 @@ LƯU Ý:
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    let orgId: string | null = null
+    // Logged-in users → xray_results (history). Anon → xray_leads only.
+    // xray_results enforces NOT NULL owner via xray_results_ownership_check.
+    let savedResultId: string | null = null
     if (user) {
       const { data: membership } = await supabase
         .from('org_members')
         .select('org_id')
         .eq('user_id', user.id)
         .single()
-      orgId = membership?.org_id ?? null
-    }
+      const orgId = membership?.org_id ?? null
 
-    const savedResultId = await saveXRayResult(
-      orgId, user?.id ?? null, answers, result
-    )
+      savedResultId = await saveXRayResult(orgId, user.id, answers, result)
 
-    if (orgId && user) {
-      markDiscoveryComplete(
-        orgId, user.id, savedResultId, result
-      ).catch((err) => console.error('Failed to mark discovery:', err))
-    }
-
-    // Save lead only for anonymous visitors — logged-in users already live in xray_results.
-    if (!user) {
+      if (orgId) {
+        markDiscoveryComplete(
+          orgId, user.id, savedResultId, result
+        ).catch((err) => console.error('Failed to mark discovery:', err))
+      }
+    } else {
       saveLead(companyInfo, answers, result).catch((err) =>
         console.error('Failed to save X-Ray lead:', err)
       )
