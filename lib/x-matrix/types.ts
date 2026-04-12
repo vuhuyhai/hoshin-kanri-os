@@ -56,9 +56,13 @@ export interface XMatrixData {
 // ============================================================
 // Org member (for KPI owner select)
 // ============================================================
+// Role values must match the CHECK constraint on org_members.role
+// (see supabase/migrations/001_initial_schema.sql).
+export type OrgRole = 'CEO' | 'Manager' | 'Member'
+
 export interface OrgMember {
   userId: string
   fullName: string
   email: string
-  role: 'CEO' | 'manager' | 'staff'
+  role: OrgRole
 }
