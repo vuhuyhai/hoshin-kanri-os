@@ -5,6 +5,7 @@ import {
   getDraftSystemPrompt,
   buildSuggestMorePrompt,
 } from '@/lib/swot/coaching-draft-prompt'
+import { AI_MODELS } from '@/lib/ai/models'
 import type {
   SuggestMoreRequest,
   SuggestMoreResponse,
@@ -37,7 +38,7 @@ function isValidItems(arr: unknown): arr is RawSuggestItem[] {
 async function callAI(prompt: string): Promise<RawSuggestItem[]> {
   const client = new Anthropic()
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: AI_MODELS.reasoning,
     max_tokens: 800,
     system: getDraftSystemPrompt(),
     messages: [{ role: 'user', content: prompt }],

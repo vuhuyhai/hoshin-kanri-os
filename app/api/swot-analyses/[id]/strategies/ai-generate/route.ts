@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { TowsQuadrant, AiStrategyItem } from '@/lib/swot/tows-types'
 import { generateCombinedCode } from '@/lib/swot/factor-utils'
 import { buildTowsPrompt } from '@/lib/swot/tows-prompts'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const anthropic = new Anthropic()
 const VALID_TOWS: TowsQuadrant[] = ['SO', 'WO', 'ST', 'WT']
@@ -100,7 +101,7 @@ export async function POST(
     })
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     })

@@ -8,6 +8,7 @@ import {
   parseCoachingAIOutput,
 } from '@/lib/swot/coaching-prompts'
 import { COACHING_QUESTION_BANK } from '@/lib/swot/frameworks'
+import { AI_MODELS } from '@/lib/ai/models'
 import {
   getNextDimension,
   getNextFramework,
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     const client = new Anthropic()
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 800,
       system: systemPrompt,
       messages: recentMessages.map((m) => ({

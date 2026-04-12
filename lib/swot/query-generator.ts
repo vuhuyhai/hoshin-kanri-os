@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { CoachingItem, GeneratedQuery, OrgContext } from './types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const anthropic = new Anthropic()
 const CURRENT_YEAR = new Date().getFullYear()
@@ -66,7 +67,7 @@ export async function generateQueriesForItem(
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 600,
       system: 'Bạn là chuyên gia nghiên cứu thị trường Việt Nam với 10 năm kinh nghiệm.\nNhiệm vụ: Tạo search queries để tìm số liệu từ nguồn uy tín Việt Nam.\nChỉ trả về JSON hợp lệ, không thêm text.',
       messages: [{ role: 'user', content: buildQueryPrompt(item, org, isInternal) }],

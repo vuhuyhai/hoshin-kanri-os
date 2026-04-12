@@ -6,6 +6,7 @@ import type { Json } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/send'
 import { xRayReportEmailTemplate } from '@/lib/email/templates'
+import { AI_MODELS } from '@/lib/ai/models'
 
 export async function POST(request: NextRequest) {
   try {
@@ -130,7 +131,7 @@ LƯU Ý:
     const client = new Anthropic()
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 2500,
       messages: [{ role: 'user', content: prompt }],
     })

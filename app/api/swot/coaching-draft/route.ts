@@ -5,6 +5,7 @@ import {
   getDraftSystemPrompt,
   buildDraftUserPrompt,
 } from '@/lib/swot/coaching-draft-prompt'
+import { AI_MODELS } from '@/lib/ai/models'
 import type {
   SwotContextInput,
   SwotDraft,
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       : ''
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 2000,
       system: getDraftSystemPrompt(),
       messages: [

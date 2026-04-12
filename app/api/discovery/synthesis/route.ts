@@ -7,6 +7,7 @@ import type {
   XMatrixPrefill,
 } from '@/lib/discovery/types'
 import type { Json } from '@/lib/supabase/types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     const client = new Anthropic()
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
     })

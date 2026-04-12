@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildConflictCheckPrompt, getDraftSystemPrompt } from '@/lib/swot/coaching-draft-prompt'
 import type { SwotDraft, ConflictCheckResult, ConflictIssue, QuadrantKey } from '@/lib/swot/coaching-types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const VALID_QUADRANTS: QuadrantKey[] = ['strengths', 'weaknesses', 'opportunities', 'threats']
 
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     let response: Anthropic.Message
     try {
       response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: AI_MODELS.reasoning,
         max_tokens: 600,
         system: getDraftSystemPrompt(),
         messages: [{ role: 'user', content: prompt }],

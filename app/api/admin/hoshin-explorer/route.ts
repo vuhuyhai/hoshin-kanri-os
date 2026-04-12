@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findConceptById, HK_SYSTEM_PROMPT } from '@/lib/admin/hoshin-explorer-data'
+import { AI_MODELS } from '@/lib/ai/models'
 
 export interface HKExplorerContent {
   level1: string
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const client = new Anthropic()
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 1500,
       system: HK_SYSTEM_PROMPT,
       messages: [{

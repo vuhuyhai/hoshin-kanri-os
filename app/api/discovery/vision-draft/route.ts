@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { getVisionDraftPrompt } from '@/lib/discovery/prompts'
 import type { VisionDraftRequest, VisionDraftResponse } from '@/lib/discovery/types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const client = new Anthropic()
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 800,
       messages: [{ role: 'user', content: prompt }],
     })

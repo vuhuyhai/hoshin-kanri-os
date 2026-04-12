@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { randomUUID } from 'crypto'
 import type { CoachingItem, EvidenceItemV2, OrgContext, SynthesizedSwotItem, SynthesisResult } from './types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const anthropic = new Anthropic()
 
@@ -130,7 +131,7 @@ export async function synthesizeSwot(
   try {
     const message = await anthropic.messages.create(
       {
-        model: 'claude-sonnet-4-20250514',
+        model: AI_MODELS.reasoning,
         max_tokens: 2000,
         system: `Bạn là chuyên gia tư vấn chiến lược Hoshin Kanri.
 Nguyên tắc: "No one benefits from vague statements. Be clear and detailed.

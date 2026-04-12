@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { ALL_CREDIBLE_DOMAINS, DOMAIN_WEIGHT_MAP } from './evidence-sources'
 import type { CoachingItem, GeneratedQuery, EvidenceResult } from './types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const anthropic = new Anthropic()
 const CURRENT_YEAR = new Date().getFullYear()
@@ -86,7 +87,7 @@ async function extractEvidenceWithClaude(
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 400,
       system: `Bạn là chuyên gia phân tích dữ liệu thị trường Việt Nam.
 Nhiệm vụ: Extract số liệu cụ thể nhất từ kết quả tìm kiếm làm bằng chứng SWOT.

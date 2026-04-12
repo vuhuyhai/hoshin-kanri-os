@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import type { OrgContext, CoachingSummary, ContextCardsOutput } from '@/lib/swot/types'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const CONTEXT_CARDS_SYSTEM_PROMPT = `
 Bạn là chuyên gia phân tích thị trường cho SME Việt Nam.
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     const client = new Anthropic()
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODELS.reasoning,
       max_tokens: 2000,
       system: CONTEXT_CARDS_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],

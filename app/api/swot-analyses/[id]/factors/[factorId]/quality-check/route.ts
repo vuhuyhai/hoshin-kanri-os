@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import type { SwotQuadrant } from '@/lib/swot/types'
 import { buildQualityCheckPrompt } from '@/lib/swot/tows-prompts'
+import { AI_MODELS } from '@/lib/ai/models'
 
 const anthropic = new Anthropic()
 
@@ -38,7 +39,7 @@ export async function POST(
     )
 
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: AI_MODELS.fast,
       max_tokens: 300,
       messages: [{ role: 'user', content: prompt }],
     })
