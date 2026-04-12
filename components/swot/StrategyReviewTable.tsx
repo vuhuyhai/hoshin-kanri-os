@@ -13,6 +13,7 @@ import type {
 import { BSC_LABELS } from '@/lib/swot/tows-types'
 import { buildExportRows } from '@/lib/swot/factor-utils'
 import { StrategyReviewSummary, TOWS_COLORS, BSC_KEYS } from './StrategyReviewSummary'
+import { fetchJson, postJson } from '@/lib/http/fetch-json'
 
 interface Props {
   analysisId: string
@@ -50,11 +51,11 @@ export function StrategyReviewTable({
     const next = USER_CYCLE[(idx + 1) % USER_CYCLE.length]
     onStatusChange(id, next)
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/strategies`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      await fetchJson(`/api/swot-analyses/${analysisId}/strategies`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: next }),
       })
-      if (!res.ok) throw new Error()
     } catch {
       onStatusChange(id, current)
       toast.error('Lỗi cập nhật trạng thái')
@@ -64,11 +65,11 @@ export function StrategyReviewTable({
   const handleBscChange = async (id: string, bsc: BscPerspective) => {
     onBscChange?.(id, bsc)
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/strategies`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      await fetchJson(`/api/swot-analyses/${analysisId}/strategies`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, bsc_perspective: bsc }),
       })
-      if (!res.ok) throw new Error()
     } catch { toast.error('Lỗi cập nhật BSC') }
   }
 
@@ -91,23 +92,18 @@ export function StrategyReviewTable({
     if (approvedStrategies.length === 0 || isSyncing) return
     setIsSyncing(true)
     try {
-      const res = await fetch('/api/swot/sync-xmatrix', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysisId }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error || 'Sync thất bại')
-        return
-      }
+      const data = await postJson<{ syncedCount: number; errors?: string[] }>(
+        '/api/swot/sync-xmatrix',
+        { analysisId },
+      )
       for (const s of approvedStrategies.slice(0, data.syncedCount)) onStatusChange(s.id, 'in_x_matrix')
       toast.success(`Đã sync ${data.syncedCount} chiến lược vào X-Matrix`)
-      if (data.errors?.length > 0) toast.warning(data.errors[0])
+      if (data.errors?.length && data.errors.length > 0) toast.warning(data.errors[0])
       onSendToXMatrix?.(approvedStrategies)
       setTimeout(() => router.push('/dashboard/x-matrix/new'), 800)
     } catch (err) {
       console.error('[StrategyReviewTable] sync error:', err)
-      toast.error('Lỗi khi sync vào X-Matrix')
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi sync vào X-Matrix')
     } finally {
       setIsSyncing(false)
     }

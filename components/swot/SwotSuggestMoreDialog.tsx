@@ -12,6 +12,7 @@ import type {
   SuggestMoreResponse,
 } from '@/lib/swot/coaching-types'
 import { QUADRANT_LABELS } from '@/lib/swot/coaching-types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface SwotSuggestMoreDialogProps {
   quadrant: QuadrantKey
@@ -45,23 +46,15 @@ export function SwotSuggestMoreDialog({
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('/api/swot/suggest-more', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await postJson<SuggestMoreResponse>(
+        '/api/swot/suggest-more',
+        {
           quadrant,
           hint,
           existingItems: existingItems.map((i) => i.statement),
           contextInput,
-        }),
-      })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error((err as { error?: string }).error || 'Lỗi kết nối AI')
-      }
-
-      const data: SuggestMoreResponse = await res.json()
+        },
+      )
       const label = QUADRANT_LABELS[quadrant]
 
       const hydratedItems: SwotDraftItem[] = data.items.map((item) => ({

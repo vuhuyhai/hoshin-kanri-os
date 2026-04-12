@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { validateXMatrix, calcCompleteness } from '@/lib/x-matrix/utils'
 import { trackXMatrixCompleted } from '@/lib/analytics/events'
 import type { XMatrixData } from '@/lib/x-matrix/types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface XMatrixReviewProps {
   data: XMatrixData
@@ -35,18 +36,10 @@ export function XMatrixReview({ data, orgId, onBack }: XMatrixReviewProps) {
     setIsSaving(true)
 
     try {
-      const res = await fetch('/api/x-matrix/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data,
-          year: new Date().getFullYear(),
-          orgId,
-        }),
-      })
-
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Lỗi lưu X-Matrix')
+      const json = await postJson<{ kpisCreated: number; xMatrixId: string }>(
+        '/api/x-matrix/create',
+        { data, year: new Date().getFullYear(), orgId },
+      )
 
       trackXMatrixCompleted({
         hoshinCount: data.hoshins.length,

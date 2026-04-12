@@ -6,6 +6,7 @@ import { Plus, X, Sparkles, Loader2, Check } from 'lucide-react'
 import type { SwotQuadrant } from '@/lib/swot/types'
 import type { SwotFactor, TowsQuadrant, TowsStrategyWithFactorsRecord } from '@/lib/swot/tows-types'
 import { TOWS_CONFIG, BSC_LABELS } from '@/lib/swot/tows-types'
+import { fetchJson, postJson } from '@/lib/http/fetch-json'
 
 interface Props {
   analysisId: string
@@ -39,15 +40,8 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
   const notify = useCallback((s: TowsStrategyWithFactorsRecord[]) => onStrategiesChange(s), [onStrategiesChange])
 
   useEffect(() => {
-    fetch(`/api/swot-analyses/${analysisId}/strategies`)
-      .then(async (r) => {
-        if (!r.ok) {
-          const err = await r.json().catch(() => ({}))
-          throw new Error((err as { error?: string }).error ?? `HTTP ${r.status}`)
-        }
-        return r.json()
-      })
-      .then((data: unknown) => {
+    fetchJson<unknown>(`/api/swot-analyses/${analysisId}/strategies`)
+      .then((data) => {
         const list = Array.isArray(data) ? (data as TowsStrategyWithFactorsRecord[]) : []
         const safe = list.map((s) => ({
           ...s,
@@ -57,7 +51,7 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
         setStrategies(safe)
         notify(safe)
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('[TowsCanvas] load strategies failed:', err)
         toast.error(err instanceof Error ? err.message : 'Không tải được chiến lược')
       })
@@ -76,12 +70,14 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
     }
     setIsGenerating(true)
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/strategies/ai-generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sw_factor_ids: [...selectedSwIds], ot_factor_ids: [...selectedOtIds], quadrant: activeQuad }),
-      })
-      const genBody = await res.json()
-      if (!res.ok) throw new Error(genBody.error ?? 'Lỗi tạo chiến lược')
+      const genBody = await postJson<unknown>(
+        `/api/swot-analyses/${analysisId}/strategies/ai-generate`,
+        {
+          sw_factor_ids: [...selectedSwIds],
+          ot_factor_ids: [...selectedOtIds],
+          quadrant: activeQuad,
+        },
+      )
       const rawItems = Array.isArray(genBody) ? (genBody as TowsStrategyWithFactorsRecord[]) : []
       // Defensive: tolerate server responses that forgot to hydrate factors.
       const newItems = rawItems.map((s) => ({
@@ -102,11 +98,11 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
     const prev = strategies
     setStrategies((s) => s.map((st) => st.id === id ? { ...st, status: next } : st))
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/strategies`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      await fetchJson(`/api/swot-analyses/${analysisId}/strategies`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: next }),
       })
-      if (!res.ok) throw new Error()
       notify(strategies.map((st) => st.id === id ? { ...st, status: next } : st))
     } catch { setStrategies(prev); notify(prev); toast.error('Lỗi cập nhật') }
   }

@@ -12,6 +12,7 @@ import { Step4Kpis } from './Step4Kpis'
 import { XMatrixReview } from './XMatrixReview'
 import { calcCompleteness } from '@/lib/x-matrix/utils'
 import type { XMatrixData, WizardStep, OrgMember } from '@/lib/x-matrix/types'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 const EMPTY_DATA: XMatrixData = {
   vision: '',
@@ -36,27 +37,24 @@ export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
     if (started.current) return
     started.current = true
 
-    fetch('/api/x-matrix/prefill')
-      .then((r) => r.json())
-      .then(
-        (res: {
-          data: XMatrixData | null
-          hasPrefill: boolean
-          completeness: number
-        }) => {
-          if (res.hasPrefill && res.data) {
-            setData(res.data)
-            const isPrefilled = searchParams.get('prefilled') === 'true'
-            if (isPrefilled) {
-              setShowPrefillBanner(true)
-              setTimeout(() => setShowPrefillBanner(false), 10000)
-              // Jump to Step 2 (Hoshins) when coming from SWOT sync
-              setStep(2)
-            }
-            toast.success(`X-Matrix pre-fill ${res.completeness}% từ Discovery!`)
+    fetchJson<{
+      data: XMatrixData | null
+      hasPrefill: boolean
+      completeness: number
+    }>('/api/x-matrix/prefill')
+      .then((res) => {
+        if (res.hasPrefill && res.data) {
+          setData(res.data)
+          const isPrefilled = searchParams.get('prefilled') === 'true'
+          if (isPrefilled) {
+            setShowPrefillBanner(true)
+            setTimeout(() => setShowPrefillBanner(false), 10000)
+            // Jump to Step 2 (Hoshins) when coming from SWOT sync
+            setStep(2)
           }
+          toast.success(`X-Matrix pre-fill ${res.completeness}% từ Discovery!`)
         }
-      )
+      })
       .catch(() => {
         /* Fail silently — user fills manually */
       })

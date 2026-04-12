@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Plus, X, Sparkles, Loader2, Check } from 'lucide-react'
 import type { SwotQuadrant } from '@/lib/swot/types'
 import type { SwotFactor } from '@/lib/swot/tows-types'
+import { fetchJson, postJson } from '@/lib/http/fetch-json'
 
 interface Props {
   analysisId: string
@@ -30,28 +31,22 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
   const notify = useCallback((f: Record<SwotQuadrant, SwotFactor[]>) => onFactorsChange(f), [onFactorsChange])
 
   useEffect(() => {
-    fetch(`/api/swot-analyses/${analysisId}/factors`)
-      .then(async (r) => {
-        if (!r.ok) {
-          const err = await r.json().catch(() => ({}))
-          throw new Error((err as { error?: string }).error ?? `HTTP ${r.status}`)
-        }
-        return r.json()
-      })
-      .then((data: unknown) => {
+    fetchJson<Partial<Record<SwotQuadrant, SwotFactor[]>>>(
+      `/api/swot-analyses/${analysisId}/factors`
+    )
+      .then((data) => {
         // Defensive: API is expected to return { S, W, O, T } but coerce
         // any missing / malformed keys to [] so render-time .filter() is safe.
-        const source = (data ?? {}) as Partial<Record<SwotQuadrant, SwotFactor[]>>
         const safe: Record<SwotQuadrant, SwotFactor[]> = {
-          S: Array.isArray(source.S) ? source.S : [],
-          W: Array.isArray(source.W) ? source.W : [],
-          O: Array.isArray(source.O) ? source.O : [],
-          T: Array.isArray(source.T) ? source.T : [],
+          S: Array.isArray(data.S) ? data.S : [],
+          W: Array.isArray(data.W) ? data.W : [],
+          O: Array.isArray(data.O) ? data.O : [],
+          T: Array.isArray(data.T) ? data.T : [],
         }
         setFactors(safe)
         notify(safe)
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('[SwotFactorInput] load factors failed:', err)
         toast.error(err instanceof Error ? err.message : 'Không tải được yếu tố')
       })
@@ -62,13 +57,10 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
     const content = newInput[q].trim()
     if (!content) return
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/factors`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quadrant: q, content, is_key_factor: false }),
-      })
-      const factorBody = await res.json()
-      if (!res.ok) throw new Error(factorBody.error ?? 'Lỗi thêm yếu tố')
-      const factor = factorBody as SwotFactor
+      const factor = await postJson<SwotFactor>(
+        `/api/swot-analyses/${analysisId}/factors`,
+        { quadrant: q, content, is_key_factor: false },
+      )
       const next = { ...factors, [q]: [...factors[q], factor] }
       setFactors(next); notify(next)
       setNewInput((p) => ({ ...p, [q]: '' }))
@@ -78,8 +70,9 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
 
   const handleDelete = async (q: SwotQuadrant, id: string) => {
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/factors/${id}`, { method: 'DELETE' })
-      if (!res.ok && res.status !== 204) throw new Error('Lỗi xoá')
+      await fetchJson(`/api/swot-analyses/${analysisId}/factors/${id}`, {
+        method: 'DELETE',
+      })
       const next = { ...factors, [q]: factors[q].filter((f) => f.id !== id) }
       setFactors(next); notify(next)
       toast.success('Đã xoá')
@@ -91,21 +84,21 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
     const next = { ...factors, [q]: factors[q].map((f) => f.id === factor.id ? { ...f, is_key_factor: !f.is_key_factor } : f) }
     setFactors(next); notify(next)
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/factors/${factor.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      await fetchJson(`/api/swot-analyses/${analysisId}/factors/${factor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_key_factor: !factor.is_key_factor }),
       })
-      if (!res.ok) throw new Error()
     } catch { setFactors(prev); notify(prev); toast.error('Lỗi cập nhật') }
   }
 
   const handleQualityCheck = async (q: SwotQuadrant, factor: SwotFactor) => {
     setLoadingCheck((p) => ({ ...p, [factor.id]: true }))
     try {
-      const res = await fetch(`/api/swot-analyses/${analysisId}/factors/${factor.id}/quality-check`, { method: 'POST' })
-      const checkBody = await res.json()
-      if (!res.ok) throw new Error(checkBody.error ?? 'Lỗi kiểm tra')
-      const result = checkBody as { score: number; feedback: string }
+      const result = await fetchJson<{ score: number; feedback: string }>(
+        `/api/swot-analyses/${analysisId}/factors/${factor.id}/quality-check`,
+        { method: 'POST' },
+      )
       const next = { ...factors, [q]: factors[q].map((f) => f.id === factor.id ? { ...f, quality_score: result.score } : f) }
       setFactors(next); notify(next)
       setFeedback((p) => ({ ...p, [factor.id]: result.feedback }))

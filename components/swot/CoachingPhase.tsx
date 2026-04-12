@@ -9,6 +9,7 @@ import { SwotLoadingState } from './SwotLoadingState'
 import { SwotDraftBoard } from './SwotDraftBoard'
 import type { OrgContext } from '@/lib/swot/types'
 import type { SwotContextInput, SwotDraft, QuadrantKey } from '@/lib/swot/coaching-types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface CoachingPhaseProps {
   orgContext: OrgContext
@@ -44,18 +45,10 @@ export function CoachingPhase({ orgContext, userId, analysisId, onComplete }: Co
       setStep('loading')
 
       try {
-        const res = await fetch('/api/swot/coaching-draft', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        })
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          throw new Error((err as { error?: string }).error || 'Lỗi kết nối AI')
-        }
-
-        const draftData: SwotDraft = await res.json()
+        const draftData = await postJson<SwotDraft>(
+          '/api/swot/coaching-draft',
+          input,
+        )
         setDraft(draftData)
         setStep('review')
       } catch (err) {

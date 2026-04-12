@@ -6,6 +6,7 @@ import { Search, AlertTriangle, Check, Loader2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import type { SwotDraft, ConflictCheckResult } from '@/lib/swot/coaching-types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface SwotConfirmButtonProps {
   draft: SwotDraft
@@ -32,13 +33,10 @@ export function SwotConfirmButton({ draft, onConfirm, isConfirming }: SwotConfir
     }
     setIsCheckingConflicts(true)
     try {
-      const res = await fetch('/api/swot/conflict-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft }),
-      })
-      if (!res.ok) { await onConfirm(); return }
-      const result: ConflictCheckResult = await res.json()
+      const result = await postJson<ConflictCheckResult>(
+        '/api/swot/conflict-check',
+        { draft },
+      )
       setConflictResult(result)
       if (!result.hasIssues) { await onConfirm(); return }
       toast('Xem lại các điểm được đánh dấu — bạn vẫn có thể bỏ qua và tiếp tục')
@@ -47,6 +45,9 @@ export function SwotConfirmButton({ draft, onConfirm, isConfirming }: SwotConfir
         document.querySelector(`[data-item-id="${firstId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
     } catch {
+      // Fail-safe: if conflict-check API errors or network fails,
+      // let the user confirm anyway. Blocking confirm on a non-critical
+      // check would be worse UX than letting potential duplicates through.
       await onConfirm()
     } finally {
       setIsCheckingConflicts(false)

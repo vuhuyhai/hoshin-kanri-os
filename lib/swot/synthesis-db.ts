@@ -6,6 +6,7 @@ import {
 } from './synthesis-helpers'
 import type { SwotSynthesisOutput, SynthesisResult, ContextCard } from './types'
 import type { SwotDraft, SwotDraftItem, QuadrantKey } from './coaching-types'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 const QUAD_TO_KEY: Record<'S' | 'W' | 'O' | 'T', QuadrantKey> = {
   S: 'strengths',
@@ -139,7 +140,7 @@ export async function callSynthesisAPI(
   const timeoutId = setTimeout(() => controller.abort(), 58000)
 
   try {
-    const response = await fetch('/api/swot/synthesis', {
+    const data = await fetchJson<SynthesisResult>('/api/swot/synthesis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -149,13 +150,6 @@ export async function callSynthesisAPI(
       }),
       signal: controller.signal,
     })
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
-      throw new Error((err as { error?: string }).error || 'Synthesis failed')
-    }
-
-    const data: SynthesisResult = await response.json()
     return synthesisResultToOutput(data)
   } finally {
     clearTimeout(timeoutId)

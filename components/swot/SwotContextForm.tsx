@@ -12,6 +12,7 @@ import { EMPTY_ELEMENTS, SectionLabel, deriveFrameworks, findIndustryOption } fr
 import type { FormErrors } from './swot-context-form-config'
 import type { SelectedElements, SwotContextInput } from '@/lib/swot/coaching-types'
 import type { XRaySeedContext } from '@/lib/swot/xray-to-swot-mapper'
+import { fetchJson } from '@/lib/http/fetch-json'
 
 interface SwotContextFormProps {
   orgProfile: { name: string; industry: string; headcount: string; city: string }
@@ -51,9 +52,8 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
 
   // Fetch X-Ray prefill on mount
   useEffect(() => {
-    fetch('/api/swot/prefill-from-xray')
-      .then((r) => r.json())
-      .then((data: { prefilled?: boolean } & Partial<PrefillResult>) => {
+    fetchJson<{ prefilled?: boolean } & Partial<PrefillResult>>('/api/swot/prefill-from-xray')
+      .then((data) => {
         if (data.prefilled) {
           const result = data as PrefillResult
           setPrefillData(result)

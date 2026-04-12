@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import { ContextCardItem } from './ContextCardItem'
 import type { ContextCard, OrgContext, CoachingSummary } from '@/lib/swot/types'
+import { postJson } from '@/lib/http/fetch-json'
 
 interface ContextCardsPhaseProps {
   orgContext: OrgContext
@@ -32,13 +33,10 @@ export function ContextCardsPhase({ orgContext, summary, onBack, onContinue }: C
     try {
       const dummySummary =
         summary ?? { strengths: [], weaknesses: [], opportunities: [], threats: [] }
-      const response = await fetch('/api/swot/context-cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary: dummySummary, orgContext }),
-      })
-      if (!response.ok) throw new Error('Context cards failed')
-      const data = await response.json()
+      const data = await postJson<{ cards?: ContextCard[] }>(
+        '/api/swot/context-cards',
+        { summary: dummySummary, orgContext },
+      )
       const fetchedCards = data.cards ?? []
       setCards(fetchedCards)
       setContextCards(fetchedCards)
