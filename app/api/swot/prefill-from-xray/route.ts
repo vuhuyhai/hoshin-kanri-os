@@ -27,11 +27,12 @@ export async function GET() {
 
     const orgId = membership.org_id
 
-    // TODO: chạy `supabase gen types` sau khi confirm xray_results schema ổn định
-    // @ts-ignore — xray_results (migration 005) chưa có trong generated types
-    let query = supabase.from('xray_results').select('id, overall_score, result_json, created_at').eq('org_id', orgId)
-    query = query.order('created_at', { ascending: false })
-    const { data: xrayRows } = await query.limit(1)
+    const { data: xrayRows } = await supabase
+      .from('xray_results')
+      .select('id, overall_score, result_json, created_at')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
 
     const xray = (xrayRows as unknown as XRayRow[] | null)?.[0]
     if (!xray) return NextResponse.json({ prefilled: false })

@@ -949,6 +949,10 @@ export type Database = {
     Functions: {
       check_is_super_admin: { Args: never; Returns: boolean }
       get_user_org_ids: { Args: { uid: string }; Returns: string[] }
+      increment_rate_limit: {
+        Args: { p_bucket: string; p_window_start: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

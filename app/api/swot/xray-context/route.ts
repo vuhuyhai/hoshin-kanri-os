@@ -40,6 +40,17 @@ export async function GET(request: NextRequest) {
 
     const row = (rows as unknown as Array<{ id: string; result_json: unknown }>)?.[0]
 
+    // Explicit xrayId but no row → either doesn't exist or belongs to another
+    // org (RLS filters silently). Return 404 so the caller can surface a clear
+    // "bản X-Ray này không tồn tại" error instead of treating it like "never ran".
+    if (xrayId && !row) {
+      return NextResponse.json(
+        { error: 'Không tìm thấy bản X-Ray này' },
+        { status: 404 },
+      )
+    }
+
+    // No xrayId and no history → org genuinely hasn't run X-Ray yet.
     if (!row) {
       return NextResponse.json({ hasXRay: false, data: null })
     }

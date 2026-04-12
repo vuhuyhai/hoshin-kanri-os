@@ -19,7 +19,6 @@ export async function checkRateLimit(params: {
   const resetAt = new Date(windowStartMs + windowMs)
 
   const supabase = createAdminClient()
-  // @ts-expect-error — rate_limits RPC not in generated types yet
   const { data: count, error } = await supabase.rpc('increment_rate_limit', {
     p_bucket: key,
     p_window_start: windowStart.toISOString(),
