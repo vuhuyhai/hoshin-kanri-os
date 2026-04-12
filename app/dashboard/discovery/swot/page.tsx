@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SwotPageTabs } from './SwotPageTabs'
+import { SwotWizard } from '@/components/swot/wizard/SwotWizard'
 import type { OrgContext } from '@/lib/swot/types'
 
-export default async function SwotPage({ searchParams }: { searchParams: Promise<{ xray_id?: string }> }) {
-  const { xray_id: xrayId } = await searchParams
+export default async function SwotPage() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -73,12 +72,11 @@ export default async function SwotPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="w-full min-h-full">
-      <SwotPageTabs
+      <SwotWizard
         orgContext={orgContext}
         userId={user.id}
         analysisId={analysisId}
         orgId={membership.org_id}
-        xrayId={xrayId}
       />
     </div>
   )

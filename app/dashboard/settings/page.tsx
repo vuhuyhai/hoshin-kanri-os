@@ -38,7 +38,7 @@ export default async function SettingsPage() {
       email: u?.email ?? '',
       fullName: u?.full_name ?? null,
       role: m.role,
-      joinedAt: m.created_at,
+      joinedAt: m.created_at ?? '',
     }
   })
 

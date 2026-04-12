@@ -31,9 +31,30 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
 
   useEffect(() => {
     fetch(`/api/swot-analyses/${analysisId}/factors`)
-      .then((r) => r.json())
-      .then((data) => { setFactors(data); notify(data) })
-      .catch(() => toast.error('Không tải được yếu tố'))
+      .then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}))
+          throw new Error((err as { error?: string }).error ?? `HTTP ${r.status}`)
+        }
+        return r.json()
+      })
+      .then((data: unknown) => {
+        // Defensive: API is expected to return { S, W, O, T } but coerce
+        // any missing / malformed keys to [] so render-time .filter() is safe.
+        const source = (data ?? {}) as Partial<Record<SwotQuadrant, SwotFactor[]>>
+        const safe: Record<SwotQuadrant, SwotFactor[]> = {
+          S: Array.isArray(source.S) ? source.S : [],
+          W: Array.isArray(source.W) ? source.W : [],
+          O: Array.isArray(source.O) ? source.O : [],
+          T: Array.isArray(source.T) ? source.T : [],
+        }
+        setFactors(safe)
+        notify(safe)
+      })
+      .catch((err) => {
+        console.error('[SwotFactorInput] load factors failed:', err)
+        toast.error(err instanceof Error ? err.message : 'Không tải được yếu tố')
+      })
       .finally(() => setIsLoading(false))
   }, [analysisId, notify])
 

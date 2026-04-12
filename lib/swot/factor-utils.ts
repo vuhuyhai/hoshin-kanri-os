@@ -8,21 +8,47 @@ import type {
 import { BSC_LABELS } from '@/lib/swot/tows-types'
 
 /**
- * Count existing factors in the same quadrant, return next code.
- * e.g. if 3 "S" factors exist → returns "S4"
+ * Atomically reserve a block of consecutive factor code numbers for
+ * a (analysis, quadrant) pair. Returns the first usable number.
+ *
+ * Caller formats codes as `${quadrant}${start}`, `${quadrant}${start+1}`,
+ * ..., `${quadrant}${start+count-1}`.
+ *
+ * Backed by Postgres RPC `reserve_factor_codes` (see migration 014)
+ * which uses INSERT ... ON CONFLICT DO UPDATE as a single atomic
+ * statement — concurrent callers serialize on the PK row lock, so
+ * no retry loop is needed.
  */
-export async function generateFactorCode(
+export async function reserveFactorCodes(
   supabase: SupabaseClient,
   analysisId: string,
   quadrant: SwotQuadrant,
-): Promise<string> {
-  const { count } = await supabase
-    .from('swot_factors')
-    .select('id', { count: 'exact', head: true })
-    .eq('swot_analysis_id', analysisId)
-    .eq('quadrant', quadrant)
+  count: number = 1,
+): Promise<number> {
+  if (count < 1) throw new Error('count must be >= 1')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)('reserve_factor_codes', {
+    p_analysis_id: analysisId,
+    p_quadrant: quadrant,
+    p_count: count,
+  })
+  if (error) throw new Error(error.message ?? 'Lỗi reserve factor code')
+  if (typeof data !== 'number') {
+    throw new Error('reserve_factor_codes trả về dữ liệu không hợp lệ')
+  }
+  return data
+}
 
-  return `${quadrant}${(count ?? 0) + 1}`
+/**
+ * Helper: format a block of N consecutive codes starting from `start`.
+ * e.g. formatFactorCodes('S', 5, 3) → ['S5', 'S6', 'S7']
+ */
+export function formatFactorCodes(
+  quadrant: SwotQuadrant,
+  start: number,
+  count: number,
+): string[] {
+  return Array.from({ length: count }, (_, i) => `${quadrant}${start + i}`)
 }
 
 /**

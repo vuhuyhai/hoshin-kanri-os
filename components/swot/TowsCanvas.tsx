@@ -40,9 +40,27 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
 
   useEffect(() => {
     fetch(`/api/swot-analyses/${analysisId}/strategies`)
-      .then((r) => r.json())
-      .then((data) => { setStrategies(data); notify(data) })
-      .catch(() => toast.error('Không tải được chiến lược'))
+      .then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}))
+          throw new Error((err as { error?: string }).error ?? `HTTP ${r.status}`)
+        }
+        return r.json()
+      })
+      .then((data: unknown) => {
+        const list = Array.isArray(data) ? (data as TowsStrategyWithFactorsRecord[]) : []
+        const safe = list.map((s) => ({
+          ...s,
+          sw_factors: Array.isArray(s.sw_factors) ? s.sw_factors : [],
+          ot_factors: Array.isArray(s.ot_factors) ? s.ot_factors : [],
+        }))
+        setStrategies(safe)
+        notify(safe)
+      })
+      .catch((err) => {
+        console.error('[TowsCanvas] load strategies failed:', err)
+        toast.error(err instanceof Error ? err.message : 'Không tải được chiến lược')
+      })
       .finally(() => setIsLoading(false))
   }, [analysisId, notify])
 
@@ -64,7 +82,13 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
       })
       const genBody = await res.json()
       if (!res.ok) throw new Error(genBody.error ?? 'Lỗi tạo chiến lược')
-      const newItems = genBody as TowsStrategyWithFactorsRecord[]
+      const rawItems = Array.isArray(genBody) ? (genBody as TowsStrategyWithFactorsRecord[]) : []
+      // Defensive: tolerate server responses that forgot to hydrate factors.
+      const newItems = rawItems.map((s) => ({
+        ...s,
+        sw_factors: Array.isArray(s.sw_factors) ? s.sw_factors : [],
+        ot_factors: Array.isArray(s.ot_factors) ? s.ot_factors : [],
+      }))
       const merged = [...strategies.filter((s) => !newItems.some((n) => n.combined_code === s.combined_code)), ...newItems]
       setStrategies(merged); notify(merged)
       setSelectedSwIds(new Set()); setSelectedOtIds(new Set()); setActiveQuad(null)

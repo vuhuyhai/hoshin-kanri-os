@@ -50,36 +50,6 @@ export interface SwotDraft {
   frameworksUsed: AnalysisFramework[]
 }
 
-export interface SwotCoachingState {
-  step: 'form' | 'loading' | 'review' | 'confirmed'
-  contextInput: SwotContextInput | null
-  draft: SwotDraft | null
-  loadingMessage: string
-  setStep: (step: SwotCoachingState['step']) => void
-  setContextInput: (input: SwotContextInput) => void
-  setDraft: (draft: SwotDraft) => void
-  setLoadingMessage: (msg: string) => void
-  updateDraftItem: (
-    quadrant: QuadrantKey,
-    itemId: string,
-    newStatement: string
-  ) => void
-  addDraftItem: (quadrant: QuadrantKey) => void
-  removeDraftItem: (quadrant: QuadrantKey, itemId: string) => void
-  reset: () => void
-  // Suggest more
-  suggestState: QuadrantSuggestState
-  openSuggestDialog: (quadrant: QuadrantKey) => void
-  closeSuggestDialog: () => void
-  appendSuggestedItems: (quadrant: QuadrantKey, items: SwotDraftItem[]) => void
-  // Conflict detection
-  conflictResult: ConflictCheckResult | null
-  isCheckingConflicts: boolean
-  setConflictResult: (result: ConflictCheckResult | null) => void
-  setIsCheckingConflicts: (loading: boolean) => void
-  dismissConflict: (issueIndex: number) => void
-}
-
 // === SUGGEST MORE ===
 
 export interface SuggestMoreRequest {

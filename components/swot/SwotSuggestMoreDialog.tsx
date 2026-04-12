@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
+import { Sparkles, X as XIcon, Loader2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type {
@@ -31,7 +32,6 @@ export function SwotSuggestMoreDialog({
   const [isLoading, setIsLoading] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
 
-  // Close on click outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
@@ -58,9 +58,7 @@ export function SwotSuggestMoreDialog({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(
-          (err as { error?: string }).error || 'Lỗi kết nối AI'
-        )
+        throw new Error((err as { error?: string }).error || 'Lỗi kết nối AI')
       }
 
       const data: SuggestMoreResponse = await res.json()
@@ -76,9 +74,7 @@ export function SwotSuggestMoreDialog({
       toast.success(`Đã thêm ${hydratedItems.length} gợi ý vào ${label}`)
       onClose()
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Lỗi kết nối AI. Thử lại.'
-      )
+      toast.error(err instanceof Error ? err.message : 'Lỗi kết nối AI. Thử lại.')
     } finally {
       setIsLoading(false)
     }
@@ -89,30 +85,30 @@ export function SwotSuggestMoreDialog({
   return (
     <div
       ref={dialogRef}
-      className="absolute top-full left-0 right-0 z-50 mt-1 border-2 border-black bg-white p-4 shadow-[4px_4px_0_#000] space-y-3"
+      className="absolute top-full left-0 right-0 z-50 mt-1 border-2 border-ink bg-white p-4 space-y-3"
+      style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
     >
       <div className="flex items-center justify-between">
-        <h4 className="font-display font-bold text-sm">
-          🤖 Gợi thêm cho &ldquo;{label}&rdquo;
+        <h4 className="font-display font-bold text-sm text-ink inline-flex items-center gap-1">
+          <Sparkles className="w-4 h-4 text-[#c73937]" />
+          Gợi thêm cho &ldquo;{label}&rdquo;
         </h4>
         <button
           onClick={onClose}
           disabled={isLoading}
-          className="text-sm hover:bg-gray-100 px-1.5 py-0.5 rounded"
+          className="text-text-2 hover:text-ink hover:bg-bg-warm p-1"
         >
-          ✕
+          <XIcon className="w-4 h-4" />
         </button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Bạn muốn AI tập trung vào hướng nào?
-      </p>
+      <p className="font-body text-xs text-text-3">Bạn muốn AI tập trung vào hướng nào?</p>
       <Textarea
         value={hint}
         onChange={(e) => setHint(e.target.value)}
         placeholder="Ví dụ: tập trung vào năng lực công nghệ, hoặc để AI tự chọn nếu để trống"
         rows={2}
         disabled={isLoading}
-        className="border-2 border-black resize-none text-sm"
+        className="border-2 border-ink bg-white resize-none text-sm"
       />
       <div className="flex justify-end gap-2">
         <Button
@@ -120,7 +116,7 @@ export function SwotSuggestMoreDialog({
           size="sm"
           onClick={onClose}
           disabled={isLoading}
-          className="border-2 border-black text-xs font-display font-bold"
+          className="border-2 border-ink text-xs font-display font-bold"
         >
           Huỷ
         </Button>
@@ -128,15 +124,17 @@ export function SwotSuggestMoreDialog({
           size="sm"
           onClick={handleSubmit}
           disabled={isLoading}
-          className="border-2 border-black bg-black text-white text-xs font-display font-bold shadow-[2px_2px_0_#000] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          className="border-2 border-ink bg-ink text-white text-xs font-display font-bold shadow-[2px_2px_0_#2C2B2B] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
         >
           {isLoading ? (
-            <span className="flex items-center gap-1.5">
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <>
+              <Loader2 className="mr-1 w-3 h-3 animate-spin" />
               Đang tạo...
-            </span>
+            </>
           ) : (
-            '⚡ Gợi thêm →'
+            <>
+              <Sparkles className="mr-1 w-3 h-3" /> Gợi thêm <ArrowRight className="ml-1 w-3 h-3" />
+            </>
           )}
         </Button>
       </div>

@@ -43,7 +43,7 @@ export function findIndustryOption(raw: string) {
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-xs font-bold tracking-widest uppercase text-muted-foreground border-b-2 border-black pb-1 mb-4">
+    <div className="font-display font-bold text-xs tracking-widest uppercase text-text-3 border-b-2 border-ink pb-1 mb-4">
       {children}
     </div>
   )

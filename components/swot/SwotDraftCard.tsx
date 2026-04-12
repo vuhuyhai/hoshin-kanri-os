@@ -1,19 +1,20 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { Pencil, X as XIcon } from 'lucide-react'
 import { SwotConflictBadge } from './SwotConflictBadge'
 import type { SwotDraftItem, ConflictIssue } from '@/lib/swot/coaching-types'
 
-const FRAMEWORK_BADGE: Record<string, { label: string; color: string }> = {
-  '8Ms': { label: '8Ms', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  '5Forces': { label: '5F', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  PESTEL: { label: 'PESTEL', color: 'bg-green-100 text-green-800 border-green-300' },
+const FRAMEWORK_BADGE: Record<string, { label: string; accent: string }> = {
+  '8Ms':     { label: '8Ms',    accent: '#2563eb' },
+  '5Forces': { label: '5F',     accent: '#f59e0b' },
+  PESTEL:    { label: 'PESTEL', accent: '#10b981' },
 }
 
-const CONFIDENCE_BORDER: Record<string, string> = {
-  high: 'border-l-green-500',
-  medium: 'border-l-yellow-500',
-  low: 'border-l-gray-400',
+const CONFIDENCE_ACCENT: Record<string, string> = {
+  high:   '#10b981',
+  medium: '#f59e0b',
+  low:    '#8A8787',
 }
 
 interface SwotDraftCardProps {
@@ -25,7 +26,9 @@ interface SwotDraftCardProps {
   onDismissConflict?: () => void
 }
 
-export function SwotDraftCard({ item, onEdit, onDelete, conflictIssue, relatedItemStatement, onDismissConflict }: SwotDraftCardProps) {
+export function SwotDraftCard({
+  item, onEdit, onDelete, conflictIssue, relatedItemStatement, onDismissConflict,
+}: SwotDraftCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(item.statement)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -39,9 +42,7 @@ export function SwotDraftCard({ item, onEdit, onDelete, conflictIssue, relatedIt
 
   const handleSave = () => {
     const trimmed = editText.trim()
-    if (trimmed && trimmed !== item.statement) {
-      onEdit(trimmed)
-    }
+    if (trimmed && trimmed !== item.statement) onEdit(trimmed)
     setIsEditing(false)
   }
 
@@ -59,12 +60,13 @@ export function SwotDraftCard({ item, onEdit, onDelete, conflictIssue, relatedIt
   }
 
   const badge = FRAMEWORK_BADGE[item.frameworkSource]
-  const borderColor = CONFIDENCE_BORDER[item.confidence]
+  const confidenceAccent = CONFIDENCE_ACCENT[item.confidence] ?? '#8A8787'
 
   return (
     <div
       data-item-id={item.id}
-      className={`group border-2 border-black border-l-4 ${borderColor} bg-white p-3 transition-shadow hover:shadow-[2px_2px_0_#000]`}
+      className="group border-2 border-ink bg-white p-3 transition-shadow hover:shadow-[2px_2px_0_#2C2B2B]"
+      style={{ borderLeft: `4px solid ${confidenceAccent}` }}
     >
       {isEditing ? (
         <div className="space-y-2">
@@ -74,18 +76,18 @@ export function SwotDraftCard({ item, onEdit, onDelete, conflictIssue, relatedIt
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={2}
-            className="w-full text-sm border-2 border-black p-2 resize-none focus:outline-none"
+            className="w-full font-body text-sm border-2 border-ink bg-white p-2 resize-none focus:outline-none"
           />
           <div className="flex gap-2 text-xs">
             <button
               onClick={handleSave}
-              className="px-2 py-1 bg-black text-white border-2 border-black font-medium"
+              className="px-2 py-1 bg-ink text-white border-2 border-ink font-display font-bold"
             >
               Lưu
             </button>
             <button
               onClick={handleCancel}
-              className="px-2 py-1 border-2 border-black font-medium"
+              className="px-2 py-1 bg-white text-ink border-2 border-ink font-display font-bold"
             >
               Huỷ
             </button>
@@ -96,37 +98,38 @@ export function SwotDraftCard({ item, onEdit, onDelete, conflictIssue, relatedIt
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {badge && (
-                <span className={`text-[10px] px-1.5 py-0.5 border font-medium ${badge.color}`}>
+                <span
+                  className="font-display font-bold text-[10px] px-1.5 py-0.5 border-2 border-ink text-white"
+                  style={{ background: badge.accent }}
+                >
                   {badge.label}
                 </span>
               )}
               {item.isUserAdded && (
-                <span className="text-[10px] px-1.5 py-0.5 border border-purple-300 bg-purple-100 text-purple-800 font-medium">
+                <span className="font-display font-bold text-[10px] px-1.5 py-0.5 border-2 border-ink bg-white text-ink">
                   Tự thêm
                 </span>
               )}
-              <span className="text-sm">{item.statement}</span>
+              <span className="font-body text-sm text-ink">{item.statement}</span>
             </div>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               <button
                 onClick={() => setIsEditing(true)}
-                className="text-sm hover:bg-gray-100 px-1 rounded"
+                className="text-text-2 hover:text-ink hover:bg-bg-warm p-1"
                 title="Sửa"
               >
-                ✏️
+                <Pencil className="w-3 h-3" />
               </button>
               <button
                 onClick={onDelete}
-                className="text-sm hover:bg-red-50 px-1 rounded"
+                className="text-text-2 hover:text-[#c73937] hover:bg-bg-warm p-1"
                 title="Xoá"
               >
-                ✕
+                <XIcon className="w-3 h-3" />
               </button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 pl-0.5">
-            AI: {item.rationale}
-          </p>
+          <p className="font-body text-xs text-text-3 mt-1 pl-0.5 italic">AI: {item.rationale}</p>
           {conflictIssue && onDismissConflict && (
             <SwotConflictBadge
               issue={conflictIssue}

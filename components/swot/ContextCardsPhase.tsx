@@ -2,42 +2,21 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { Globe, AlertTriangle, Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
+import { ContextCardItem } from './ContextCardItem'
 import type { ContextCard, OrgContext, CoachingSummary } from '@/lib/swot/types'
 
 interface ContextCardsPhaseProps {
   orgContext: OrgContext
   summary: CoachingSummary | null
+  /** Wizard callbacks. If omitted, falls back to useSwotStore.setSwotPhase. */
+  onBack?: () => void
+  onContinue?: () => void
 }
 
-const CARD_TYPE_LABELS: Record<string, string> = {
-  market_trend: 'Xu hướng',
-  competitive_risk: 'Cạnh tranh',
-  regulatory: 'Pháp lý',
-  opportunity: 'Cơ hội',
-}
-
-const QUADRANT_CONFIG = {
-  O: {
-    label: 'Cơ Hội',
-    bg: 'bg-blue-50 dark:bg-blue-950',
-    border: 'border-blue-200 dark:border-blue-800',
-    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  },
-  T: {
-    label: 'Thách Thức',
-    bg: 'bg-red-50 dark:bg-red-950',
-    border: 'border-red-200 dark:border-red-800',
-    badge: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-  },
-} as const
-
-export function ContextCardsPhase({
-  orgContext,
-  summary,
-}: ContextCardsPhaseProps) {
+export function ContextCardsPhase({ orgContext, summary, onBack, onContinue }: ContextCardsPhaseProps) {
   const setSwotPhase = useSwotStore((s) => s.setSwotPhase)
   const setContextCards = useSwotStore((s) => s.setContextCards)
   const existingCards = useSwotStore((s) => s.evidence.contextCards)
@@ -48,32 +27,18 @@ export function ContextCardsPhase({
   const [cards, setCards] = useState<ContextCard[]>(existingCards)
   const started = useRef(existingCards.length > 0)
 
-  // Auto-fetch on mount if no cards yet
-  useEffect(() => {
-    if (!started.current) {
-      started.current = true
-      loadContextCards()
-    }
-  }, [])
-
   const loadContextCards = async () => {
     setStatus('loading')
     try {
-      const dummySummary = summary ?? {
-        strengths: [],
-        weaknesses: [],
-        opportunities: [],
-        threats: [],
-      }
+      const dummySummary =
+        summary ?? { strengths: [], weaknesses: [], opportunities: [], threats: [] }
       const response = await fetch('/api/swot/context-cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ summary: dummySummary, orgContext }),
       })
-
       if (!response.ok) throw new Error('Context cards failed')
       const data = await response.json()
-
       const fetchedCards = data.cards ?? []
       setCards(fetchedCards)
       setContextCards(fetchedCards)
@@ -84,57 +49,65 @@ export function ContextCardsPhase({
     }
   }
 
-  const handleContinue = () => {
-    setSwotPhase(3)
-  }
+  useEffect(() => {
+    if (!started.current) {
+      started.current = true
+      loadContextCards()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  const handleContinue = () => {
+    if (onContinue) onContinue()
+    else setSwotPhase(3)
+  }
   const handleSkip = () => {
     setContextCards([])
-    setSwotPhase(3)
+    if (onContinue) onContinue()
+    else setSwotPhase(3)
+  }
+  const handleBack = () => {
+    if (onBack) onBack()
+    else setSwotPhase(1)
   }
 
   if (status === 'loading') {
     return (
-      <div className="mx-auto max-w-lg space-y-8 py-12 text-center">
+      <div className="mx-auto max-w-lg py-12 text-center space-y-6">
         <div
-          className="animate-spin text-6xl"
-          style={{ animationDuration: '3s' }}
+          className="inline-flex items-center justify-center w-20 h-20 border-2 border-ink bg-white"
+          style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
         >
-          🌐
+          <Loader2 className="w-10 h-10 text-ink animate-spin" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">
+          <h2 className="font-display font-black text-xl uppercase text-ink">
             Đang phân tích bối cảnh thị trường
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="font-body text-sm text-text-2">
             AI đang phân tích bối cảnh thị trường cho ngành của bạn...
           </p>
         </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="mx-auto h-24 animate-pulse rounded-lg bg-muted"
-              style={{ animationDelay: `${i * 200}ms` }}
-            />
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground">Thường mất 15–20 giây</p>
+        <p className="font-body text-xs text-text-3">Thường mất 15–20 giây</p>
       </div>
     )
   }
 
   if (status === 'error') {
     return (
-      <div className="mx-auto max-w-lg space-y-6 py-12 text-center">
-        <div className="text-6xl">⚠️</div>
+      <div className="mx-auto max-w-lg py-12 text-center space-y-6">
+        <div
+          className="inline-flex items-center justify-center w-20 h-20 border-2 border-ink bg-white"
+          style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
+        >
+          <AlertTriangle className="w-10 h-10 text-[#c73937]" />
+        </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">
+          <h2 className="font-display font-black text-xl uppercase text-ink">
             Không thể phân tích bối cảnh
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Bạn vẫn có thể tiếp tục — AI sẽ tổng hợp SWOT dựa trên thông tin
-            từ coaching.
+          <p className="font-body text-sm text-text-2">
+            Bạn vẫn có thể tiếp tục — AI sẽ tổng hợp SWOT dựa trên thông tin từ coaching.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -147,7 +120,9 @@ export function ContextCardsPhase({
           >
             Thử lại
           </Button>
-          <Button onClick={handleSkip}>Tiếp tục không cần bối cảnh →</Button>
+          <Button onClick={handleSkip}>
+            Tiếp tục không cần bối cảnh <ArrowRight className="ml-1 w-4 h-4" />
+          </Button>
         </div>
       </div>
     )
@@ -155,62 +130,37 @@ export function ContextCardsPhase({
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
       <button
-        onClick={() => setSwotPhase(1)}
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onClick={handleBack}
+        className="inline-flex items-center gap-1 font-body text-sm text-text-2 hover:text-ink transition-colors"
       >
-        ← Quay lại coaching
+        <ArrowLeft className="w-4 h-4" /> Quay lại coaching
       </button>
 
-      <div className="space-y-2 text-center">
-        <div className="text-3xl">🌐</div>
-        <h2 className="text-xl font-semibold">Bối cảnh thị trường</h2>
-        <p className="text-sm text-muted-foreground">
-          AI đã phân tích {cards.length} yếu tố bên ngoài liên quan đến doanh
-          nghiệp của bạn. Xem qua trước khi tổng hợp SWOT.
+      <div className="text-center space-y-2">
+        <div
+          className="inline-flex items-center justify-center w-14 h-14 border-2 border-ink bg-white"
+          style={{ boxShadow: '3px 3px 0 #2C2B2B' }}
+        >
+          <Globe className="w-7 h-7 text-ink" />
+        </div>
+        <h2 className="font-display font-black text-xl uppercase text-ink">
+          Bối cảnh thị trường
+        </h2>
+        <p className="font-body text-sm text-text-2">
+          AI đã phân tích {cards.length} yếu tố bên ngoài liên quan đến doanh nghiệp của bạn. Xem qua trước khi tổng hợp SWOT.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {cards.map((card) => {
-          const qConfig = QUADRANT_CONFIG[card.swot_quadrant]
-          return (
-            <div
-              key={card.id}
-              className={`space-y-2 rounded-lg border p-4 ${qConfig.bg} ${qConfig.border}`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold leading-snug">
-                  {card.title}
-                </h3>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${qConfig.badge}`}
-                >
-                  {qConfig.label}
-                </span>
-              </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {card.insight}
-              </p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {CARD_TYPE_LABELS[card.card_type] ?? card.card_type}
-                </Badge>
-                {card.relevance_score >= 0.8 && (
-                  <span className="text-xs text-muted-foreground">
-                    Độ liên quan cao
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {cards.map((card) => (
+          <ContextCardItem key={card.id} card={card} />
+        ))}
       </div>
 
       <div className="flex justify-center pt-2">
         <Button onClick={handleContinue} className="px-8">
-          Tiếp tục →
+          Tiếp tục <ArrowRight className="ml-1 w-4 h-4" />
         </Button>
       </div>
     </div>

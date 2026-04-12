@@ -142,7 +142,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
           type="button"
           disabled={!tier1Ready}
           onClick={() => { shouldScrollRef.current = true; setShowFrameworks(true) }}
-          className="w-full border-2 border-black bg-black text-white font-display font-bold text-sm py-3 shadow-[4px_4px_0_#E8452C] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-x-0 disabled:translate-y-0"
+          className="w-full border-2 border-ink bg-ink text-white font-display font-bold text-sm py-3 shadow-[4px_4px_0_#E8452C] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-x-0 disabled:translate-y-0"
         >
           Tiếp theo: Chọn góc nhìn phân tích →
         </button>
@@ -151,7 +151,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
         <SectionLabel>GÓC NHÌN PHÂN TÍCH</SectionLabel>
         {showFrameworks ? (
           <div className="transition-all duration-300 ease-in-out space-y-6">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-text-3">
               Chọn yếu tố cụ thể — AI sẽ tập trung phân tích SWOT theo đúng những gì bạn quan tâm
             </p>
             <SwotFrameworkPicker
@@ -165,7 +165,7 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
               <Button
                 type="submit"
                 disabled={isLoading || !elementsValid}
-                className="w-full border-2 border-black bg-[#E8452C] text-white font-display font-bold text-sm py-6 shadow-[4px_4px_0_#2C2B2B] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0_#2C2B2B] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+                className="w-full border-2 border-ink bg-[#E8452C] text-white font-display font-bold text-sm py-6 shadow-[4px_4px_0_#2C2B2B] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0_#2C2B2B] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -177,16 +177,16 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
                 )}
               </Button>
               {!elementsValid && !isLoading && (
-                <div className="invisible group-hover:visible absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black text-white text-xs px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_#000]">
+                <div className="invisible group-hover:visible absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-ink text-white text-xs px-3 py-1.5 border-2 border-ink shadow-[2px_2px_0_#2C2B2B]">
                   Vui lòng chọn ít nhất 1 yếu tố 8Ms và 1 yếu tố OT
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="border-2 border-dashed border-muted-foreground/30 p-6 text-center opacity-50">
-            <Lock className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
+          <div className="border-2 border-dashed border-ink/30 p-6 text-center opacity-50">
+            <Lock className="h-5 w-5 mx-auto mb-2 text-text-3" />
+            <p className="font-body text-sm text-text-3">
               Hoàn thành thông tin cơ bản để mở khóa bước này
             </p>
           </div>

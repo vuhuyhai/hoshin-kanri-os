@@ -100,7 +100,7 @@ export async function POST(
     })
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250514',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -151,7 +151,17 @@ export async function POST(
       inserted.push(row)
     }
 
-    return NextResponse.json(inserted, { status: 201 })
+    // Hydrate sw_factors / ot_factors so the response matches
+    // TowsStrategyWithFactorsRecord — the shape the GET /strategies route
+    // returns and StrategyReviewTable expects. Without this the client
+    // crashes on s.sw_factors.map(...).
+    const enriched = inserted.map((row) => ({
+      ...row,
+      sw_factors: swFactors ?? [],
+      ot_factors: otFactors ?? [],
+    }))
+
+    return NextResponse.json(enriched, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Lỗi tạo chiến lược AI'
     return NextResponse.json({ error: msg }, { status: 500 })

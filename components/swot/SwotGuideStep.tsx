@@ -1,3 +1,4 @@
+import { Lightbulb } from 'lucide-react'
 import type { GuideDetail } from '@/lib/swot/guide-data'
 
 interface SwotGuideStepProps {
@@ -98,15 +99,13 @@ export function SwotGuideStep({
 
         {/* Tip */}
         <div
-          className="border-l-4 pl-4 py-3 text-sm font-body"
+          className="border-l-4 pl-4 py-3 text-sm font-body inline-flex items-start gap-2"
           style={{
             borderColor: '#c73937',
             backgroundColor: '#FFF5F5',
           }}
         >
-          <span className="mr-1" role="img" aria-label="tip">
-            💡
-          </span>
+          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-[#c73937]" />
           <span className="text-text-2">{tip}</span>
         </div>
       </div>

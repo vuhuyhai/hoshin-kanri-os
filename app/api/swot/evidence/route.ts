@@ -3,6 +3,7 @@ import { generateQueriesForItem } from '@/lib/swot/query-generator'
 import { searchEvidenceForItem } from '@/lib/swot/evidence-searcher'
 import pLimit from 'p-limit'
 import type { CoachingItem, EvidenceResult, OrgContext } from '@/lib/swot/types'
+import type { Json } from '@/lib/supabase/types'
 
 const limit = pLimit(4)
 
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     items.map((item) => limit(async (): Promise<EvidenceResultItem> => {
       const cacheKey = buildCacheKey(item.text, org.industry)
       const { data: cached } = await supabase.from('evidence_cache').select('result_json').eq('cache_key', cacheKey).gt('expires_at', new Date().toISOString()).single()
-      if (cached) return { item, evidence: (cached as { result_json: EvidenceResult }).result_json, from_cache: true }
+      if (cached) return { item, evidence: (cached as unknown as { result_json: EvidenceResult }).result_json, from_cache: true }
 
       const queries = await generateQueriesForItem(item, orgContext)
       const evidence = await searchEvidenceForItem(item, queries)
@@ -54,8 +55,7 @@ export async function POST(req: Request) {
       if (evidence.found) {
         const expires = new Date()
         expires.setDate(expires.getDate() + 7)
-        // @ts-expect-error evidence_cache not in generated Supabase types (migration 006)
-        await supabase.from('evidence_cache').upsert({ cache_key: cacheKey, result_json: evidence, expires_at: expires.toISOString() })
+        await supabase.from('evidence_cache').upsert({ cache_key: cacheKey, result_json: evidence as unknown as Json, expires_at: expires.toISOString() })
       }
 
       return { item, evidence, queries_used: queries.map((q) => q.query) }

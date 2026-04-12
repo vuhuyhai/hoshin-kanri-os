@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { syncCandidatesToXMatrix } from '@/lib/swot/sync-to-xmatrix'
-import type { HoshinCandidate } from '@/lib/swot/swot-session-store'
+import { syncTowsStrategiesToXMatrix } from '@/lib/swot/sync-to-xmatrix'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,8 +8,9 @@ export async function POST(request: NextRequest) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user)
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const { data: membership } = await supabase
       .from('org_members')
@@ -18,23 +18,29 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    if (!membership)
+    if (!membership) {
       return NextResponse.json({ error: 'Org not found' }, { status: 404 })
-
-    const body = await request.json()
-    const { candidates } = body as { candidates: HoshinCandidate[] }
-
-    if (!Array.isArray(candidates) || candidates.length === 0) {
-      return NextResponse.json(
-        { error: 'Chưa chọn Hoshin Candidate nào' },
-        { status: 400 }
-      )
     }
 
-    const result = await syncCandidatesToXMatrix(
-      membership.org_id,
-      candidates
-    )
+    const body = await request.json()
+    const { analysisId } = body as { analysisId?: string }
+
+    if (!analysisId || typeof analysisId !== 'string') {
+      return NextResponse.json({ error: 'Thiếu analysisId' }, { status: 400 })
+    }
+
+    // Verify the analysis belongs to this org
+    const { data: analysis } = await supabase
+      .from('swot_analyses')
+      .select('org_id')
+      .eq('id', analysisId)
+      .single()
+
+    if (!analysis || analysis.org_id !== membership.org_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const result = await syncTowsStrategiesToXMatrix(membership.org_id, analysisId)
 
     if (!result.success) {
       return NextResponse.json(

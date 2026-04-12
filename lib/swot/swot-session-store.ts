@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
 import { createClient } from '@/lib/supabase/client'
 import type { Json } from '@/lib/supabase/types'
 import type {
@@ -10,7 +10,14 @@ import type {
   DimensionInsight,
   ContextCard,
 } from './types'
-import type { SwotDraft } from './coaching-types'
+import type {
+  SwotDraft,
+  SwotDraftItem,
+  SwotContextInput,
+  QuadrantKey,
+  QuadrantSuggestState,
+  ConflictCheckResult,
+} from './coaching-types'
 import {
   createInitialCoachingTracker,
   getNextDimension,
@@ -278,6 +285,86 @@ function debouncedSave(saveFn: () => Promise<void>) {
 }
 
 // ============================================================
+// COACHING WIZARD SLICE — merged from useSwotCoachingStore
+// ============================================================
+
+export type CoachingWizardStep = 'form' | 'loading' | 'review' | 'confirmed'
+
+export interface CoachingWizardState {
+  step: CoachingWizardStep
+  contextInput: SwotContextInput | null
+  draft: SwotDraft | null
+  loadingMessage: string
+  suggestState: QuadrantSuggestState
+  conflictResult: ConflictCheckResult | null
+  isCheckingConflicts: boolean
+}
+
+function createEmptyCoachingWizard(): CoachingWizardState {
+  return {
+    step: 'form',
+    contextInput: null,
+    draft: null,
+    loadingMessage: '',
+    suggestState: { isOpen: false, isLoading: false, quadrant: null },
+    conflictResult: null,
+    isCheckingConflicts: false,
+  }
+}
+
+// ============================================================
+// PERSIST STORAGE — TTL wrapper + version migration
+// ============================================================
+
+const SWOT_STORE_NAME = 'hoshin-swot-session'
+const SWOT_STORE_VERSION = 2
+const SWOT_STORE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+interface PersistedEnvelope {
+  state?: { __savedAt?: number } & Record<string, unknown>
+  version?: number
+}
+
+function createTtlLocalStorage(ttlMs: number): StateStorage {
+  return {
+    getItem: (key) => {
+      if (typeof window === 'undefined') return null
+      const raw = window.localStorage.getItem(key)
+      if (!raw) return null
+      try {
+        const parsed = JSON.parse(raw) as PersistedEnvelope
+        const savedAt = parsed.state?.__savedAt
+        if (typeof savedAt === 'number' && Date.now() - savedAt > ttlMs) {
+          window.localStorage.removeItem(key)
+          return null
+        }
+      } catch {
+        // malformed — let zustand handle
+      }
+      return raw
+    },
+    setItem: (key, value) => {
+      if (typeof window === 'undefined') return
+      try {
+        const parsed = JSON.parse(value) as PersistedEnvelope
+        if (parsed.state) {
+          parsed.state.__savedAt = Date.now()
+          window.localStorage.setItem(key, JSON.stringify(parsed))
+          return
+        }
+      } catch {
+        // fall through
+      }
+      window.localStorage.setItem(key, value)
+    },
+    removeItem: (key) => {
+      if (typeof window === 'undefined') return
+      window.localStorage.removeItem(key)
+    },
+  }
+}
+
+// ============================================================
 // ZUSTAND STORE
 // ============================================================
 
@@ -378,6 +465,23 @@ interface SwotStoreState extends SwotSession {
   confirmedDraft: SwotDraft | null
   setConfirmedDraft: (draft: SwotDraft) => void
 
+  // Coaching wizard (Step 1) — merged from useSwotCoachingStore
+  coachingWizard: CoachingWizardState
+  setCoachingStep: (step: CoachingWizardStep) => void
+  setCoachingContextInput: (input: SwotContextInput) => void
+  setCoachingDraft: (draft: SwotDraft) => void
+  setCoachingLoadingMessage: (msg: string) => void
+  updateCoachingDraftItem: (quadrant: QuadrantKey, itemId: string, newStatement: string) => void
+  addCoachingDraftItem: (quadrant: QuadrantKey) => void
+  removeCoachingDraftItem: (quadrant: QuadrantKey, itemId: string) => void
+  appendCoachingSuggestedItems: (quadrant: QuadrantKey, items: SwotDraftItem[]) => void
+  openCoachingSuggestDialog: (quadrant: QuadrantKey) => void
+  closeCoachingSuggestDialog: () => void
+  setCoachingConflictResult: (result: ConflictCheckResult | null) => void
+  setCoachingIsCheckingConflicts: (loading: boolean) => void
+  dismissCoachingConflict: (issueIndex: number) => void
+  resetCoachingWizard: () => void
+
   // Intro screen actions
   startCoaching: (
     selectedDimensions: Record<FrameworkId, string[]>,
@@ -410,6 +514,9 @@ export const useSwotStore = create<SwotStoreState>()(
 
   // Confirmed draft from Phase 1
   confirmedDraft: null as SwotDraft | null,
+
+  // Coaching wizard (Step 1) — initial state
+  coachingWizard: createEmptyCoachingWizard(),
 
   // Coaching state machine
   coachingTracker: createInitialCoachingTracker(),
@@ -602,6 +709,8 @@ export const useSwotStore = create<SwotStoreState>()(
         case 'coaching':
           return {
             coaching: { status: 'not_started', responses: [] },
+            coachingWizard: createEmptyCoachingWizard(),
+            confirmedDraft: null,
             evidence: { status: 'locked', batches: [], allSources: [], contextCards: [], contextCardsStatus: 'idle' },
             synthesis: { status: 'locked', items: [] },
             strategy: {
@@ -675,6 +784,150 @@ export const useSwotStore = create<SwotStoreState>()(
   setConfirmedDraft: (draft: SwotDraft) => {
     set({ confirmedDraft: draft })
   },
+
+  // ============================================================
+  // COACHING WIZARD (STEP 1) — merged from useSwotCoachingStore
+  // ============================================================
+  //
+  // Sync invariant: if the user edits the working draft after having
+  // already confirmed, we clear confirmedDraft so downstream steps
+  // (Context/Synthesis) don't operate on stale data. They must
+  // re-confirm through SwotConfirmButton.
+
+  setCoachingStep: (step) =>
+    set((state) => ({ coachingWizard: { ...state.coachingWizard, step } })),
+
+  setCoachingContextInput: (input) =>
+    set((state) => ({ coachingWizard: { ...state.coachingWizard, contextInput: input } })),
+
+  setCoachingDraft: (draft) =>
+    set((state) => ({
+      coachingWizard: { ...state.coachingWizard, draft },
+      // Replacing draft wholesale invalidates previous confirmation
+      confirmedDraft: null,
+    })),
+
+  setCoachingLoadingMessage: (msg) =>
+    set((state) => ({ coachingWizard: { ...state.coachingWizard, loadingMessage: msg } })),
+
+  updateCoachingDraftItem: (quadrant, itemId, newStatement) =>
+    set((state) => {
+      if (!state.coachingWizard.draft) return state
+      return {
+        coachingWizard: {
+          ...state.coachingWizard,
+          draft: {
+            ...state.coachingWizard.draft,
+            [quadrant]: state.coachingWizard.draft[quadrant].map((item: SwotDraftItem) =>
+              item.id === itemId ? { ...item, statement: newStatement } : item
+            ),
+          },
+        },
+        confirmedDraft: null,
+      }
+    }),
+
+  addCoachingDraftItem: (quadrant) =>
+    set((state) => {
+      if (!state.coachingWizard.draft) return state
+      const newItem: SwotDraftItem = {
+        id: crypto.randomUUID(),
+        statement: '',
+        rationale: '',
+        frameworkSource: '8Ms',
+        confidence: 'medium',
+        isUserAdded: true,
+      }
+      return {
+        coachingWizard: {
+          ...state.coachingWizard,
+          draft: {
+            ...state.coachingWizard.draft,
+            [quadrant]: [...state.coachingWizard.draft[quadrant], newItem],
+          },
+        },
+        confirmedDraft: null,
+      }
+    }),
+
+  removeCoachingDraftItem: (quadrant, itemId) =>
+    set((state) => {
+      if (!state.coachingWizard.draft) return state
+      return {
+        coachingWizard: {
+          ...state.coachingWizard,
+          draft: {
+            ...state.coachingWizard.draft,
+            [quadrant]: state.coachingWizard.draft[quadrant].filter(
+              (item: SwotDraftItem) => item.id !== itemId
+            ),
+          },
+        },
+        confirmedDraft: null,
+      }
+    }),
+
+  appendCoachingSuggestedItems: (quadrant, items) =>
+    set((state) => {
+      if (!state.coachingWizard.draft) return state
+      return {
+        coachingWizard: {
+          ...state.coachingWizard,
+          draft: {
+            ...state.coachingWizard.draft,
+            [quadrant]: [...state.coachingWizard.draft[quadrant], ...items],
+          },
+        },
+        confirmedDraft: null,
+      }
+    }),
+
+  openCoachingSuggestDialog: (quadrant) =>
+    set((state) => ({
+      coachingWizard: {
+        ...state.coachingWizard,
+        suggestState: { isOpen: true, isLoading: false, quadrant },
+      },
+    })),
+
+  closeCoachingSuggestDialog: () =>
+    set((state) => ({
+      coachingWizard: {
+        ...state.coachingWizard,
+        suggestState: { isOpen: false, isLoading: false, quadrant: null },
+      },
+    })),
+
+  setCoachingConflictResult: (result) =>
+    set((state) => ({
+      coachingWizard: { ...state.coachingWizard, conflictResult: result },
+    })),
+
+  setCoachingIsCheckingConflicts: (loading) =>
+    set((state) => ({
+      coachingWizard: { ...state.coachingWizard, isCheckingConflicts: loading },
+    })),
+
+  dismissCoachingConflict: (issueIndex) =>
+    set((state) => {
+      if (!state.coachingWizard.conflictResult) return state
+      const issues = state.coachingWizard.conflictResult.issues.filter(
+        (_, i) => i !== issueIndex
+      )
+      return {
+        coachingWizard: {
+          ...state.coachingWizard,
+          conflictResult: {
+            ...state.coachingWizard.conflictResult,
+            hasIssues: issues.length > 0,
+            issues,
+          },
+        },
+      }
+    }),
+
+  resetCoachingWizard: () =>
+    set({ coachingWizard: createEmptyCoachingWizard() }),
 
   // ============================================================
   // PHASE 1 — COACHING
@@ -1004,6 +1257,7 @@ export const useSwotStore = create<SwotStoreState>()(
       ...createEmptySession(orgId),
       swotPhase: 1 as SwotPhaseNumber,
       confirmedDraft: null,
+      coachingWizard: createEmptyCoachingWizard(),
       coachingTracker: createInitialCoachingTracker(),
       coachingMessages: [],
       coachingCoverage: createEmptyCoverage(),
@@ -1194,10 +1448,35 @@ export const useSwotStore = create<SwotStoreState>()(
   },
     }),
     {
-      name: 'hoshin-swot-session',
+      name: SWOT_STORE_NAME,
+      version: SWOT_STORE_VERSION,
+      storage: createJSONStorage(() => createTtlLocalStorage(SWOT_STORE_TTL_MS)),
+      // v1 → v2: schema changed (added coachingWizard slice, migrated from
+      // useSwotCoachingStore). Drop old cache — DB (discovery_sessions) is the
+      // source of truth and will repopulate on initSession(). Returning an
+      // empty object leaves the factory-initialised default state intact after
+      // zustand's shallow merge.
+      migrate: (persistedState, version) => {
+        if (version < SWOT_STORE_VERSION) {
+          return {} as SwotStoreState
+        }
+        return persistedState as SwotStoreState
+      },
       partialize: (state) => ({
         swotPhase: state.swotPhase,
         confirmedDraft: state.confirmedDraft,
+        // Only persist resumable wizard fields. Transient UI state
+        // (loadingMessage, suggestState, conflictResult, isCheckingConflicts)
+        // is recomputed on interaction and should not survive a refresh.
+        coachingWizard: {
+          step: state.coachingWizard.step,
+          contextInput: state.coachingWizard.contextInput,
+          draft: state.coachingWizard.draft,
+          loadingMessage: '',
+          suggestState: { isOpen: false, isLoading: false, quadrant: null },
+          conflictResult: null,
+          isCheckingConflicts: false,
+        } satisfies CoachingWizardState,
         coachingTracker: state.coachingTracker,
         coachingMessages: state.coachingMessages.slice(-20),
         coachingCoverage: state.coachingCoverage,
@@ -1207,6 +1486,16 @@ export const useSwotStore = create<SwotStoreState>()(
         staleReason: state.staleReason,
       }),
       onRehydrateStorage: () => (state) => {
+        // Orphan cleanup: previous version used a separate sessionStorage key
+        // for the coaching wizard. Remove it once so stale data can't leak in.
+        if (typeof window !== 'undefined') {
+          try {
+            window.sessionStorage.removeItem('swot-coaching-session')
+          } catch {
+            /* noop */
+          }
+        }
+
         if (state) {
           const updates: Record<string, unknown> = {}
           if (state.coachingCoverage) {

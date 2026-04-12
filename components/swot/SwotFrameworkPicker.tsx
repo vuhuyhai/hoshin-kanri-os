@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Check, Square } from 'lucide-react'
 import { FrameworkElementSelector } from './FrameworkElementSelector'
 import type { SelectedElements } from '@/lib/swot/coaching-types'
 
@@ -29,7 +29,8 @@ const SUGGESTION_TOOLTIPS: Record<string, string> = {
 function AiSuggestBadge({ tooltip }: { tooltip: string }) {
   return (
     <div
-      className="absolute -top-2 -right-2 z-10 flex items-center gap-1 bg-[#E8452C] text-white text-[10px] font-bold border-2 border-black px-2 py-0.5 shadow-[2px_2px_0_#2C2B2B]"
+      className="absolute -top-2 -right-2 z-10 flex items-center gap-1 bg-[#E8452C] text-white text-[10px] font-display font-bold border-2 border-ink px-2 py-0.5"
+      style={{ boxShadow: '2px 2px 0 #2C2B2B' }}
       title={tooltip}
     >
       <Sparkles className="h-2.5 w-2.5" />
@@ -51,7 +52,6 @@ export function SwotFrameworkPicker({
 }: SwotFrameworkPickerProps) {
   const autoSelectedRef = useRef(false)
 
-  // Auto-select suggested frameworks if user hasn't chosen any
   useEffect(() => {
     if (autoSelectedRef.current) return
     const next = { ...selectedElements }
@@ -61,7 +61,6 @@ export function SwotFrameworkPicker({
       next.eightMs = EIGHT_MS_ELEMENTS.slice(0, 2)
       changed = true
     }
-
     if (suggestedOT === 'porter5' && selectedElements.fiveForces.length === 0) {
       next.fiveForces = FIVE_FORCES_ELEMENTS.slice(0, 2)
       changed = true
@@ -76,10 +75,7 @@ export function SwotFrameworkPicker({
     }
   }, [suggestedSW, suggestedOT]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggleElement = (
-    key: keyof SelectedElements,
-    element: string,
-  ) => {
+  const toggleElement = (key: keyof SelectedElements, element: string) => {
     const current = selectedElements[key]
     const next = current.includes(element)
       ? current.filter((e) => e !== element)
@@ -94,20 +90,20 @@ export function SwotFrameworkPicker({
 
   return (
     <div className="space-y-6">
-      {/* ── S-W Group ── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-display font-bold px-2 py-0.5 border-2 border-blue-600 bg-blue-50 text-blue-700">
+          <span
+            className="font-display font-bold text-xs px-2 py-0.5 border-2 border-ink text-white"
+            style={{ background: '#2563eb' }}
+          >
             S-W
           </span>
-          <span className="text-xs font-display font-semibold text-ink">
+          <span className="font-display font-semibold text-xs text-ink">
             Phân tích Điểm mạnh &amp; Điểm yếu
           </span>
         </div>
         <div className="relative">
-          {suggestedSW === '8Ms' && (
-            <AiSuggestBadge tooltip={SUGGESTION_TOOLTIPS['8Ms']} />
-          )}
+          {suggestedSW === '8Ms' && <AiSuggestBadge tooltip={SUGGESTION_TOOLTIPS['8Ms']} />}
           <FrameworkElementSelector
             name="8Ms"
             description="Phân tích nội bộ theo 8 nguồn lực"
@@ -119,24 +115,24 @@ export function SwotFrameworkPicker({
         </div>
       </div>
 
-      {/* ── O-T Group ── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-display font-bold px-2 py-0.5 border-2 border-orange-500 bg-orange-50 text-orange-700">
+          <span
+            className="font-display font-bold text-xs px-2 py-0.5 border-2 border-ink text-white"
+            style={{ background: '#c73937' }}
+          >
             O-T
           </span>
-          <span className="text-xs font-display font-semibold text-ink">
+          <span className="font-display font-semibold text-xs text-ink">
             Phân tích Cơ hội &amp; Thách thức
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground -mt-1">
+        <p className="font-body text-[11px] text-text-3 -mt-1">
           Chọn ít nhất 1 yếu tố từ 1 trong 2 framework bên dưới
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="relative">
-            {suggestedOT === 'porter5' && (
-              <AiSuggestBadge tooltip={SUGGESTION_TOOLTIPS.porter5} />
-            )}
+            {suggestedOT === 'porter5' && <AiSuggestBadge tooltip={SUGGESTION_TOOLTIPS.porter5} />}
             <FrameworkElementSelector
               name="5 Forces"
               description="Áp lực cạnh tranh ngành"
@@ -147,9 +143,7 @@ export function SwotFrameworkPicker({
             />
           </div>
           <div className="relative">
-            {suggestedOT === 'PESTEL' && (
-              <AiSuggestBadge tooltip={SUGGESTION_TOOLTIPS.PESTEL} />
-            )}
+            {suggestedOT === 'PESTEL' && <AiSuggestBadge tooltip={SUGGESTION_TOOLTIPS.PESTEL} />}
             <FrameworkElementSelector
               name="PESTEL"
               description="Môi trường vĩ mô Việt Nam"
@@ -162,25 +156,22 @@ export function SwotFrameworkPicker({
         </div>
       </div>
 
-      {/* ── Progress indicator ── */}
-      <div className="border-2 border-black/10 bg-gray-50 p-3 space-y-1.5">
+      <div className="border-2 border-ink/20 bg-bg-warm p-3 space-y-1.5">
         <div className="flex items-center gap-2 text-xs">
-          <span>{swValid ? '✅' : '⬜'}</span>
-          <span className={swValid ? 'text-ink font-medium' : 'text-muted-foreground'}>
+          {swValid ? <Check className="w-3 h-3 text-[#10b981]" /> : <Square className="w-3 h-3 text-text-3" />}
+          <span className={`font-body ${swValid ? 'text-ink font-medium' : 'text-text-3'}`}>
             Đã chọn {swCount} yếu tố SW
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span>{otValid ? '✅' : '⬜'}</span>
-          <span className={otValid ? 'text-ink font-medium' : 'text-muted-foreground'}>
+          {otValid ? <Check className="w-3 h-3 text-[#10b981]" /> : <Square className="w-3 h-3 text-text-3" />}
+          <span className={`font-body ${otValid ? 'text-ink font-medium' : 'text-text-3'}`}>
             Đã chọn {otCount} yếu tố OT
           </span>
         </div>
       </div>
 
-      {error && (
-        <p className="text-sm text-red-600 font-medium">{error}</p>
-      )}
+      {error && <p className="font-body text-sm text-[#c73937] font-medium">{error}</p>}
     </div>
   )
 }

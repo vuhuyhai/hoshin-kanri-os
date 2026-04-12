@@ -1,6 +1,7 @@
 import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { synthesizeSwot } from '@/lib/swot/synthesis-engine'
 import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
+import type { Json } from '@/lib/supabase/types'
 
 export const maxDuration = 60
 
@@ -53,8 +54,8 @@ export async function POST(req: Request) {
         items: result.swot_items,
         stats: result.stats,
         merge_log: result.merge_log,
-      },
-    }, { onConflict: 'org_id,step_completed' })
+      } as unknown as Json,
+    }, { onConflict: 'org_id,user_id,step_completed' })
 
     return Response.json(result)
   } catch (error) {

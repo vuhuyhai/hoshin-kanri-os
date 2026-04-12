@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
 import { WizardProgress } from './WizardProgress'
 import { Step1Vision } from './Step1Vision'
 import { Step2Hoshins } from './Step2Hoshins'
@@ -70,10 +71,13 @@ export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
   if (isLoadingPrefill) {
     return (
       <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
-        <div className="text-4xl animate-pulse">📋</div>
-        <p className="text-sm text-muted-foreground">
-          Đang tải dữ liệu Discovery...
-        </p>
+        <div
+          className="inline-flex items-center justify-center w-16 h-16 border-2 border-ink bg-white"
+          style={{ boxShadow: '3px 3px 0 #2C2B2B' }}
+        >
+          <Loader2 className="w-8 h-8 text-ink animate-spin" />
+        </div>
+        <p className="font-body text-sm text-text-3">Đang tải dữ liệu Discovery...</p>
       </div>
     )
   }

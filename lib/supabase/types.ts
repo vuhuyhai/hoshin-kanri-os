@@ -836,6 +836,78 @@ export type Database = {
         }
         Relationships: []
       }
+      xray_results: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          id: string
+          org_id: string | null
+          overall_level: string
+          overall_score: number
+          result_json: Json
+          user_id: string | null
+        }
+        Insert: {
+          answers_json: Json
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          overall_level: string
+          overall_score: number
+          result_json: Json
+          user_id?: string | null
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          overall_level?: string
+          overall_score?: number
+          result_json?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xray_results_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xray_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_cache: {
+        Row: {
+          cache_key: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          result_json: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          result_json: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          result_json?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       admin_customer_detail: {

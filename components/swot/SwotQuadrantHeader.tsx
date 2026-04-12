@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { Sparkles, Plus } from 'lucide-react'
 import { SwotSuggestMoreDialog } from './SwotSuggestMoreDialog'
 import type { QuadrantKey, SwotDraftItem, SwotContextInput } from '@/lib/swot/coaching-types'
 
 interface SwotQuadrantHeaderProps {
   quadrant: QuadrantKey
   label: string
-  icon: string
+  /** @deprecated emoji icon no longer rendered */
+  icon?: string
   itemCount: number
   maxItems?: number
   existingItems: SwotDraftItem[]
@@ -19,7 +21,6 @@ interface SwotQuadrantHeaderProps {
 export function SwotQuadrantHeader({
   quadrant,
   label,
-  icon,
   itemCount,
   maxItems = 8,
   existingItems,
@@ -33,27 +34,25 @@ export function SwotQuadrantHeader({
   return (
     <div className="relative">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm flex items-center gap-1.5">
-          {icon} {label}
-          <span className="text-xs font-normal text-muted-foreground">
-            ({itemCount})
-          </span>
+        <h3 className="font-display font-bold text-sm flex items-center gap-1.5 text-ink">
+          {label}
+          <span className="font-body text-xs font-normal text-text-3">({itemCount})</span>
         </h3>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onAddItem}
-            className="text-xs px-2 py-1 border border-black/30 hover:border-black hover:bg-white/50 transition-colors font-medium"
+            className="inline-flex items-center gap-1 text-xs px-2 py-1 border-2 border-ink bg-white hover:bg-[#F7F5F2] transition-colors font-display font-bold text-ink"
           >
-            + Thêm
+            <Plus className="w-3 h-3" /> Thêm
           </button>
           <button
             type="button"
             onClick={() => setShowSuggest(true)}
             title={isOverLimit ? 'Đã có nhiều items, cân nhắc trước khi thêm' : undefined}
-            className="text-xs px-2 py-1 border border-black/30 hover:border-black hover:bg-white/50 transition-colors font-medium"
+            className="inline-flex items-center gap-1 text-xs px-2 py-1 border-2 border-ink bg-white hover:bg-[#F7F5F2] transition-colors font-display font-bold text-ink"
           >
-            🤖 AI
+            <Sparkles className="w-3 h-3" /> AI
           </button>
         </div>
       </div>
