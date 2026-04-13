@@ -6,6 +6,9 @@
     },
     "app/api/swot/coaching/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/swot/coaching-draft/route.ts": {
+      "maxDuration": 60
     }
   }
 }

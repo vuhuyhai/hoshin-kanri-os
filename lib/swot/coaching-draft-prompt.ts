@@ -3,7 +3,7 @@ import { QUADRANT_LABELS } from './coaching-types'
 
 const SYSTEM_PROMPT = `Bạn là chuyên gia phân tích chiến lược doanh nghiệp Việt Nam với 20 năm kinh nghiệm.
 Nhiệm vụ: Tạo bản SWOT analysis chất lượng cao cho doanh nghiệp SME Việt Nam.
-QUAN TRỌNG: Chỉ trả về JSON, không giải thích thêm.`
+QUAN TRỌNG: Bạn PHẢI gọi tool submit_swot_draft để nộp kết quả. Không trả lời bằng text.`
 
 export function getDraftSystemPrompt(): string {
   return SYSTEM_PROMPT
@@ -42,27 +42,23 @@ export function buildDraftUserPrompt(input: SwotContextInput): string {
     }
   }
 
+  const xrayBlock = input.xrayContext?.summaryForAI
+    ? `\nDỮ LIỆU CHẨN ĐOÁN BUSINESS X-RAY (dùng làm bằng chứng định lượng cho phân tích):\n${input.xrayContext.summaryForAI}\n`
+    : ''
+
   return `Doanh nghiệp: ${input.orgName}
 Ngành: ${input.industry}
 Quy mô: ${input.headcount} nhân sự, tại ${input.city}
 Thách thức hiện tại: ${input.topChallenges}
 Điểm mạnh hiện có: ${input.currentStrengths}
 Mục tiêu 12 tháng: ${input.breakthroughGoal}
-
+${xrayBlock}
 Góc nhìn phân tích được chọn:
 ${frameworkBlocks.join('\n')}
 
-Hãy tạo SWOT analysis với cấu trúc JSON sau (KHÔNG thêm markdown/backtick):
-{
-  "strengths": [
-    { "statement": "...", "rationale": "...", "frameworkSource": "8Ms", "confidence": "high" }
-  ],
-  "weaknesses": [...],
-  "opportunities": [...],
-  "threats": [...]
-}
+Hãy tạo bản SWOT analysis bằng cách gọi tool submit_swot_draft.
 
-Yêu cầu:
+Yêu cầu nội dung:
 - Mỗi quadrant: 3-5 items
 - statement: câu hoàn chỉnh, tiếng Việt, cụ thể với ngành ${input.industry}
 - rationale: 1 câu giải thích ngắn tại sao đây là điểm đáng chú ý

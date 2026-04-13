@@ -48,6 +48,112 @@ function isValidQuadrant(arr: unknown): arr is RawDraftItem[] {
   )
 }
 
+const QUADRANT_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    statement: {
+      type: 'string',
+      description: 'Câu hoàn chỉnh tiếng Việt, cụ thể với ngành',
+    },
+    rationale: {
+      type: 'string',
+      description: 'Một câu giải thích ngắn lý do',
+    },
+    frameworkSource: {
+      type: 'string',
+      enum: ['8Ms', '5Forces', 'PESTEL'],
+    },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+  },
+  required: ['statement', 'rationale', 'frameworkSource', 'confidence'],
+} as const
+
+const SWOT_TOOL: Anthropic.Tool = {
+  name: 'submit_swot_draft',
+  description:
+    'Submit a complete SWOT analysis draft with 3-5 items per quadrant.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      strengths: {
+        type: 'array',
+        items: QUADRANT_ITEM_SCHEMA,
+        minItems: 3,
+        maxItems: 5,
+      },
+      weaknesses: {
+        type: 'array',
+        items: QUADRANT_ITEM_SCHEMA,
+        minItems: 3,
+        maxItems: 5,
+      },
+      opportunities: {
+        type: 'array',
+        items: QUADRANT_ITEM_SCHEMA,
+        minItems: 3,
+        maxItems: 5,
+      },
+      threats: {
+        type: 'array',
+        items: QUADRANT_ITEM_SCHEMA,
+        minItems: 3,
+        maxItems: 5,
+      },
+    },
+    required: ['strengths', 'weaknesses', 'opportunities', 'threats'],
+  },
+}
+
+async function callDraftAI(
+  client: Anthropic,
+  prompt: string,
+): Promise<RawDraftOutput> {
+  const response = await client.messages.create({
+    model: AI_MODELS.reasoning,
+    max_tokens: 4096,
+    system: getDraftSystemPrompt(),
+    tools: [SWOT_TOOL],
+    tool_choice: { type: 'tool', name: 'submit_swot_draft' },
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  if (response.stop_reason === 'max_tokens') {
+    console.error('[coaching-draft] AI hit max_tokens before completing tool call')
+    throw new Error('max_tokens')
+  }
+
+  const toolBlock = response.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
+  )
+
+  if (!toolBlock) {
+    console.error(
+      '[coaching-draft] No tool_use block in response. stop_reason=',
+      response.stop_reason,
+      'content:',
+      JSON.stringify(response.content).slice(0, 800),
+    )
+    throw new Error('no_tool_use')
+  }
+
+  const parsed = toolBlock.input as RawDraftOutput
+
+  if (
+    !isValidQuadrant(parsed.strengths) ||
+    !isValidQuadrant(parsed.weaknesses) ||
+    !isValidQuadrant(parsed.opportunities) ||
+    !isValidQuadrant(parsed.threats)
+  ) {
+    console.error(
+      '[coaching-draft] quadrant validation failed. parsed:',
+      JSON.stringify(parsed).slice(0, 1000),
+    )
+    throw new Error('invalid_quadrants')
+  }
+
+  return parsed
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -74,52 +180,21 @@ export async function POST(request: NextRequest) {
     }
 
     const client = new Anthropic()
-    const xrayHint = body.xrayContext?.summaryForAI
-      ? `\n\nDỮ LIỆU CHẨN ĐOÁN (Business X-Ray):\n${body.xrayContext.summaryForAI}`
-      : ''
-
-    const response = await client.messages.create({
-      model: AI_MODELS.reasoning,
-      max_tokens: 2000,
-      system: getDraftSystemPrompt(),
-      messages: [
-        { role: 'user', content: buildDraftUserPrompt(body) + xrayHint },
-      ],
-    })
-
-    const rawText = response.content
-      .filter(
-        (block): block is Anthropic.TextBlock => block.type === 'text'
-      )
-      .map((block) => block.text)
-      .join('')
-
-    // Strip markdown fences if present
-    let jsonText = rawText.trim()
-    const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (fenceMatch) jsonText = fenceMatch[1].trim()
+    const prompt = buildDraftUserPrompt(body)
 
     let parsed: RawDraftOutput
     try {
-      parsed = JSON.parse(jsonText)
+      parsed = await callDraftAI(client, prompt)
     } catch {
-      return NextResponse.json(
-        { error: 'AI trả về định dạng không hợp lệ, vui lòng thử lại' },
-        { status: 500 }
-      )
-    }
-
-    // Validate each quadrant has at least 2 items
-    if (
-      !isValidQuadrant(parsed.strengths) ||
-      !isValidQuadrant(parsed.weaknesses) ||
-      !isValidQuadrant(parsed.opportunities) ||
-      !isValidQuadrant(parsed.threats)
-    ) {
-      return NextResponse.json(
-        { error: 'AI trả về định dạng không hợp lệ, vui lòng thử lại' },
-        { status: 500 }
-      )
+      // Retry once on any parse/validation/truncation failure
+      try {
+        parsed = await callDraftAI(client, prompt)
+      } catch {
+        return NextResponse.json(
+          { error: 'AI trả về định dạng không hợp lệ, vui lòng thử lại' },
+          { status: 500 }
+        )
+      }
     }
 
     const draft: SwotDraft = {
