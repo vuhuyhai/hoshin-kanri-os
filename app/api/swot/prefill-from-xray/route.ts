@@ -27,10 +27,15 @@ export async function GET() {
 
     const orgId = membership.org_id
 
+    // Find latest X-Ray attributable to this user. Match either by current
+    // org_id OR by user_id — covers users who ran X-Ray before their
+    // org_members row existed (anon → signup → x-ray → onboarding → swot).
+    // xray_results.ownership_check (migration 019) guarantees at least one
+    // of org_id/user_id is non-null, so this OR covers every owned row.
     const { data: xrayRows } = await supabase
       .from('xray_results')
       .select('id, overall_score, result_json, created_at')
-      .eq('org_id', orgId)
+      .or(`org_id.eq.${orgId},user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
       .limit(1)
 
@@ -57,19 +62,36 @@ export async function GET() {
     const top = pillars[pillars.length - 1]
     const strengths = `Điểm mạnh nổi bật: ${top.label} đạt ${top.score}/100`
 
-    // Framework suggestion based on total score
+    // 12-month breakthrough goal: anchor it in the X-Ray's first concrete
+    // top-action and the score-band gap. Min length must clear the form's
+    // 15-char validator (line 104 of SwotContextForm).
     const totalScore = xray.overall_score
+    const topAction = xray.result_json?.topActions?.[0]?.trim() ?? ''
+    const targetScore = totalScore < 50 ? Math.min(70, totalScore + 25)
+      : totalScore < 70 ? 75
+      : Math.min(95, totalScore + 10)
+    // Guard against very-short topAction strings that would produce
+    // a leading-period cosmetic artifact ("." + appended sentence).
+    const goals = topAction.length > 3
+      ? `${topAction}. Đồng thời nâng tổng điểm OPEX từ ${totalScore}/100 lên ≥${targetScore}/100 trong 12 tháng tới.`
+      : `Nâng tổng điểm OPEX từ ${totalScore}/100 lên ≥${targetScore}/100 trong 12 tháng, ưu tiên cải thiện ${pillars[0].label}.`
+
+    // Framework suggestion based on total score
     const suggestedFrameworkOT: 'porter5' | 'PESTEL' =
       totalScore >= FRAMEWORK_SCORE_THRESHOLD ? 'porter5' : 'PESTEL'
+
+    // Industry: org settings first, then X-Ray companyInfo as fallback so
+    // users who ran X-Ray before completing org setup still get a value.
+    const industry = org?.industry || xray.result_json?.industry || ''
 
     return NextResponse.json({
       prefilled: true,
       source: { date: xray.created_at, totalScore },
       data: {
-        industry: org?.industry ?? '',
+        industry,
         headcount: org?.headcount ?? '',
         challenges,
-        goals: '',
+        goals,
         strengths,
         suggestedFrameworkSW: '8Ms' as const,
         suggestedFrameworkOT,

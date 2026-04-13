@@ -147,11 +147,12 @@ export function SwotContextFormTier1({
             <label className="label-brutal flex items-center gap-2" htmlFor="goal">
               <Target className="w-4 h-4 text-text-3" />
               Mục tiêu lớn nhất muốn đạt trong 12 tháng tới *
+              {showBadge('goals') && <XRayBadge />}
             </label>
             <Textarea
               id="goal"
               value={breakthroughGoal}
-              onChange={(e) => setBreakthroughGoal(e.target.value)}
+              onChange={(e) => { setBreakthroughGoal(e.target.value); markDirty('goals') }}
               placeholder="Ví dụ: Tăng doanh thu 40%, mở rộng sang 2 tỉnh mới..."
               rows={3}
               className="border-2 border-ink resize-none min-h-[100px]"

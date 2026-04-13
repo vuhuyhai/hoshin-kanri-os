@@ -18,10 +18,9 @@ interface SwotContextFormProps {
   orgProfile: { name: string; industry: string; headcount: string; city: string }
   onSubmit: (input: SwotContextInput) => Promise<void>
   isLoading: boolean
-  xrayContext?: XRaySeedContext
 }
 
-export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }: SwotContextFormProps) {
+export function SwotContextForm({ orgProfile, onSubmit, isLoading }: SwotContextFormProps) {
   const initialOption = findIndustryOption(orgProfile.industry)
   const [industry, setIndustry] = useState(initialOption?.value ?? '')
   const [headcount, setHeadcount] = useState(orgProfile.headcount || '')
@@ -33,6 +32,10 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
   const [prefillData, setPrefillData] = useState<PrefillResult | null>(null)
   const [showPrefillBanner, setShowPrefillBanner] = useState(false)
   const [prefillLoading, setPrefillLoading] = useState(true)
+  // xrayContext drives the AI prompt enrichment in /api/swot/coaching-draft.
+  // Self-fetched on mount so the form is the single owner of "X-Ray data
+  // flowing into SWOT" — no need to plumb props through CoachingPhase/Wizard.
+  const [xrayContext, setXrayContext] = useState<XRaySeedContext | undefined>(undefined)
   const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set())
   const prefilledRef = useRef<Set<string>>(new Set())
   const [showFrameworks, setShowFrameworks] = useState(false)
@@ -50,33 +53,50 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
   const tier1Ready = !!industry && !!headcount
     && topChallenges.length >= 20 && currentStrengths.length >= 10 && breakthroughGoal.length >= 15
 
-  // Fetch X-Ray prefill on mount
+  // Fetch X-Ray prefill + AI seed in parallel on mount.
+  // - prefill-from-xray → user-visible form field text (industry/challenges/goals/...)
+  // - xray-context     → XRaySeedContext object forwarded to coaching-draft AI prompt
+  // Both share the same root: the org's latest X-Ray. Two separate routes today,
+  // could be merged later. Failing either is non-fatal — form still works without.
   useEffect(() => {
-    fetchJson<{ prefilled?: boolean } & Partial<PrefillResult>>('/api/swot/prefill-from-xray')
+    const prefillReq = fetchJson<{ prefilled?: boolean } & Partial<PrefillResult>>(
+      '/api/swot/prefill-from-xray',
+    )
       .then((data) => {
-        if (data.prefilled) {
-          const result = data as PrefillResult
-          setPrefillData(result)
-          setShowPrefillBanner(true)
-          const filled = new Set<string>()
-          if (!industry && result.data.industry) {
-            setIndustry(result.data.industry); filled.add('industry')
-          }
-          if (!headcount && result.data.headcount) {
-            setHeadcount(result.data.headcount); filled.add('headcount')
-          }
-          if (!topChallenges && result.data.challenges) {
-            setTopChallenges(result.data.challenges); filled.add('challenges')
-          }
-          if (!currentStrengths && result.data.strengths) {
-            setCurrentStrengths(result.data.strengths); filled.add('strengths')
-          }
-          prefilledRef.current = filled
-          setShowFrameworks(true)
+        if (!data.prefilled) return
+        const result = data as PrefillResult
+        setPrefillData(result)
+        setShowPrefillBanner(true)
+        const filled = new Set<string>()
+        if (!industry && result.data.industry) {
+          setIndustry(result.data.industry); filled.add('industry')
         }
+        if (!headcount && result.data.headcount) {
+          setHeadcount(result.data.headcount); filled.add('headcount')
+        }
+        if (!topChallenges && result.data.challenges) {
+          setTopChallenges(result.data.challenges); filled.add('challenges')
+        }
+        if (!currentStrengths && result.data.strengths) {
+          setCurrentStrengths(result.data.strengths); filled.add('strengths')
+        }
+        if (!breakthroughGoal && result.data.goals) {
+          setBreakthroughGoal(result.data.goals); filled.add('goals')
+        }
+        prefilledRef.current = filled
+        setShowFrameworks(true)
       })
       .catch((err) => console.error('[SwotContextForm] prefill fetch failed:', err))
-      .finally(() => setPrefillLoading(false))
+
+    const seedReq = fetchJson<{ hasXRay: boolean; data: XRaySeedContext | null }>(
+      '/api/swot/xray-context',
+    )
+      .then((res) => {
+        if (res.hasXRay && res.data) setXrayContext(res.data)
+      })
+      .catch((err) => console.error('[SwotContextForm] xray-context fetch failed:', err))
+
+    Promise.all([prefillReq, seedReq]).finally(() => setPrefillLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -85,13 +105,6 @@ export function SwotContextForm({ orgProfile, onSubmit, isLoading, xrayContext }
       shouldScrollRef.current = false
     }
   }, [showFrameworks])
-
-  useEffect(() => {
-    if (!xrayContext) return
-    if (!industry) setIndustry(findIndustryOption(orgProfile.industry)?.value ?? '')
-    if (!topChallenges && xrayContext.swotHints.weaknesses.length > 0)
-      setTopChallenges(xrayContext.swotHints.weaknesses.slice(0, 2).join('. '))
-  }, [xrayContext]) // eslint-disable-line react-hooks/exhaustive-deps
   const swValid = selectedElements.eightMs.length >= 1
   const otValid = selectedElements.fiveForces.length + selectedElements.pestel.length >= 1
   const elementsValid = swValid && otValid

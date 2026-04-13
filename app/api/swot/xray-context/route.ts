@@ -27,10 +27,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Match by current org_id OR by user_id — covers users who ran X-Ray
+    // before their org_members row existed. Mirrors prefill-from-xray route.
     let query = supabase
       .from('xray_results')
       .select('id, result_json')
-      .eq('org_id', membership.org_id)
+      .or(`org_id.eq.${membership.org_id},user_id.eq.${user.id}`)
     if (xrayId) {
       query = query.eq('id', xrayId)
     } else {
