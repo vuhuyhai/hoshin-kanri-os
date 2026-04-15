@@ -37,6 +37,10 @@ export const blogPostSchema = z.object({
     .or(z.literal(''))
     .optional()
     .transform((v) => (v && v.length > 0 ? v : null)),
+  tag_ids: z
+    .array(z.string().uuid('tag_id không hợp lệ'))
+    .max(10, 'Tối đa 10 tag mỗi bài')
+    .default([]),
 })
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>
@@ -63,3 +67,19 @@ export const blogCategorySchema = z.object({
 })
 
 export type BlogCategoryInput = z.infer<typeof blogCategorySchema>
+
+export const blogTagSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2, 'Slug phải có ít nhất 2 ký tự')
+    .max(50, 'Slug tối đa 50 ký tự')
+    .regex(SLUG_RE, 'Slug chỉ gồm chữ thường, số và dấu gạch ngang'),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Tên tag phải có ít nhất 2 ký tự')
+    .max(50, 'Tên tối đa 50 ký tự'),
+})
+
+export type BlogTagInput = z.infer<typeof blogTagSchema>

@@ -1,8 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { adminGetPost, adminListCategories } from '@/lib/blog/queries'
+import {
+  adminGetPost,
+  adminListCategories,
+  adminListTags,
+} from '@/lib/blog/queries'
 import { BlogForm } from '../../BlogForm'
 import { updateBlogPostAction } from '../../_actions'
+import { PreviewLinkPanel } from './PreviewLinkPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +18,15 @@ async function safeListCategories() {
     return await adminListCategories()
   } catch (e) {
     console.error('[admin/blog/edit] category list failed:', e)
+    return []
+  }
+}
+
+async function safeListTags() {
+  try {
+    return await adminListTags()
+  } catch (e) {
+    console.error('[admin/blog/edit] tag list failed:', e)
     return []
   }
 }
@@ -30,7 +44,10 @@ export default async function EditBlogPostPage({ params }: Props) {
   }
   if (!post) notFound()
 
-  const categories = await safeListCategories()
+  const [categories, tags] = await Promise.all([
+    safeListCategories(),
+    safeListTags(),
+  ])
   const boundAction = updateBlogPostAction.bind(null, id)
 
   return (
@@ -47,6 +64,13 @@ export default async function EditBlogPostPage({ params }: Props) {
         </h1>
         <p className="mt-1 font-mono text-[11px] text-text-3">id: {post.id}</p>
       </div>
+
+      <PreviewLinkPanel
+        postId={post.id}
+        initialToken={post.preview_token}
+        status={post.status}
+      />
+
       <BlogForm
         action={boundAction}
         initial={{
@@ -57,9 +81,11 @@ export default async function EditBlogPostPage({ params }: Props) {
           content_md: post.content_md,
           status: post.status,
           category_id: post.category_id ?? '',
+          tag_ids: post.tags.map((t) => t.id),
         }}
         submitLabel="Lưu thay đổi"
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        tags={tags.map((t) => ({ id: t.id, name: t.name }))}
       />
     </div>
   )

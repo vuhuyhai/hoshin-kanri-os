@@ -10,6 +10,7 @@
 // created yet — a PostgREST embed would fail the whole post query
 // with a schema-cache error on an un-applied migration.
 
+import { randomBytes } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isMissingTableError } from './errors'
@@ -25,6 +26,22 @@ export type BlogCategory = {
 
 export type CategoryRef = Pick<BlogCategory, 'id' | 'slug' | 'name'>
 
+export type BlogTag = {
+  id: string
+  slug: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
+export type TagRef = Pick<BlogTag, 'id' | 'slug' | 'name'>
+
+export type BlogAuthor = {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
+}
+
 export type BlogPost = {
   id: string
   slug: string
@@ -35,13 +52,17 @@ export type BlogPost = {
   status: 'draft' | 'published'
   author_id: string | null
   category_id: string | null
+  preview_token: string | null
   published_at: string | null
   views_count: number
   created_at: string
   updated_at: string
 }
 
-export type BlogPostWithCategory = BlogPost & { category: CategoryRef | null }
+export type BlogPostWithCategory = BlogPost & {
+  category: CategoryRef | null
+  tags: TagRef[]
+}
 export type BlogPostSummary = Omit<BlogPostWithCategory, 'content_md'>
 
 // Minimum shape any row we want to enrich with a category must have.
@@ -61,7 +82,7 @@ type SupabaseLike = {
 }
 
 const POST_SUMMARY_COLUMNS =
-  'id, slug, title, excerpt, cover_url, status, author_id, category_id, published_at, views_count, created_at, updated_at'
+  'id, slug, title, excerpt, cover_url, status, author_id, category_id, preview_token, published_at, views_count, created_at, updated_at'
 
 /**
  * Attach resolved category objects to an array of rows in a single
@@ -111,6 +132,64 @@ async function attachCategories<T extends HasCategoryId>(
   }
 }
 
+// Two-step tag fetch: junction first, then tags. Same fail-soft
+// pattern as attachCategories so the blog keeps working before
+// migration 024 is applied in a fresh env.
+async function attachTags<T extends { id: string }>(
+  db: ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>>,
+  rows: T[]
+): Promise<(T & { tags: TagRef[] })[]> {
+  if (rows.length === 0) return []
+
+  const postIds = rows.map((r) => r.id)
+
+  try {
+    const { data: links, error } = await db
+      .from('blog_post_tags')
+      .select('post_id, tag_id')
+      .in('post_id', postIds)
+    if (error) throw error
+
+    const tagIds = Array.from(
+      new Set((links ?? []).map((l) => (l as { tag_id: string }).tag_id))
+    )
+    if (tagIds.length === 0) {
+      return rows.map((r) => ({ ...r, tags: [] as TagRef[] }))
+    }
+
+    const { data: tagsData, error: tagErr } = await db
+      .from('blog_tags')
+      .select('id, slug, name')
+      .in('id', tagIds)
+    if (tagErr) throw tagErr
+
+    const tagMap = new Map<string, TagRef>()
+    for (const t of (tagsData ?? []) as TagRef[]) {
+      tagMap.set(t.id, t)
+    }
+
+    const postToTags = new Map<string, TagRef[]>()
+    for (const raw of links ?? []) {
+      const l = raw as { post_id: string; tag_id: string }
+      const tag = tagMap.get(l.tag_id)
+      if (!tag) continue
+      const arr = postToTags.get(l.post_id) ?? []
+      arr.push(tag)
+      postToTags.set(l.post_id, arr)
+    }
+
+    return rows.map((r) => ({
+      ...r,
+      tags: postToTags.get(r.id) ?? [],
+    }))
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return rows.map((r) => ({ ...r, tags: [] as TagRef[] }))
+    }
+    throw e
+  }
+}
+
 // ============================================================
 // Public reads — categories
 // ============================================================
@@ -151,6 +230,64 @@ export async function getCategoryBySlug(
 }
 
 // ============================================================
+// Public reads — tags
+// ============================================================
+
+export async function listTags(): Promise<BlogTag[]> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('blog_tags')
+      .select('*')
+      .order('name', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as BlogTag[]
+  } catch (e) {
+    if (isMissingTableError(e)) return []
+    throw e
+  }
+}
+
+export async function getTagBySlug(slug: string): Promise<BlogTag | null> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('blog_tags')
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle()
+    if (error) throw error
+    return (data as BlogTag | null) ?? null
+  } catch (e) {
+    if (isMissingTableError(e)) return null
+    throw e
+  }
+}
+
+// ============================================================
+// Public reads — author (profiles)
+// ============================================================
+
+export async function getAuthorById(
+  userId: string | null
+): Promise<BlogAuthor | null> {
+  if (!userId) return null
+  try {
+    const db = createAdminClient()
+    const { data, error } = await db
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('id', userId)
+      .maybeSingle()
+    if (error) throw error
+    return (data as BlogAuthor | null) ?? null
+  } catch (e) {
+    console.error('[getAuthorById] failed:', e)
+    return null
+  }
+}
+
+// ============================================================
 // Public reads — blog posts
 // ============================================================
 
@@ -158,10 +295,30 @@ function escapeIlike(input: string): string {
   return input.replace(/[%,()]/g, ' ').trim()
 }
 
+async function resolveTagFilterPostIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  tagSlug: string
+): Promise<string[] | null> {
+  const tag = await getTagBySlug(tagSlug)
+  if (!tag) return null
+  try {
+    const { data, error } = await supabase
+      .from('blog_post_tags')
+      .select('post_id')
+      .eq('tag_id', tag.id)
+    if (error) throw error
+    return (data ?? []).map((r) => (r as { post_id: string }).post_id)
+  } catch (e) {
+    if (isMissingTableError(e)) return null
+    throw e
+  }
+}
+
 export async function listPublishedPosts(params?: {
   limit?: number
   offset?: number
   categorySlug?: string
+  tagSlug?: string
   searchQuery?: string
 }): Promise<BlogPostSummary[]> {
   const supabase = await createClient()
@@ -175,6 +332,12 @@ export async function listPublishedPosts(params?: {
     categoryFilterId = cat.id
   }
 
+  let tagFilterPostIds: string[] | null = null
+  if (params?.tagSlug) {
+    tagFilterPostIds = await resolveTagFilterPostIds(supabase, params.tagSlug)
+    if (tagFilterPostIds === null || tagFilterPostIds.length === 0) return []
+  }
+
   let query = supabase
     .from('blog_posts')
     .select(POST_SUMMARY_COLUMNS)
@@ -184,6 +347,10 @@ export async function listPublishedPosts(params?: {
 
   if (categoryFilterId) {
     query = query.eq('category_id', categoryFilterId)
+  }
+
+  if (tagFilterPostIds) {
+    query = query.in('id', tagFilterPostIds)
   }
 
   const q = params?.searchQuery ? escapeIlike(params.searchQuery) : ''
@@ -199,11 +366,13 @@ export async function listPublishedPosts(params?: {
     supabase as unknown as SupabaseLike,
     rows
   )
-  return withCategory as BlogPostSummary[]
+  const withTags = await attachTags(supabase, withCategory)
+  return withTags as BlogPostSummary[]
 }
 
 export async function countPublishedPosts(params?: {
   categorySlug?: string
+  tagSlug?: string
   searchQuery?: string
 }): Promise<number> {
   const supabase = await createClient()
@@ -215,6 +384,12 @@ export async function countPublishedPosts(params?: {
     categoryFilterId = cat.id
   }
 
+  let tagFilterPostIds: string[] | null = null
+  if (params?.tagSlug) {
+    tagFilterPostIds = await resolveTagFilterPostIds(supabase, params.tagSlug)
+    if (tagFilterPostIds === null || tagFilterPostIds.length === 0) return 0
+  }
+
   let query = supabase
     .from('blog_posts')
     .select('id', { count: 'exact', head: true })
@@ -222,6 +397,10 @@ export async function countPublishedPosts(params?: {
 
   if (categoryFilterId) {
     query = query.eq('category_id', categoryFilterId)
+  }
+
+  if (tagFilterPostIds) {
+    query = query.in('id', tagFilterPostIds)
   }
 
   const q = params?.searchQuery ? escapeIlike(params.searchQuery) : ''
@@ -276,7 +455,8 @@ export async function listRelatedPosts(params: {
     supabase as unknown as SupabaseLike,
     rows
   )
-  return withCategory as BlogPostSummary[]
+  const withTags = await attachTags(supabase, withCategory)
+  return withTags as BlogPostSummary[]
 }
 
 export async function listRssPosts(limit = 50): Promise<
@@ -317,10 +497,34 @@ export async function getPublishedPostBySlug(
   if (error) throw error
   if (!data) return null
 
-  const [enriched] = await attachCategories(
+  const [withCategory] = await attachCategories(
     supabase as unknown as SupabaseLike,
     [data as BlogPost]
   )
+  const [enriched] = await attachTags(supabase, [withCategory])
+  return enriched as BlogPostWithCategory
+}
+
+// Public draft preview — looked up by a secret token. Uses the
+// admin client so the preview can render even when status='draft'.
+export async function getPostByPreviewToken(
+  token: string
+): Promise<BlogPostWithCategory | null> {
+  if (!token || token.length < 8) return null
+  const db = createAdminClient()
+  const { data, error } = await db
+    .from('blog_posts')
+    .select('*')
+    .eq('preview_token', token)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+
+  const [withCategory] = await attachCategories(
+    db as unknown as SupabaseLike,
+    [data as BlogPost]
+  )
+  const [enriched] = await attachTags(db, [withCategory])
   return enriched as BlogPostWithCategory
 }
 
@@ -356,7 +560,8 @@ export async function adminListAllPosts(): Promise<BlogPostSummary[]> {
     db as unknown as SupabaseLike,
     rows
   )
-  return withCategory as BlogPostSummary[]
+  const withTags = await attachTags(db, withCategory)
+  return withTags as BlogPostSummary[]
 }
 
 export async function adminGetPost(
@@ -372,9 +577,10 @@ export async function adminGetPost(
   if (error) throw error
   if (!data) return null
 
-  const [enriched] = await attachCategories(db as unknown as SupabaseLike, [
+  const [withCategory] = await attachCategories(db as unknown as SupabaseLike, [
     data as BlogPost,
   ])
+  const [enriched] = await attachTags(db, [withCategory])
   return enriched as BlogPostWithCategory
 }
 
@@ -391,9 +597,10 @@ export async function adminGetPostBySlug(
   if (error) throw error
   if (!data) return null
 
-  const [enriched] = await attachCategories(db as unknown as SupabaseLike, [
+  const [withCategory] = await attachCategories(db as unknown as SupabaseLike, [
     data as BlogPost,
   ])
+  const [enriched] = await attachTags(db, [withCategory])
   return enriched as BlogPostWithCategory
 }
 
@@ -618,5 +825,163 @@ export async function adminDeleteCategory(id: string): Promise<void> {
   // ON DELETE SET NULL in the migration lets posts survive the delete
   // as uncategorized — no need to touch them here.
   const { error } = await db.from('blog_categories').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ============================================================
+// Admin reads/writes — tags (service role, bypass RLS)
+// ============================================================
+
+export async function adminListTags(): Promise<
+  (BlogTag & { post_count: number })[]
+> {
+  const db = createAdminClient()
+  const { data: tags, error } = await db
+    .from('blog_tags')
+    .select('*')
+    .order('name', { ascending: true })
+  if (error) throw error
+
+  const counts = new Map<string, number>()
+  try {
+    const { data: links, error: linkErr } = await db
+      .from('blog_post_tags')
+      .select('tag_id')
+    if (linkErr) throw linkErr
+    for (const l of links ?? []) {
+      const tid = (l as { tag_id: string }).tag_id
+      counts.set(tid, (counts.get(tid) ?? 0) + 1)
+    }
+  } catch (e) {
+    if (!isMissingTableError(e)) throw e
+  }
+
+  return ((tags ?? []) as BlogTag[]).map((t) => ({
+    ...t,
+    post_count: counts.get(t.id) ?? 0,
+  }))
+}
+
+export async function adminGetTagBySlug(slug: string): Promise<BlogTag | null> {
+  const db = createAdminClient()
+  const { data, error } = await db
+    .from('blog_tags')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw error
+  return (data as BlogTag | null) ?? null
+}
+
+type TagUpsertInput = { slug: string; name: string }
+
+export async function adminCreateTag(input: TagUpsertInput): Promise<BlogTag> {
+  const db = createAdminClient()
+  const { data, error } = await db
+    .from('blog_tags')
+    .insert({ slug: input.slug, name: input.name })
+    .select('*')
+    .single()
+  if (error) throw error
+  return data as BlogTag
+}
+
+export async function adminUpdateTag(
+  id: string,
+  input: TagUpsertInput
+): Promise<BlogTag> {
+  const db = createAdminClient()
+  const { data, error } = await db
+    .from('blog_tags')
+    .update({
+      slug: input.slug,
+      name: input.name,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) throw error
+  return data as BlogTag
+}
+
+export async function adminDeleteTag(id: string): Promise<void> {
+  const db = createAdminClient()
+  const { error } = await db.from('blog_tags').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Replace the tag set for a post: delete existing junction rows,
+// then insert new ones. No diff logic — at the scale we expect
+// (a post has < 10 tags), a simple replace is cheaper to reason
+// about than a merge.
+export async function adminSetPostTags(
+  postId: string,
+  tagIds: string[]
+): Promise<void> {
+  const db = createAdminClient()
+  const { error: delErr } = await db
+    .from('blog_post_tags')
+    .delete()
+    .eq('post_id', postId)
+  if (delErr) throw delErr
+
+  if (tagIds.length === 0) return
+
+  const rows = tagIds.map((tagId) => ({ post_id: postId, tag_id: tagId }))
+  const { error: insErr } = await db.from('blog_post_tags').insert(rows)
+  if (insErr) throw insErr
+}
+
+// ============================================================
+// Draft preview tokens
+// ============================================================
+
+function generatePreviewToken(): string {
+  return randomBytes(16).toString('hex')
+}
+
+export async function adminEnsurePreviewToken(
+  postId: string
+): Promise<string> {
+  const db = createAdminClient()
+  const { data: existing, error: getErr } = await db
+    .from('blog_posts')
+    .select('preview_token')
+    .eq('id', postId)
+    .maybeSingle()
+  if (getErr) throw getErr
+  const current = (existing as { preview_token: string | null } | null)
+    ?.preview_token
+  if (current) return current
+
+  const token = generatePreviewToken()
+  const { error } = await db
+    .from('blog_posts')
+    .update({ preview_token: token })
+    .eq('id', postId)
+  if (error) throw error
+  return token
+}
+
+export async function adminRotatePreviewToken(
+  postId: string
+): Promise<string> {
+  const db = createAdminClient()
+  const token = generatePreviewToken()
+  const { error } = await db
+    .from('blog_posts')
+    .update({ preview_token: token })
+    .eq('id', postId)
+  if (error) throw error
+  return token
+}
+
+export async function adminRevokePreviewToken(postId: string): Promise<void> {
+  const db = createAdminClient()
+  const { error } = await db
+    .from('blog_posts')
+    .update({ preview_token: null })
+    .eq('id', postId)
   if (error) throw error
 }

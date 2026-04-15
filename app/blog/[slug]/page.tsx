@@ -2,11 +2,17 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { getPublishedPostBySlug, listRelatedPosts } from '@/lib/blog/queries'
+import {
+  getPublishedPostBySlug,
+  listRelatedPosts,
+  getAuthorById,
+} from '@/lib/blog/queries'
 import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer'
 import { TableOfContents } from '@/components/blog/TableOfContents'
 import { RelatedPosts } from '@/components/blog/RelatedPosts'
 import { ShareButtons } from '@/components/blog/ShareButtons'
+import { AuthorByline } from '@/components/blog/AuthorByline'
+import { PostTags } from '@/components/blog/PostTags'
 import { extractHeadings, calcReadingMinutes } from '@/lib/blog/toc'
 import { ViewTracker } from './ViewTracker'
 
@@ -74,16 +80,17 @@ export default async function BlogPostPage({ params }: Props) {
   const readingMinutes = calcReadingMinutes(post.content_md)
   const tocItems = extractHeadings(post.content_md)
 
-  let related: Awaited<ReturnType<typeof listRelatedPosts>> = []
-  try {
-    related = await listRelatedPosts({
+  const [related, author] = await Promise.all([
+    listRelatedPosts({
       currentId: post.id,
       categoryId: post.category_id,
       limit: 3,
-    })
-  } catch (e) {
-    console.error(`/blog/${slug} related posts failed:`, e)
-  }
+    }).catch((e) => {
+      console.error(`/blog/${slug} related posts failed:`, e)
+      return [] as Awaited<ReturnType<typeof listRelatedPosts>>
+    }),
+    getAuthorById(post.author_id),
+  ])
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -188,6 +195,11 @@ export default async function BlogPostPage({ params }: Props) {
               <span>{readingMinutes} phút đọc</span>
               <span aria-hidden>•</span>
               <span>{post.views_count.toLocaleString('vi-VN')} lượt xem</span>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+              <AuthorByline author={author} />
+              <PostTags tags={post.tags} />
             </div>
           </header>
 

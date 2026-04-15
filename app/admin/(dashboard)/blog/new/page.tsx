@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { BlogForm } from '../BlogForm'
 import { createBlogPostAction } from '../_actions'
-import { adminListCategories } from '@/lib/blog/queries'
+import { adminListCategories, adminListTags } from '@/lib/blog/queries'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +14,20 @@ async function safeListCategories() {
   }
 }
 
+async function safeListTags() {
+  try {
+    return await adminListTags()
+  } catch (e) {
+    console.error('[admin/blog/new] tag list failed:', e)
+    return []
+  }
+}
+
 export default async function NewBlogPostPage() {
-  const categories = await safeListCategories()
+  const [categories, tags] = await Promise.all([
+    safeListCategories(),
+    safeListTags(),
+  ])
   return (
     <div className="space-y-6">
       <div>
@@ -33,6 +45,7 @@ export default async function NewBlogPostPage() {
         action={createBlogPostAction}
         submitLabel="Tạo bài viết"
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        tags={tags.map((t) => ({ id: t.id, name: t.name }))}
       />
     </div>
   )

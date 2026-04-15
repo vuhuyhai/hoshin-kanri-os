@@ -6,6 +6,8 @@ import {
   countPublishedPosts,
   listCategories,
   getCategoryBySlug,
+  listTags,
+  getTagBySlug,
 } from '@/lib/blog/queries'
 import { BlogSearch } from '@/components/blog/BlogSearch'
 
@@ -17,48 +19,70 @@ const PAGE_SIZE = 12
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<{ category?: string; tag?: string }>
 }): Promise<Metadata> {
-  const { category } = await searchParams
-  const slug = category?.trim()
-  if (!slug) {
+  const { category, tag } = await searchParams
+  const catSlug = category?.trim()
+  const tagSlug = tag?.trim()
+
+  if (catSlug) {
+    const cat = await getCategoryBySlug(catSlug).catch(() => null)
+    const name = cat?.name ?? catSlug
+    const url = `${SITE_URL}/blog?category=${catSlug}`
+    const description =
+      cat?.description ??
+      `Bài viết thuộc danh mục ${name} trên blog Hoshin Kanri OS.`
     return {
-      title: 'Blog — Hoshin Kanri OS',
-      description:
-        'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam từ đội ngũ Hoshin Kanri OS.',
-      alternates: {
-        canonical: `${SITE_URL}/blog`,
-        types: {
-          'application/rss+xml': `${SITE_URL}/blog/rss.xml`,
-        },
-      },
+      title: `${name} — Blog Hoshin Kanri OS`,
+      description,
+      alternates: { canonical: url },
       openGraph: {
         type: 'website',
-        url: `${SITE_URL}/blog`,
-        title: 'Blog — Hoshin Kanri OS',
-        description:
-          'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam.',
+        url,
+        title: `${name} — Blog Hoshin Kanri OS`,
+        description,
         locale: 'vi_VN',
         siteName: 'Hoshin Kanri OS',
       },
     }
   }
 
-  const cat = await getCategoryBySlug(slug).catch(() => null)
-  const name = cat?.name ?? slug
-  const url = `${SITE_URL}/blog?category=${slug}`
-  const description =
-    cat?.description ??
-    `Bài viết thuộc danh mục ${name} trên blog Hoshin Kanri OS.`
+  if (tagSlug) {
+    const t = await getTagBySlug(tagSlug).catch(() => null)
+    const name = t?.name ?? tagSlug
+    const url = `${SITE_URL}/blog?tag=${tagSlug}`
+    const description = `Bài viết gắn tag ${name} trên blog Hoshin Kanri OS.`
+    return {
+      title: `#${name} — Blog Hoshin Kanri OS`,
+      description,
+      alternates: { canonical: url },
+      openGraph: {
+        type: 'website',
+        url,
+        title: `#${name} — Blog Hoshin Kanri OS`,
+        description,
+        locale: 'vi_VN',
+        siteName: 'Hoshin Kanri OS',
+      },
+    }
+  }
+
   return {
-    title: `${name} — Blog Hoshin Kanri OS`,
-    description,
-    alternates: { canonical: url },
+    title: 'Blog — Hoshin Kanri OS',
+    description:
+      'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam từ đội ngũ Hoshin Kanri OS.',
+    alternates: {
+      canonical: `${SITE_URL}/blog`,
+      types: {
+        'application/rss+xml': `${SITE_URL}/blog/rss.xml`,
+      },
+    },
     openGraph: {
       type: 'website',
-      url,
-      title: `${name} — Blog Hoshin Kanri OS`,
-      description,
+      url: `${SITE_URL}/blog`,
+      title: 'Blog — Hoshin Kanri OS',
+      description:
+        'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam.',
       locale: 'vi_VN',
       siteName: 'Hoshin Kanri OS',
     },
@@ -74,51 +98,67 @@ function formatDate(iso: string | null): string {
   })
 }
 
-type SearchParams = Promise<{ page?: string; category?: string; q?: string }>
+type SearchParams = Promise<{
+  page?: string
+  category?: string
+  tag?: string
+  q?: string
+}>
 
 export default async function BlogIndexPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { page: pageParam, category: categoryParam, q: qParam } = await searchParams
+  const {
+    page: pageParam,
+    category: categoryParam,
+    tag: tagParam,
+    q: qParam,
+  } = await searchParams
   const pageNum = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const offset = (pageNum - 1) * PAGE_SIZE
   const categorySlug = categoryParam?.trim() || undefined
+  const tagSlug = tagParam?.trim() || undefined
   const searchQuery = qParam?.trim() ?? ''
   const hasSearch = searchQuery.length >= 2
 
-  // Resilient: if the DB is unreachable or the table is missing (e.g.
-  // migration not yet applied in the target env), show the empty state
-  // instead of crashing the whole page with a 500.
   let posts: Awaited<ReturnType<typeof listPublishedPosts>> = []
   let total = 0
   let categories: Awaited<ReturnType<typeof listCategories>> = []
   let activeCategory: Awaited<ReturnType<typeof getCategoryBySlug>> = null
+  let tags: Awaited<ReturnType<typeof listTags>> = []
+  let activeTag: Awaited<ReturnType<typeof getTagBySlug>> = null
   try {
-    ;[posts, total, categories, activeCategory] = await Promise.all([
-      listPublishedPosts({
-        limit: PAGE_SIZE,
-        offset,
-        categorySlug,
-        searchQuery: hasSearch ? searchQuery : undefined,
-      }),
-      countPublishedPosts({
-        categorySlug,
-        searchQuery: hasSearch ? searchQuery : undefined,
-      }),
-      listCategories(),
-      categorySlug ? getCategoryBySlug(categorySlug) : Promise.resolve(null),
-    ])
+    ;[posts, total, categories, activeCategory, tags, activeTag] =
+      await Promise.all([
+        listPublishedPosts({
+          limit: PAGE_SIZE,
+          offset,
+          categorySlug,
+          tagSlug,
+          searchQuery: hasSearch ? searchQuery : undefined,
+        }),
+        countPublishedPosts({
+          categorySlug,
+          tagSlug,
+          searchQuery: hasSearch ? searchQuery : undefined,
+        }),
+        listCategories(),
+        categorySlug ? getCategoryBySlug(categorySlug) : Promise.resolve(null),
+        listTags(),
+        tagSlug ? getTagBySlug(tagSlug) : Promise.resolve(null),
+      ])
   } catch (e) {
     console.error('/blog listing failed to load posts:', e)
   }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const searchQs = hasSearch ? `&q=${encodeURIComponent(searchQuery)}` : ''
-  const baseHref = activeCategory
-    ? `/blog?category=${activeCategory.slug}${searchQs}&`
-    : `/blog?${hasSearch ? `q=${encodeURIComponent(searchQuery)}&` : ''}`
+  const qsParts: string[] = []
+  if (activeCategory) qsParts.push(`category=${activeCategory.slug}`)
+  if (activeTag) qsParts.push(`tag=${activeTag.slug}`)
+  if (hasSearch) qsParts.push(`q=${encodeURIComponent(searchQuery)}`)
+  const baseHref = qsParts.length > 0 ? `/blog?${qsParts.join('&')}&` : '/blog?'
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -166,7 +206,11 @@ export default async function BlogIndexPage({
         <section className="w-full border-b-[3px] border-ink">
           <div className="mx-auto max-w-[1440px] px-6 py-16 text-center lg:px-12 lg:py-24">
             <p className="heading-overline mb-3">
-              {activeCategory ? `Danh mục: ${activeCategory.name}` : 'Blog'}
+              {activeCategory
+                ? `Danh mục: ${activeCategory.name}`
+                : activeTag
+                  ? `Tag: ${activeTag.name}`
+                  : 'Blog'}
             </p>
             <h1
               className="font-display font-black uppercase text-ink leading-[1.05]"
@@ -175,9 +219,12 @@ export default async function BlogIndexPage({
               {activeCategory ? (
                 <>
                   {activeCategory.name}{' '}
-                  <span className="text-accent-brand">
-                    ({total})
-                  </span>
+                  <span className="text-accent-brand">({total})</span>
+                </>
+              ) : activeTag ? (
+                <>
+                  #{activeTag.name}{' '}
+                  <span className="text-accent-brand">({total})</span>
                 </>
               ) : (
                 <>
@@ -189,7 +236,9 @@ export default async function BlogIndexPage({
             </h1>
             <p className="mx-auto mt-6 max-w-2xl font-body text-lg text-text-2">
               {activeCategory?.description ??
-                'Hoshin Kanri, OKR, X-Matrix, SWOT và những bài học thực chiến từ việc đồng hành với chủ doanh nghiệp nhỏ và vừa.'}
+                (activeTag
+                  ? `Bài viết được gắn tag ${activeTag.name}.`
+                  : 'Hoshin Kanri, OKR, X-Matrix, SWOT và những bài học thực chiến từ việc đồng hành với chủ doanh nghiệp nhỏ và vừa.')}
             </p>
           </div>
         </section>
@@ -200,6 +249,7 @@ export default async function BlogIndexPage({
               <BlogSearch
                 defaultValue={hasSearch ? searchQuery : ''}
                 categorySlug={activeCategory?.slug}
+                tagSlug={activeTag?.slug}
               />
               {hasSearch && (
                 <p className="mt-3 text-center font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">
@@ -213,24 +263,28 @@ export default async function BlogIndexPage({
                 aria-label="Danh mục bài viết"
               >
                 <Link
-                  href={hasSearch ? `/blog?q=${encodeURIComponent(searchQuery)}` : '/blog'}
+                  href={
+                    hasSearch
+                      ? `/blog?q=${encodeURIComponent(searchQuery)}`
+                      : '/blog'
+                  }
                   className={
-                    activeCategory
-                      ? 'btn-brutal-secondary px-4 py-2 text-[11px]'
-                      : 'btn-brutal-primary px-4 py-2 text-[11px]'
+                    !activeCategory && !activeTag
+                      ? 'btn-brutal-primary px-4 py-2 text-[11px]'
+                      : 'btn-brutal-secondary px-4 py-2 text-[11px]'
                   }
                 >
                   Tất cả
                 </Link>
                 {categories.map((c) => {
                   const isActive = activeCategory?.slug === c.slug
-                  const catHref = hasSearch
-                    ? `/blog?category=${c.slug}&q=${encodeURIComponent(searchQuery)}`
-                    : `/blog?category=${c.slug}`
+                  const qs = new URLSearchParams()
+                  qs.set('category', c.slug)
+                  if (hasSearch) qs.set('q', searchQuery)
                   return (
                     <Link
                       key={c.id}
-                      href={catHref}
+                      href={`/blog?${qs.toString()}`}
                       className={
                         isActive
                           ? 'btn-brutal-primary px-4 py-2 text-[11px]'
@@ -238,6 +292,32 @@ export default async function BlogIndexPage({
                       }
                     >
                       {c.name}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+            {tags.length > 0 && (
+              <div
+                className="flex flex-wrap items-center justify-center gap-2"
+                aria-label="Tags bài viết"
+              >
+                {tags.map((t) => {
+                  const isActive = activeTag?.slug === t.slug
+                  const qs = new URLSearchParams()
+                  qs.set('tag', t.slug)
+                  if (hasSearch) qs.set('q', searchQuery)
+                  return (
+                    <Link
+                      key={t.id}
+                      href={`/blog?${qs.toString()}`}
+                      className={
+                        isActive
+                          ? 'font-display text-[11px] font-bold uppercase tracking-wider text-accent-brand underline decoration-[3px] underline-offset-4'
+                          : 'font-display text-[11px] font-semibold uppercase tracking-wider text-text-3 hover:text-accent-brand'
+                      }
+                    >
+                      #{t.name}
                     </Link>
                   )
                 })}

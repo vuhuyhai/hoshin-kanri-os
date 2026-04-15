@@ -46,6 +46,12 @@ async function BlogAdminContent() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/admin/blog/tags"
+            className="btn-brutal-secondary px-5 py-2.5 text-xs"
+          >
+            Tags
+          </Link>
+          <Link
             href="/admin/blog/categories"
             className="btn-brutal-secondary px-5 py-2.5 text-xs"
           >

@@ -3,9 +3,16 @@ import Link from 'next/link'
 type Props = {
   defaultValue?: string
   categorySlug?: string
+  tagSlug?: string
 }
 
-export function BlogSearch({ defaultValue = '', categorySlug }: Props) {
+export function BlogSearch({ defaultValue = '', categorySlug, tagSlug }: Props) {
+  const clearQs = new URLSearchParams()
+  if (categorySlug) clearQs.set('category', categorySlug)
+  if (tagSlug) clearQs.set('tag', tagSlug)
+  const clearHref =
+    clearQs.toString().length > 0 ? `/blog?${clearQs.toString()}` : '/blog'
+
   return (
     <form
       action="/blog"
@@ -17,6 +24,7 @@ export function BlogSearch({ defaultValue = '', categorySlug }: Props) {
       {categorySlug && (
         <input type="hidden" name="category" value={categorySlug} />
       )}
+      {tagSlug && <input type="hidden" name="tag" value={tagSlug} />}
       <input
         type="search"
         name="q"
@@ -26,17 +34,11 @@ export function BlogSearch({ defaultValue = '', categorySlug }: Props) {
         minLength={2}
         maxLength={80}
       />
-      <button
-        type="submit"
-        className="btn-brutal-primary px-6 py-3 text-xs"
-      >
+      <button type="submit" className="btn-brutal-primary px-6 py-3 text-xs">
         Tìm
       </button>
       {defaultValue && (
-        <Link
-          href={categorySlug ? `/blog?category=${categorySlug}` : '/blog'}
-          className="btn-brutal-secondary ml-3 px-5 py-3 text-xs"
-        >
+        <Link href={clearHref} className="btn-brutal-secondary ml-3 px-5 py-3 text-xs">
           Xoá
         </Link>
       )}

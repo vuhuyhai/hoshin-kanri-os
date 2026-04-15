@@ -12,9 +12,15 @@ type BlogFormInitial = {
   content_md: string
   status: 'draft' | 'published'
   category_id: string
+  tag_ids: string[]
 }
 
 export type CategoryOption = {
+  id: string
+  name: string
+}
+
+export type TagOption = {
   id: string
   name: string
 }
@@ -37,6 +43,7 @@ const EMPTY: BlogFormInitial = {
   content_md: '',
   status: 'draft',
   category_id: '',
+  tag_ids: [],
 }
 
 function slugify(input: string): string {
@@ -57,11 +64,13 @@ export function BlogForm({
   initial = EMPTY,
   submitLabel = 'Lưu bài viết',
   categories = [],
+  tags = [],
 }: {
   action: BlogFormAction
   initial?: BlogFormInitial
   submitLabel?: string
   categories?: CategoryOption[]
+  tags?: TagOption[]
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     action,
@@ -76,7 +85,14 @@ export function BlogForm({
   const [content, setContent] = useState(initial.content_md)
   const [status, setStatus] = useState<'draft' | 'published'>(initial.status)
   const [categoryId, setCategoryId] = useState(initial.category_id)
+  const [tagIds, setTagIds] = useState<string[]>(initial.tag_ids)
   const [showPreview, setShowPreview] = useState(false)
+
+  const toggleTag = (id: string) => {
+    setTagIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    )
+  }
 
   const fieldErrors =
     state && state.ok === false ? (state.fieldErrors ?? {}) : {}
@@ -162,6 +178,54 @@ export function BlogForm({
               /admin/blog/categories
             </a>
             .
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+          Tags (tuỳ chọn, tối đa 10)
+        </label>
+        {tagIds.map((id) => (
+          <input key={id} type="hidden" name="tag_ids" value={id} />
+        ))}
+        {tags.length === 0 ? (
+          <p className="mt-1 font-body text-[11px] text-text-3">
+            Chưa có tag nào. Tạo tag tại{' '}
+            <a
+              href="/admin/blog/tags"
+              className="font-semibold text-accent-brand underline"
+            >
+              /admin/blog/tags
+            </a>
+            .
+          </p>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {tags.map((t) => {
+              const selected = tagIds.includes(t.id)
+              return (
+                <button
+                  type="button"
+                  key={t.id}
+                  onClick={() => toggleTag(t.id)}
+                  className={
+                    selected
+                      ? 'btn-brutal-primary px-3 py-1.5 text-[11px]'
+                      : 'btn-brutal-secondary px-3 py-1.5 text-[11px]'
+                  }
+                  aria-pressed={selected}
+                >
+                  {selected ? '✓ ' : ''}
+                  {t.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {fieldErrors.tag_ids && (
+          <p className="mt-1 font-body text-xs text-accent-brand">
+            {fieldErrors.tag_ids}
           </p>
         )}
       </div>

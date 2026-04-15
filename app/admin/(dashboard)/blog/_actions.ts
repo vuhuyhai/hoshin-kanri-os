@@ -9,12 +9,24 @@ import {
   adminUpdatePost,
   adminDeletePost,
   adminGetPostBySlug,
+  adminSetPostTags,
   adminCreateCategory,
   adminUpdateCategory,
   adminDeleteCategory,
   adminGetCategoryBySlug,
+  adminCreateTag,
+  adminUpdateTag,
+  adminDeleteTag,
+  adminGetTagBySlug,
+  adminEnsurePreviewToken,
+  adminRotatePreviewToken,
+  adminRevokePreviewToken,
 } from '@/lib/blog/queries'
-import { blogPostSchema, blogCategorySchema } from '@/lib/blog/schema'
+import {
+  blogPostSchema,
+  blogCategorySchema,
+  blogTagSchema,
+} from '@/lib/blog/schema'
 import { describeDbError } from '@/lib/blog/errors'
 
 type ActionResult =
@@ -43,6 +55,7 @@ async function requireSuperAdmin(): Promise<string> {
 }
 
 function parseFormData(formData: FormData) {
+  const rawTagIds = formData.getAll('tag_ids').map((v) => String(v)).filter(Boolean)
   return blogPostSchema.safeParse({
     slug: formData.get('slug') ?? '',
     title: formData.get('title') ?? '',
@@ -51,6 +64,7 @@ function parseFormData(formData: FormData) {
     content_md: formData.get('content_md') ?? '',
     status: formData.get('status') ?? 'draft',
     category_id: formData.get('category_id') ?? '',
+    tag_ids: rawTagIds,
   })
 }
 
@@ -59,6 +73,13 @@ function parseCategoryFormData(formData: FormData) {
     slug: formData.get('slug') ?? '',
     name: formData.get('name') ?? '',
     description: formData.get('description') ?? '',
+  })
+}
+
+function parseTagFormData(formData: FormData) {
+  return blogTagSchema.safeParse({
+    slug: formData.get('slug') ?? '',
+    name: formData.get('name') ?? '',
   })
 }
 
@@ -96,7 +117,7 @@ export async function createBlogPostAction(
   }
 
   try {
-    await adminCreatePost(
+    const created = await adminCreatePost(
       {
         slug: parsed.data.slug,
         title: parsed.data.title,
@@ -108,6 +129,9 @@ export async function createBlogPostAction(
       },
       userId
     )
+    if (parsed.data.tag_ids.length > 0) {
+      await adminSetPostTags(created.id, parsed.data.tag_ids)
+    }
   } catch (e) {
     console.error('[createBlogPostAction] create failed:', e)
     return { ok: false, error: describeDbError(e) }
@@ -163,6 +187,7 @@ export async function updateBlogPostAction(
       status: parsed.data.status,
       category_id: parsed.data.category_id ?? null,
     })
+    await adminSetPostTags(id, parsed.data.tag_ids)
   } catch (e) {
     console.error('[updateBlogPostAction] update failed:', e)
     return { ok: false, error: describeDbError(e) }
@@ -313,4 +338,170 @@ export async function deleteCategoryAction(
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
   return { ok: true }
+}
+
+// ============================================================
+// Tags
+// ============================================================
+
+export async function createTagAction(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireSuperAdmin()
+
+  const parsed = parseTagFormData(formData)
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]
+    return {
+      ok: false,
+      error: first?.message ?? 'Dữ liệu không hợp lệ',
+      fieldErrors: Object.fromEntries(
+        parsed.error.issues.map((i) => [String(i.path[0] ?? ''), i.message])
+      ),
+    }
+  }
+
+  let existing: Awaited<ReturnType<typeof adminGetTagBySlug>>
+  try {
+    existing = await adminGetTagBySlug(parsed.data.slug)
+  } catch (e) {
+    console.error('[createTagAction] slug lookup failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+  if (existing) {
+    return {
+      ok: false,
+      error: 'Slug đã tồn tại, chọn slug khác',
+      fieldErrors: { slug: 'Slug đã tồn tại' },
+    }
+  }
+
+  try {
+    await adminCreateTag({ slug: parsed.data.slug, name: parsed.data.name })
+  } catch (e) {
+    console.error('[createTagAction] create failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+
+  revalidatePath('/admin/blog/tags')
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { ok: true }
+}
+
+export async function updateTagAction(
+  id: string,
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireSuperAdmin()
+
+  const parsed = parseTagFormData(formData)
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]
+    return {
+      ok: false,
+      error: first?.message ?? 'Dữ liệu không hợp lệ',
+      fieldErrors: Object.fromEntries(
+        parsed.error.issues.map((i) => [String(i.path[0] ?? ''), i.message])
+      ),
+    }
+  }
+
+  let existing: Awaited<ReturnType<typeof adminGetTagBySlug>>
+  try {
+    existing = await adminGetTagBySlug(parsed.data.slug)
+  } catch (e) {
+    console.error('[updateTagAction] slug lookup failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+  if (existing && existing.id !== id) {
+    return {
+      ok: false,
+      error: 'Slug đã tồn tại ở tag khác',
+      fieldErrors: { slug: 'Slug đã tồn tại' },
+    }
+  }
+
+  try {
+    await adminUpdateTag(id, {
+      slug: parsed.data.slug,
+      name: parsed.data.name,
+    })
+  } catch (e) {
+    console.error('[updateTagAction] update failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+
+  revalidatePath('/admin/blog/tags')
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { ok: true }
+}
+
+export async function deleteTagAction(id: string): Promise<ActionResult> {
+  await requireSuperAdmin()
+
+  try {
+    await adminDeleteTag(id)
+  } catch (e) {
+    console.error('[deleteTagAction] delete failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+
+  revalidatePath('/admin/blog/tags')
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { ok: true }
+}
+
+// ============================================================
+// Draft preview token
+// ============================================================
+
+type PreviewTokenResult =
+  | { ok: true; token: string | null }
+  | { ok: false; error: string }
+
+export async function ensurePreviewTokenAction(
+  postId: string
+): Promise<PreviewTokenResult> {
+  await requireSuperAdmin()
+  try {
+    const token = await adminEnsurePreviewToken(postId)
+    revalidatePath(`/admin/blog/${postId}/edit`)
+    return { ok: true, token }
+  } catch (e) {
+    console.error('[ensurePreviewTokenAction] failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+}
+
+export async function rotatePreviewTokenAction(
+  postId: string
+): Promise<PreviewTokenResult> {
+  await requireSuperAdmin()
+  try {
+    const token = await adminRotatePreviewToken(postId)
+    revalidatePath(`/admin/blog/${postId}/edit`)
+    return { ok: true, token }
+  } catch (e) {
+    console.error('[rotatePreviewTokenAction] failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+}
+
+export async function revokePreviewTokenAction(
+  postId: string
+): Promise<PreviewTokenResult> {
+  await requireSuperAdmin()
+  try {
+    await adminRevokePreviewToken(postId)
+    revalidatePath(`/admin/blog/${postId}/edit`)
+    return { ok: true, token: null }
+  } catch (e) {
+    console.error('[revokePreviewTokenAction] failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
 }

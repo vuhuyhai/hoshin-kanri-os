@@ -95,6 +95,7 @@ export type Database = {
           status: string
           author_id: string | null
           category_id: string | null
+          preview_token: string | null
           published_at: string | null
           views_count: number
           created_at: string
@@ -110,6 +111,7 @@ export type Database = {
           status?: string
           author_id?: string | null
           category_id?: string | null
+          preview_token?: string | null
           published_at?: string | null
           views_count?: number
           created_at?: string
@@ -125,6 +127,7 @@ export type Database = {
           status?: string
           author_id?: string | null
           category_id?: string | null
+          preview_token?: string | null
           published_at?: string | null
           views_count?: number
           created_at?: string
@@ -136,6 +139,63 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_tags: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      blog_post_tags: {
+        Row: {
+          post_id: string
+          tag_id: string
+          created_at: string
+        }
+        Insert: {
+          post_id: string
+          tag_id: string
+          created_at?: string
+        }
+        Update: {
+          post_id?: string
+          tag_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_post_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "blog_tags"
             referencedColumns: ["id"]
           },
         ]
