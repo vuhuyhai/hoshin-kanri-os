@@ -2,8 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { getPublishedPostBySlug } from '@/lib/blog/queries'
+import { getPublishedPostBySlug, listRelatedPosts } from '@/lib/blog/queries'
 import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer'
+import { TableOfContents } from '@/components/blog/TableOfContents'
+import { RelatedPosts } from '@/components/blog/RelatedPosts'
+import { ShareButtons } from '@/components/blog/ShareButtons'
+import { extractHeadings, calcReadingMinutes } from '@/lib/blog/toc'
 import { ViewTracker } from './ViewTracker'
 
 export const dynamic = 'force-dynamic'
@@ -67,6 +71,19 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound()
 
   const url = `${SITE_URL}/blog/${post.slug}`
+  const readingMinutes = calcReadingMinutes(post.content_md)
+  const tocItems = extractHeadings(post.content_md)
+
+  let related: Awaited<ReturnType<typeof listRelatedPosts>> = []
+  try {
+    related = await listRelatedPosts({
+      currentId: post.id,
+      categoryId: post.category_id,
+      limit: 3,
+    })
+  } catch (e) {
+    console.error(`/blog/${slug} related posts failed:`, e)
+  }
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -165,8 +182,10 @@ export default async function BlogPostPage({ params }: Props) {
             <p className="mt-6 font-body text-lg leading-relaxed text-text-2">
               {post.excerpt}
             </p>
-            <div className="mt-6 flex items-center gap-4 font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3 font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">
               <span>{formatDate(post.published_at)}</span>
+              <span aria-hidden>•</span>
+              <span>{readingMinutes} phút đọc</span>
               <span aria-hidden>•</span>
               <span>{post.views_count.toLocaleString('vi-VN')} lượt xem</span>
             </div>
@@ -181,7 +200,15 @@ export default async function BlogPostPage({ params }: Props) {
             />
           )}
 
+          <TableOfContents items={tocItems} />
+
           <MarkdownRenderer content={post.content_md} />
+
+          <div className="mt-12 border-t-[3px] border-ink pt-6">
+            <ShareButtons url={url} title={post.title} />
+          </div>
+
+          <RelatedPosts posts={related} />
 
           <footer className="mt-16 border-t-[3px] border-ink pt-8">
             <div className="card-brutal bg-bg-muted-warm p-8 text-center">

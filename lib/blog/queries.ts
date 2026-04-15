@@ -154,18 +154,20 @@ export async function getCategoryBySlug(
 // Public reads — blog posts
 // ============================================================
 
+function escapeIlike(input: string): string {
+  return input.replace(/[%,()]/g, ' ').trim()
+}
+
 export async function listPublishedPosts(params?: {
   limit?: number
   offset?: number
   categorySlug?: string
+  searchQuery?: string
 }): Promise<BlogPostSummary[]> {
   const supabase = await createClient()
   const limit = params?.limit ?? 20
   const offset = params?.offset ?? 0
 
-  // Resolve category slug → id in a separate lookup. Done first so
-  // that filtering by a non-existent slug short-circuits to zero
-  // results instead of ignoring the filter.
   let categoryFilterId: string | undefined
   if (params?.categorySlug) {
     const cat = await getCategoryBySlug(params.categorySlug)
@@ -184,6 +186,11 @@ export async function listPublishedPosts(params?: {
     query = query.eq('category_id', categoryFilterId)
   }
 
+  const q = params?.searchQuery ? escapeIlike(params.searchQuery) : ''
+  if (q.length >= 2) {
+    query = query.or(`title.ilike.%${q}%,excerpt.ilike.%${q}%`)
+  }
+
   const { data, error } = await query
   if (error) throw error
 
@@ -197,6 +204,7 @@ export async function listPublishedPosts(params?: {
 
 export async function countPublishedPosts(params?: {
   categorySlug?: string
+  searchQuery?: string
 }): Promise<number> {
   const supabase = await createClient()
 
@@ -216,9 +224,83 @@ export async function countPublishedPosts(params?: {
     query = query.eq('category_id', categoryFilterId)
   }
 
+  const q = params?.searchQuery ? escapeIlike(params.searchQuery) : ''
+  if (q.length >= 2) {
+    query = query.or(`title.ilike.%${q}%,excerpt.ilike.%${q}%`)
+  }
+
   const { count, error } = await query
   if (error) throw error
   return count ?? 0
+}
+
+export async function listRelatedPosts(params: {
+  currentId: string
+  categoryId: string | null
+  limit?: number
+}): Promise<BlogPostSummary[]> {
+  const supabase = await createClient()
+  const limit = params.limit ?? 3
+
+  let query = supabase
+    .from('blog_posts')
+    .select(POST_SUMMARY_COLUMNS)
+    .eq('status', 'published')
+    .neq('id', params.currentId)
+    .order('published_at', { ascending: false })
+    .limit(limit)
+
+  if (params.categoryId) {
+    query = query.eq('category_id', params.categoryId)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+
+  const rows = (data ?? []) as (Omit<BlogPost, 'content_md'>)[]
+
+  if (rows.length < limit && params.categoryId) {
+    const excludeIds = [params.currentId, ...rows.map((r) => r.id)]
+    const { data: extra, error: extraErr } = await supabase
+      .from('blog_posts')
+      .select(POST_SUMMARY_COLUMNS)
+      .eq('status', 'published')
+      .not('id', 'in', `(${excludeIds.join(',')})`)
+      .order('published_at', { ascending: false })
+      .limit(limit - rows.length)
+    if (extraErr) throw extraErr
+    rows.push(...((extra ?? []) as (Omit<BlogPost, 'content_md'>)[]))
+  }
+
+  const withCategory = await attachCategories(
+    supabase as unknown as SupabaseLike,
+    rows
+  )
+  return withCategory as BlogPostSummary[]
+}
+
+export async function listRssPosts(limit = 50): Promise<
+  Pick<
+    BlogPost,
+    'slug' | 'title' | 'excerpt' | 'published_at' | 'updated_at' | 'cover_url'
+  >[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('slug, title, excerpt, published_at, updated_at, cover_url')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return (data ?? []) as {
+    slug: string
+    title: string
+    excerpt: string
+    published_at: string | null
+    updated_at: string
+    cover_url: string | null
+  }[]
 }
 
 export async function getPublishedPostBySlug(

@@ -1,7 +1,28 @@
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { slugifyHeading } from '@/lib/blog/toc'
+
+function childrenToText(node: React.ReactNode): string {
+  if (node == null || typeof node === 'boolean') return ''
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(childrenToText).join('')
+  if (React.isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode }
+    return childrenToText(props.children)
+  }
+  return ''
+}
 
 export function MarkdownRenderer({ content }: { content: string }) {
+  const headingCounts = new Map<string, number>()
+  const nextHeadingId = (text: string): string => {
+    const base = slugifyHeading(text)
+    const n = headingCounts.get(base) ?? 0
+    headingCounts.set(base, n + 1)
+    return n === 0 ? base : `${base}-${n}`
+  }
+
   return (
     <div className="blog-prose font-sans text-ink">
       <ReactMarkdown
@@ -12,16 +33,28 @@ export function MarkdownRenderer({ content }: { content: string }) {
               {children}
             </h1>
           ),
-          h2: ({ children }) => (
-            <h2 className="mt-10 mb-4 font-display text-2xl font-black uppercase tracking-wide text-ink">
-              {children}
-            </h2>
-          ),
-          h3: ({ children }) => (
-            <h3 className="mt-8 mb-3 font-display text-xl font-bold uppercase tracking-wide text-ink">
-              {children}
-            </h3>
-          ),
+          h2: ({ children }) => {
+            const id = nextHeadingId(childrenToText(children))
+            return (
+              <h2
+                id={id}
+                className="mt-10 mb-4 scroll-mt-24 font-display text-2xl font-black uppercase tracking-wide text-ink"
+              >
+                {children}
+              </h2>
+            )
+          },
+          h3: ({ children }) => {
+            const id = nextHeadingId(childrenToText(children))
+            return (
+              <h3
+                id={id}
+                className="mt-8 mb-3 scroll-mt-24 font-display text-xl font-bold uppercase tracking-wide text-ink"
+              >
+                {children}
+              </h3>
+            )
+          },
           p: ({ children }) => (
             <p className="my-5 text-[17px] leading-[1.7] text-ink">{children}</p>
           ),

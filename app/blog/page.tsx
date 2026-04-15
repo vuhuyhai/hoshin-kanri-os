@@ -7,6 +7,7 @@ import {
   listCategories,
   getCategoryBySlug,
 } from '@/lib/blog/queries'
+import { BlogSearch } from '@/components/blog/BlogSearch'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,12 @@ export async function generateMetadata({
       title: 'Blog — Hoshin Kanri OS',
       description:
         'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam từ đội ngũ Hoshin Kanri OS.',
-      alternates: { canonical: `${SITE_URL}/blog` },
+      alternates: {
+        canonical: `${SITE_URL}/blog`,
+        types: {
+          'application/rss+xml': `${SITE_URL}/blog/rss.xml`,
+        },
+      },
       openGraph: {
         type: 'website',
         url: `${SITE_URL}/blog`,
@@ -68,17 +74,19 @@ function formatDate(iso: string | null): string {
   })
 }
 
-type SearchParams = Promise<{ page?: string; category?: string }>
+type SearchParams = Promise<{ page?: string; category?: string; q?: string }>
 
 export default async function BlogIndexPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { page: pageParam, category: categoryParam } = await searchParams
+  const { page: pageParam, category: categoryParam, q: qParam } = await searchParams
   const pageNum = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const offset = (pageNum - 1) * PAGE_SIZE
   const categorySlug = categoryParam?.trim() || undefined
+  const searchQuery = qParam?.trim() ?? ''
+  const hasSearch = searchQuery.length >= 2
 
   // Resilient: if the DB is unreachable or the table is missing (e.g.
   // migration not yet applied in the target env), show the empty state
@@ -89,8 +97,16 @@ export default async function BlogIndexPage({
   let activeCategory: Awaited<ReturnType<typeof getCategoryBySlug>> = null
   try {
     ;[posts, total, categories, activeCategory] = await Promise.all([
-      listPublishedPosts({ limit: PAGE_SIZE, offset, categorySlug }),
-      countPublishedPosts({ categorySlug }),
+      listPublishedPosts({
+        limit: PAGE_SIZE,
+        offset,
+        categorySlug,
+        searchQuery: hasSearch ? searchQuery : undefined,
+      }),
+      countPublishedPosts({
+        categorySlug,
+        searchQuery: hasSearch ? searchQuery : undefined,
+      }),
       listCategories(),
       categorySlug ? getCategoryBySlug(categorySlug) : Promise.resolve(null),
     ])
@@ -99,7 +115,10 @@ export default async function BlogIndexPage({
   }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const baseHref = activeCategory ? `/blog?category=${activeCategory.slug}&` : '/blog?'
+  const searchQs = hasSearch ? `&q=${encodeURIComponent(searchQuery)}` : ''
+  const baseHref = activeCategory
+    ? `/blog?category=${activeCategory.slug}${searchQs}&`
+    : `/blog?${hasSearch ? `q=${encodeURIComponent(searchQuery)}&` : ''}`
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -175,15 +194,26 @@ export default async function BlogIndexPage({
           </div>
         </section>
 
-        {categories.length > 0 && (
-          <section className="w-full border-b-[3px] border-ink bg-bg-warm">
-            <div className="mx-auto max-w-[1440px] px-6 py-5 lg:px-12">
+        <section className="w-full border-b-[3px] border-ink bg-bg-warm">
+          <div className="mx-auto max-w-[1440px] space-y-5 px-6 py-5 lg:px-12">
+            <div className="mx-auto max-w-2xl">
+              <BlogSearch
+                defaultValue={hasSearch ? searchQuery : ''}
+                categorySlug={activeCategory?.slug}
+              />
+              {hasSearch && (
+                <p className="mt-3 text-center font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">
+                  Kết quả cho &quot;{searchQuery}&quot;: {total} bài
+                </p>
+              )}
+            </div>
+            {categories.length > 0 && (
               <div
-                className="flex flex-wrap items-center gap-2 overflow-x-auto"
+                className="flex flex-wrap items-center justify-center gap-2"
                 aria-label="Danh mục bài viết"
               >
                 <Link
-                  href="/blog"
+                  href={hasSearch ? `/blog?q=${encodeURIComponent(searchQuery)}` : '/blog'}
                   className={
                     activeCategory
                       ? 'btn-brutal-secondary px-4 py-2 text-[11px]'
@@ -194,10 +224,13 @@ export default async function BlogIndexPage({
                 </Link>
                 {categories.map((c) => {
                   const isActive = activeCategory?.slug === c.slug
+                  const catHref = hasSearch
+                    ? `/blog?category=${c.slug}&q=${encodeURIComponent(searchQuery)}`
+                    : `/blog?category=${c.slug}`
                   return (
                     <Link
                       key={c.id}
-                      href={`/blog?category=${c.slug}`}
+                      href={catHref}
                       className={
                         isActive
                           ? 'btn-brutal-primary px-4 py-2 text-[11px]'
@@ -209,21 +242,34 @@ export default async function BlogIndexPage({
                   )
                 })}
               </div>
-            </div>
-          </section>
-        )}
+            )}
+          </div>
+        </section>
 
         <section className="w-full bg-bg-muted-warm py-16 lg:py-20">
           <div className="mx-auto max-w-[1440px] px-6 lg:px-12">
             {posts.length === 0 ? (
               <div className="card-brutal mx-auto max-w-xl p-10 text-center">
                 <p className="font-display text-lg font-bold uppercase text-ink">
-                  {activeCategory
-                    ? 'Chưa có bài viết trong danh mục này'
-                    : 'Chưa có bài viết nào'}
+                  {hasSearch
+                    ? 'Không tìm thấy bài viết nào'
+                    : activeCategory
+                      ? 'Chưa có bài viết trong danh mục này'
+                      : 'Chưa có bài viết nào'}
                 </p>
                 <p className="mt-3 font-body text-text-2">
-                  {activeCategory ? (
+                  {hasSearch ? (
+                    <>
+                      Thử từ khoá khác hoặc{' '}
+                      <Link
+                        href="/blog"
+                        className="font-semibold text-accent-brand underline"
+                      >
+                        xem tất cả bài viết
+                      </Link>
+                      .
+                    </>
+                  ) : activeCategory ? (
                     <>
                       Quay lại{' '}
                       <Link
