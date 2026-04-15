@@ -40,14 +40,19 @@ function hydrateItems(raw: RawDraftItem[]): SwotDraftItem[] {
   }))
 }
 
-function isValidQuadrant(arr: unknown): arr is RawDraftItem[] {
-  return Array.isArray(arr) && arr.length >= 2 && arr.every(
-    (item) =>
-      typeof item === 'object' &&
-      item !== null &&
-      typeof (item as Record<string, unknown>).statement === 'string' &&
-      typeof (item as Record<string, unknown>).rationale === 'string'
-  )
+function quadrantError(arr: unknown): string | null {
+  if (!Array.isArray(arr)) return `not-array (got ${typeof arr})`
+  if (arr.length < 2) return `too-few-items (${arr.length})`
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i]
+    if (typeof item !== 'object' || item === null) return `item[${i}] not-object`
+    const rec = item as Record<string, unknown>
+    if (typeof rec.statement !== 'string' || rec.statement.trim().length === 0)
+      return `item[${i}] missing-statement`
+    if (typeof rec.rationale !== 'string' || rec.rationale.trim().length === 0)
+      return `item[${i}] missing-rationale`
+  }
+  return null
 }
 
 const QUADRANT_ITEM_SCHEMA = {
@@ -112,7 +117,11 @@ async function callDraftAI(
 ): Promise<RawDraftOutput> {
   const response = await client.messages.create({
     model: AI_MODELS.reasoning,
-    max_tokens: 4096,
+    // 4 quadrants × 3-5 items × (statement + rationale + metadata) in
+    // Vietnamese easily pushes past 4k tokens once JSON/schema overhead is
+    // counted. 4096 was truncating tool_use output on Sonnet 4.6 and
+    // triggering the "định dạng không hợp lệ" toast. 8192 is comfortable.
+    max_tokens: 8192,
     system: getDraftSystemPrompt(),
     tools: [SWOT_TOOL],
     tool_choice: { type: 'tool', name: 'submit_swot_draft' },
@@ -140,17 +149,24 @@ async function callDraftAI(
 
   const parsed = toolBlock.input as RawDraftOutput
 
-  if (
-    !isValidQuadrant(parsed.strengths) ||
-    !isValidQuadrant(parsed.weaknesses) ||
-    !isValidQuadrant(parsed.opportunities) ||
-    !isValidQuadrant(parsed.threats)
-  ) {
+  const errors: string[] = []
+  const sErr = quadrantError(parsed.strengths)
+  if (sErr) errors.push(`S:${sErr}`)
+  const wErr = quadrantError(parsed.weaknesses)
+  if (wErr) errors.push(`W:${wErr}`)
+  const oErr = quadrantError(parsed.opportunities)
+  if (oErr) errors.push(`O:${oErr}`)
+  const tErr = quadrantError(parsed.threats)
+  if (tErr) errors.push(`T:${tErr}`)
+
+  if (errors.length > 0) {
+    const summary = errors.join(', ')
     console.error(
-      '[coaching-draft] quadrant validation failed. parsed:',
-      JSON.stringify(parsed).slice(0, 1000),
+      '[coaching-draft] quadrant validation failed:', summary,
+      '\nkeys:', Object.keys(parsed ?? {}),
+      '\npreview:', JSON.stringify(parsed).slice(0, 1500),
     )
-    throw new Error('invalid_quadrants')
+    throw new Error(`invalid_quadrants: ${summary}`)
   }
 
   return parsed
@@ -173,15 +189,23 @@ export async function POST(request: NextRequest) {
     const prompt = buildDraftUserPrompt(body)
 
     let aiResult: RawDraftOutput
+    let firstReason = ''
     try {
       aiResult = await callDraftAI(client, prompt)
-    } catch {
+    } catch (firstErr) {
+      firstReason = (firstErr as Error).message
+      console.warn('[coaching-draft] first attempt failed:', firstReason)
       // Retry once on any parse/validation/truncation failure
       try {
         aiResult = await callDraftAI(client, prompt)
-      } catch {
+      } catch (secondErr) {
+        const secondReason = (secondErr as Error).message
+        console.error('[coaching-draft] retry also failed:', secondReason)
         return NextResponse.json(
-          { error: 'AI trả về định dạng không hợp lệ, vui lòng thử lại' },
+          {
+            error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,
+            debug: { firstReason, secondReason },
+          },
           { status: 500 }
         )
       }

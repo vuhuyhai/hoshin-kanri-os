@@ -52,6 +52,7 @@ export function CoachingPhase({ orgContext, userId, analysisId, onComplete }: Co
         setDraft(draftData)
         setStep('review')
       } catch (err) {
+        console.error('[CoachingPhase] coaching-draft failed:', err)
         toast.error(err instanceof Error ? err.message : 'Lỗi kết nối AI. Thử lại.')
         setStep('form')
       }

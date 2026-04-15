@@ -52,29 +52,31 @@ export async function GET() {
 
     if (!pillars.length) return NextResponse.json({ prefilled: false })
 
-    // 2 lowest-scoring dimensions → challenges text
-    const challenges = pillars
-      .slice(0, 2)
-      .map((p) => `Doanh nghiệp đang gặp khó khăn về ${p.label}: ${p.topIssue || p.summary}`)
-      .join('. ')
+    // Q: "3 thách thức lớn nhất hiện tại" — 3 lowest pillars as a numbered
+    // list of concrete issues, one per line. topIssue is the per-pillar
+    // "1 câu vấn đề cần ưu tiên giải quyết" the X-Ray AI already produced.
+    const worst = pillars.slice(0, 3)
+    const challenges = worst
+      .map((p, i) => `${i + 1}. ${p.label} (${p.score}/100): ${p.topIssue || p.summary}`)
+      .join('\n')
 
-    // Highest-scoring dimension → strengths text
+    // Q: "Điều doanh nghiệp đang làm TỐT NHẤT" — highest-scoring pillar
+    // with the AI's per-pillar observation so it describes what the org
+    // actually does well, not just a score label.
     const top = pillars[pillars.length - 1]
-    const strengths = `Điểm mạnh nổi bật: ${top.label} đạt ${top.score}/100`
+    const strengths = `${top.label} (${top.score}/100) — ${top.summary}`
 
-    // 12-month breakthrough goal: anchor it in the X-Ray's first concrete
-    // top-action and the score-band gap. Min length must clear the form's
-    // 15-char validator (line 104 of SwotContextForm).
+    // Q: "Mục tiêu lớn nhất muốn đạt trong 12 tháng tới" — a forward-looking
+    // breakthrough goal anchored in the X-Ray score gap + the pillars most
+    // in need of improvement. Do NOT use topActions[0] here: those are
+    // 30-day actions, not 12-month goals, and conflating them misreads the
+    // question for the CEO filling this form.
     const totalScore = xray.overall_score
-    const topAction = xray.result_json?.topActions?.[0]?.trim() ?? ''
     const targetScore = totalScore < 50 ? Math.min(70, totalScore + 25)
       : totalScore < 70 ? 75
       : Math.min(95, totalScore + 10)
-    // Guard against very-short topAction strings that would produce
-    // a leading-period cosmetic artifact ("." + appended sentence).
-    const goals = topAction.length > 3
-      ? `${topAction}. Đồng thời nâng tổng điểm OPEX từ ${totalScore}/100 lên ≥${targetScore}/100 trong 12 tháng tới.`
-      : `Nâng tổng điểm OPEX từ ${totalScore}/100 lên ≥${targetScore}/100 trong 12 tháng, ưu tiên cải thiện ${pillars[0].label}.`
+    const focusAreas = worst.slice(0, 2).map((p) => p.label).join(' và ')
+    const goals = `Nâng tổng điểm OPEX từ ${totalScore}/100 lên ≥${targetScore}/100 trong 12 tháng tới, trọng tâm cải thiện ${focusAreas}.`
 
     // Framework suggestion based on total score
     const suggestedFrameworkOT: 'porter5' | 'PESTEL' =
