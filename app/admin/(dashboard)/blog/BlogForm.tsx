@@ -1,7 +1,8 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer'
 
 type BlogFormInitial = {
@@ -87,11 +88,44 @@ export function BlogForm({
   const [categoryId, setCategoryId] = useState(initial.category_id)
   const [tagIds, setTagIds] = useState<string[]>(initial.tag_ids)
   const [showPreview, setShowPreview] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const toggleTag = (id: string) => {
     setTagIds((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     )
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ảnh quá lớn, tối đa 5 MB')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/blog/upload-cover', {
+        method: 'POST',
+        body: fd,
+      })
+      const json = (await res.json()) as { success?: boolean; url?: string; error?: string }
+      if (!res.ok || !json.url) {
+        toast.error(json.error ?? 'Upload thất bại')
+        return
+      }
+      setCoverUrl(json.url)
+      toast.success('Đã upload ảnh bìa')
+    } catch {
+      toast.error('Upload thất bại, kiểm tra kết nối')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   const fieldErrors =
@@ -285,16 +319,54 @@ export function BlogForm({
 
       <div>
         <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
-          Ảnh bìa (URL, tuỳ chọn)
+          Ảnh bìa (tuỳ chọn)
         </label>
+        <div className="mt-2 flex items-stretch gap-0">
+          <input
+            name="cover_url"
+            type="url"
+            value={coverUrl}
+            onChange={(e) => setCoverUrl(e.target.value)}
+            className="flex-1 border-[3px] border-r-0 border-ink bg-bg-warm px-4 py-3 font-mono text-sm text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
+            placeholder="https://... hoặc bấm Upload"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="btn-brutal-primary px-5 py-3 text-xs disabled:opacity-50"
+          >
+            {uploading ? 'Đang upload…' : 'Upload'}
+          </button>
+          {coverUrl && (
+            <button
+              type="button"
+              onClick={() => setCoverUrl('')}
+              disabled={uploading}
+              className="btn-brutal-secondary ml-3 px-4 py-3 text-xs disabled:opacity-50"
+            >
+              Xoá
+            </button>
+          )}
+        </div>
         <input
-          name="cover_url"
-          type="url"
-          value={coverUrl}
-          onChange={(e) => setCoverUrl(e.target.value)}
-          className="mt-2 w-full border-[3px] border-ink bg-bg-warm px-4 py-3 font-mono text-sm text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
-          placeholder="https://..."
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={handleFileChange}
         />
+        <p className="mt-1 font-body text-[11px] text-text-3">
+          PNG, JPG, WEBP hoặc GIF. Tối đa 5 MB.
+        </p>
+        {coverUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt="Preview ảnh bìa"
+            className="mt-3 aspect-[16/9] w-full max-w-sm object-cover border-[3px] border-ink shadow-[5px_5px_0_#2C2B2B]"
+          />
+        )}
         {fieldErrors.cover_url && (
           <p className="mt-1 font-body text-xs text-accent-brand">
             {fieldErrors.cover_url}

@@ -13,6 +13,7 @@ import { RelatedPosts } from '@/components/blog/RelatedPosts'
 import { ShareButtons } from '@/components/blog/ShareButtons'
 import { AuthorByline } from '@/components/blog/AuthorByline'
 import { PostTags } from '@/components/blog/PostTags'
+import { NewsletterCta } from '@/components/blog/NewsletterCta'
 import { extractHeadings, calcReadingMinutes } from '@/lib/blog/toc'
 import { ViewTracker } from './ViewTracker'
 
@@ -223,24 +224,7 @@ export default async function BlogPostPage({ params }: Props) {
           <RelatedPosts posts={related} />
 
           <footer className="mt-16 border-t-[3px] border-ink pt-8">
-            <div className="card-brutal bg-bg-muted-warm p-8 text-center">
-              <p className="font-display text-sm font-semibold uppercase tracking-wider text-text-3">
-                Sẵn sàng biến chiến lược thành hành động?
-              </p>
-              <h3 className="mt-3 font-display text-2xl font-black uppercase text-ink">
-                Thử <span className="text-accent-brand">Business X-Ray</span> miễn phí
-              </h3>
-              <p className="mt-3 font-body text-text-2">
-                10 phút để chẩn đoán tình trạng doanh nghiệp của bạn và nhận
-                báo cáo chi tiết.
-              </p>
-              <Link
-                href="/x-ray"
-                className="btn-brutal-primary mt-6 inline-block px-6 py-3 text-sm"
-              >
-                Bắt đầu X-Ray →
-              </Link>
-            </div>
+            <NewsletterCta source={`blog-post:${post.slug}`} />
           </footer>
         </article>
       </main>

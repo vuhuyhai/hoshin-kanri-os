@@ -200,6 +200,30 @@ export type Database = {
           },
         ]
       }
+      newsletter_subscribers: {
+        Row: {
+          id: string
+          email: string
+          source: string | null
+          created_at: string
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          id?: string
+          email: string
+          source?: string | null
+          created_at?: string
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          source?: string | null
+          created_at?: string
+          unsubscribed_at?: string | null
+        }
+        Relationships: []
+      }
       discovery_sessions: {
         Row: {
           created_at: string | null
