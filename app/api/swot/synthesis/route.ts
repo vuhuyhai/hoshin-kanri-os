@@ -63,6 +63,10 @@ export async function POST(req: NextRequest) {
     return Response.json(result)
   } catch (error) {
     console.error('Synthesis error:', error)
-    return Response.json({ error: 'Lỗi tổng hợp SWOT, vui lòng thử lại' }, { status: 500 })
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Lỗi tổng hợp SWOT, vui lòng thử lại'
+    return Response.json({ error: message }, { status: 500 })
   }
 }

@@ -1,26 +1,40 @@
 import { randomUUID } from 'crypto'
-import type { CoachingItem, EvidenceItemV2, OrgContext, SynthesizedSwotItem, SynthesisResult } from './types'
+import type Anthropic from '@anthropic-ai/sdk'
+import type {
+  CoachingItem,
+  EvidenceItemV2,
+  OrgContext,
+  SynthesizedSwotItem,
+  SynthesisResult,
+} from './types'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = createAnthropicClient()
-
-function buildSynthesisPrompt(coaching: CoachingItem[], evidence: EvidenceItemV2[], org: OrgContext): string {
-  const byQ = <T extends { quadrant: string }>(items: T[], q: string) => items.filter((i) => i.quadrant === q)
+function buildSynthesisPrompt(
+  coaching: CoachingItem[],
+  evidence: EvidenceItemV2[],
+  org: OrgContext,
+): string {
+  const byQ = <T extends { quadrant: string }>(items: T[], q: string) =>
+    items.filter((i) => i.quadrant === q)
 
   const fmtCoach = (items: CoachingItem[]) =>
-    items.length ? items.map((i) => `  [${i.id}] "${i.text}" (${i.source})`).join('\n') : '  (không có)'
+    items.length
+      ? items.map((i) => `  [${i.id}] "${i.text}" (${i.source})`).join('\n')
+      : '  (không có)'
 
   const fmtEvid = (items: EvidenceItemV2[]) =>
     items.length
-      ? items.map((i) => {
-          let line = `  [${i.id}] "${i.text}"`
-          if (i.data_point) line += ` — ${i.data_point}`
-          if (i.source_name) line += ` (${i.source_name})`
-          if (i.published_year) line += ` [${i.published_year}]`
-          if (i.is_new_discovery) line += ' [MỚI]'
-          return line
-        }).join('\n')
+      ? items
+          .map((i) => {
+            let line = `  [${i.id}] "${i.text}"`
+            if (i.data_point) line += ` — ${i.data_point}`
+            if (i.source_name) line += ` (${i.source_name})`
+            if (i.published_year) line += ` [${i.published_year}]`
+            if (i.is_new_discovery) line += ' [MỚI]'
+            return line
+          })
+          .join('\n')
       : '  (không có)'
 
   return `Ngành: ${org.industry} | Quy mô: ${org.headcount} | Thành phố: ${org.city}
@@ -44,79 +58,186 @@ ENRICH: Item chưa có số liệu + có evidence liên quan → gắn evidence 
 DISCARD: Quá chung + không có evidence → loại bỏ
 LIMIT: Tối đa 5 items/quadrant, ưu tiên evidence mạnh nhất
 
-OUTPUT JSON:
-{
-  "swot_items": [{
-    "quadrant": "S|W|O|T",
-    "statement": "Rõ ràng, có thể đo, tối đa 12 từ",
-    "evidence": "Số liệu cụ thể + nguồn + năm — BẮT BUỘC có con số",
-    "evidence_source": "Tên nguồn", "evidence_url": "URL", "evidence_year": 2024,
-    "implication": "Tại sao quan trọng với chiến lược — 1 câu kết nối",
-    "priority": 1, "merged_from": ["id1", "id2"], "credibility_score": 8.5
-  }],
-  "merge_log": [{ "merged_ids": ["id1","id2"], "into_item": "...", "reason": "..." }],
-  "discarded": [{ "original_text": "...", "reason": "..." }]
-}
-
 TIÊU CHUẨN CHẤT LƯỢNG:
-Statement PHẢI specific: không "dịch vụ tốt" mà "NPS 72, top 15% ngành"
-Evidence PHẢI có: con số + tên nguồn + năm
-Implication PHẢI chiến lược: kết nối với cơ hội/thách thức cụ thể
-Tổng cộng KHÔNG quá 16 items`
+- Statement PHẢI specific: không "dịch vụ tốt" mà "NPS 72, top 15% ngành"
+- Evidence PHẢI có: con số + tên nguồn + năm
+- Implication PHẢI chiến lược: kết nối với cơ hội/thách thức cụ thể
+- Tổng cộng KHÔNG quá 16 items
+
+Gọi tool submit_swot_synthesis với kết quả.`
 }
 
-function parseAndEnrichSynthesis(
-  raw: string,
+const SWOT_SYNTHESIS_TOOL: Anthropic.Tool = {
+  name: 'submit_swot_synthesis',
+  description:
+    'Submit a merged/enriched SWOT analysis synthesizing coaching items and evidence into final strategic statements.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      swot_items: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 16,
+        items: {
+          type: 'object',
+          properties: {
+            quadrant: { type: 'string', enum: ['S', 'W', 'O', 'T'] },
+            statement: {
+              type: 'string',
+              description: 'Rõ ràng, có thể đo, tối đa 12 từ',
+            },
+            evidence: {
+              type: 'string',
+              description:
+                'Số liệu cụ thể + nguồn + năm — BẮT BUỘC có con số',
+            },
+            evidence_source: { type: 'string' },
+            evidence_url: { type: 'string' },
+            evidence_year: { type: 'number' },
+            implication: {
+              type: 'string',
+              description: 'Tại sao quan trọng với chiến lược — 1 câu',
+            },
+            priority: { type: 'number', enum: [1, 2, 3, 4, 5] },
+            merged_from: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'IDs of input items merged into this output',
+            },
+            credibility_score: {
+              type: 'number',
+              description: '0-10, dựa trên độ mạnh của evidence',
+            },
+          },
+          required: [
+            'quadrant',
+            'statement',
+            'evidence',
+            'implication',
+            'priority',
+            'credibility_score',
+          ],
+        },
+      },
+      merge_log: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            merged_ids: { type: 'array', items: { type: 'string' } },
+            into_item: { type: 'string' },
+            reason: { type: 'string' },
+          },
+          required: ['merged_ids', 'into_item', 'reason'],
+        },
+      },
+      discarded: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            original_text: { type: 'string' },
+            reason: { type: 'string' },
+          },
+          required: ['original_text', 'reason'],
+        },
+      },
+    },
+    required: ['swot_items', 'merge_log', 'discarded'],
+  },
+}
+
+interface RawSynthesisOutput {
+  swot_items: Array<Omit<SynthesizedSwotItem, 'id'>>
+  merge_log: SynthesisResult['merge_log']
+  discarded: SynthesisResult['discarded']
+}
+
+async function callSynthesisAI(
+  client: Anthropic,
+  prompt: string,
+  signal: AbortSignal,
+): Promise<RawSynthesisOutput> {
+  const response = await client.messages.create(
+    {
+      model: AI_MODELS.reasoning,
+      max_tokens: 8192,
+      system: `Bạn là chuyên gia tư vấn chiến lược Hoshin Kanri.
+Nguyên tắc: "No one benefits from vague statements. Be clear and detailed.
+Put figures on the current condition." — Melander (2021)
+Gọi tool submit_swot_synthesis với output có cấu trúc.`,
+      tools: [SWOT_SYNTHESIS_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_swot_synthesis' },
+      messages: [{ role: 'user', content: prompt }],
+    },
+    { signal },
+  )
+
+  if (response.stop_reason === 'max_tokens') {
+    console.error('[swot-synthesis] hit max_tokens before completing tool call')
+    throw new Error('max_tokens')
+  }
+
+  const toolBlock = response.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
+  )
+
+  if (!toolBlock) {
+    console.error(
+      '[swot-synthesis] no tool_use block. stop_reason=',
+      response.stop_reason,
+      'content:',
+      JSON.stringify(response.content).slice(0, 800),
+    )
+    throw new Error('no_tool_use')
+  }
+
+  const parsed = toolBlock.input as Partial<RawSynthesisOutput>
+
+  if (!Array.isArray(parsed.swot_items) || parsed.swot_items.length === 0) {
+    throw new Error('missing_swot_items')
+  }
+  for (let i = 0; i < parsed.swot_items.length; i++) {
+    const item = parsed.swot_items[i]
+    if (!item || typeof item !== 'object') {
+      throw new Error(`invalid_item_${i}`)
+    }
+    if (!['S', 'W', 'O', 'T'].includes(item.quadrant)) {
+      throw new Error(`invalid_quadrant_${i}`)
+    }
+    if (typeof item.statement !== 'string' || !item.statement.trim()) {
+      throw new Error(`missing_statement_${i}`)
+    }
+  }
+
+  return {
+    swot_items: parsed.swot_items,
+    merge_log: Array.isArray(parsed.merge_log) ? parsed.merge_log : [],
+    discarded: Array.isArray(parsed.discarded) ? parsed.discarded : [],
+  }
+}
+
+function toSynthesisResult(
+  raw: RawSynthesisOutput,
   coaching: CoachingItem[],
   evidence: EvidenceItemV2[],
 ): SynthesisResult {
-  try {
-    const cleaned = raw.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(cleaned) as {
-      swot_items: Array<Omit<SynthesizedSwotItem, 'id'> & { credibility_score?: number }>
-      merge_log?: SynthesisResult['merge_log']
-      discarded?: SynthesisResult['discarded']
-    }
+  const swot_items: SynthesizedSwotItem[] = raw.swot_items.map((item) => ({
+    ...item,
+    id: randomUUID(),
+    credibility_score: item.credibility_score ?? 5,
+  }))
 
-    const swot_items: SynthesizedSwotItem[] = parsed.swot_items.map((item) => ({
-      ...item,
-      id: randomUUID(),
-      credibility_score: item.credibility_score ?? 5,
-    }))
-
-    return {
-      swot_items,
-      merge_log: parsed.merge_log ?? [],
-      discarded: parsed.discarded ?? [],
-      stats: {
-        total_input: coaching.length + evidence.length,
-        total_output: swot_items.length,
-        merged_count: (parsed.merge_log ?? []).length,
-        discarded_count: (parsed.discarded ?? []).length,
-      },
-    }
-  } catch {
-    const swot_items: SynthesizedSwotItem[] = coaching.map((c) => ({
-      id: randomUUID(),
-      quadrant: c.quadrant,
-      statement: c.text,
-      evidence: 'Chưa có số liệu cụ thể',
-      implication: 'Cần phân tích thêm',
-      priority: 3 as const,
-      credibility_score: 4,
-    }))
-
-    return {
-      swot_items,
-      merge_log: [],
-      discarded: [],
-      stats: {
-        total_input: coaching.length + evidence.length,
-        total_output: coaching.length,
-        merged_count: 0,
-        discarded_count: 0,
-      },
-    }
+  return {
+    swot_items,
+    merge_log: raw.merge_log,
+    discarded: raw.discarded,
+    stats: {
+      total_input: coaching.length + evidence.length,
+      total_output: swot_items.length,
+      merged_count: raw.merge_log.length,
+      discarded_count: raw.discarded.length,
+    },
   }
 }
 
@@ -125,32 +246,38 @@ export async function synthesizeSwot(
   evidenceItems: EvidenceItemV2[],
   org: OrgContext,
 ): Promise<SynthesisResult> {
+  const client = createAnthropicClient()
+  const prompt = buildSynthesisPrompt(coachingItems, evidenceItems, org)
+
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 55000)
+  const timeoutId = setTimeout(() => controller.abort(), 55_000)
 
   try {
-    const message = await anthropic.messages.create(
-      {
-        model: AI_MODELS.reasoning,
-        max_tokens: 2000,
-        system: `Bạn là chuyên gia tư vấn chiến lược Hoshin Kanri.
-Nguyên tắc: "No one benefits from vague statements. Be clear and detailed.
-Put figures on the current condition." — Melander (2021)
-Chỉ trả về JSON hợp lệ.`,
-        messages: [{ role: 'user', content: buildSynthesisPrompt(coachingItems, evidenceItems, org) }],
-      },
-      { signal: controller.signal },
-    )
-    clearTimeout(timeoutId)
-
-    const block = message.content[0]
-    if (block.type !== 'text') return parseAndEnrichSynthesis('{}', coachingItems, evidenceItems)
-    return parseAndEnrichSynthesis(block.text, coachingItems, evidenceItems)
-  } catch (err) {
-    clearTimeout(timeoutId)
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('AI synthesis timeout sau 55 giây. Vui lòng thử lại.')
+    let raw: RawSynthesisOutput
+    let firstReason = ''
+    try {
+      raw = await callSynthesisAI(client, prompt, controller.signal)
+    } catch (firstErr) {
+      if (firstErr instanceof Error && firstErr.name === 'AbortError') {
+        throw new Error('AI synthesis timeout sau 55 giây. Vui lòng thử lại.')
+      }
+      firstReason = (firstErr as Error).message
+      console.warn('[swot-synthesis] first attempt failed:', firstReason)
+      try {
+        raw = await callSynthesisAI(client, prompt, controller.signal)
+      } catch (secondErr) {
+        if (secondErr instanceof Error && secondErr.name === 'AbortError') {
+          throw new Error('AI synthesis timeout sau 55 giây. Vui lòng thử lại.')
+        }
+        const secondReason = (secondErr as Error).message
+        console.error('[swot-synthesis] retry also failed:', secondReason)
+        throw new Error(
+          `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,
+        )
+      }
     }
-    return parseAndEnrichSynthesis('{}', coachingItems, evidenceItems)
+    return toSynthesisResult(raw, coachingItems, evidenceItems)
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
