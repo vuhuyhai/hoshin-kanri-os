@@ -1,75 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { getPainMapperPrompt } from '@/lib/discovery/prompts'
-import type { PainMapperRequest, PainMapperResponse } from '@/lib/discovery/types'
+import type {
+  HoshinCandidate,
+  PainMapperResponse,
+} from '@/lib/discovery/types'
 import type { Json } from '@/lib/supabase/types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { streamClaudeJson } from '@/lib/ai/stream-json'
+import { parseBody, painMapperSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: PainMapperRequest = await request.json()
-    const { painPoints, orgContext } = body
+  const body = await parseBody(request, painMapperSchema)
+  if (!body.ok) return body.response
+  const { painPoints, orgContext } = body.data
 
-    if (!painPoints || painPoints.length === 0) {
-      return NextResponse.json(
-        { error: 'Cần ít nhất 1 pain point' },
-        { status: 400 }
-      )
-    }
+  const prompt = getPainMapperPrompt(painPoints, orgContext)
 
-    const prompt = getPainMapperPrompt(painPoints, orgContext)
-    const client = new Anthropic()
+  return streamClaudeJson<
+    { candidates: HoshinCandidate[] },
+    PainMapperResponse
+  >({
+    tag: 'pain-mapper',
+    model: AI_MODELS.reasoning,
+    maxTokens: 1500,
+    prompt,
+    parse: (text) =>
+      JSON.parse(text) as { candidates: HoshinCandidate[] },
+    finalize: async (parsed) => {
+      const { data: membership } = await supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .single()
 
-    const response = await client.messages.create({
-      model: AI_MODELS.reasoning,
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    })
+      if (membership) {
+        // Delete existing to avoid duplicates on re-run
+        await supabase
+          .from('discovery_sessions')
+          .delete()
+          .eq('org_id', membership.org_id)
+          .eq('step_completed', 'pain_mapper')
 
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+        await supabase.from('discovery_sessions').insert({
+          org_id: membership.org_id,
+          user_id: user.id,
+          step_completed: 'pain_mapper',
+          data_json: {
+            painPoints,
+            candidates: parsed.candidates,
+          } as unknown as Json,
+        })
+      }
 
-    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim())
-
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (membership) {
-      // Delete existing to avoid duplicates on re-run
-      await supabase
-        .from('discovery_sessions')
-        .delete()
-        .eq('org_id', membership.org_id)
-        .eq('step_completed', 'pain_mapper')
-
-      await supabase.from('discovery_sessions').insert({
-        org_id: membership.org_id,
-        user_id: user.id,
-        step_completed: 'pain_mapper',
-        data_json: { painPoints, candidates: parsed.candidates } as unknown as Json,
-      })
-    }
-
-    const result: PainMapperResponse = { candidates: parsed.candidates }
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error('Pain mapper error:', error)
-    return NextResponse.json(
-      { error: 'Không thể phân tích pain points.' },
-      { status: 500 }
-    )
-  }
+      return { candidates: parsed.candidates }
+    },
+  })
 }

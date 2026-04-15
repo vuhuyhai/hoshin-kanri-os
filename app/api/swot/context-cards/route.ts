@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import type { OrgContext, CoachingSummary, ContextCardsOutput } from '@/lib/swot/types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
 const CONTEXT_CARDS_SYSTEM_PROMPT = `
 Bạn là chuyên gia phân tích thị trường cho SME Việt Nam.
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const userPrompt = buildContextCardsUserPrompt(orgContext, coachingSummary)
 
-    const client = new Anthropic()
+    const client = createAnthropicClient()
 
     const response = await client.messages.create({
       model: AI_MODELS.reasoning,

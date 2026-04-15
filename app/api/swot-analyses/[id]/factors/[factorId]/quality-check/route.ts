@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import {
   createClient,
   requireOrgRole,
@@ -8,8 +7,9 @@ import {
 import type { SwotQuadrant } from '@/lib/swot/types'
 import { buildQualityCheckPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = new Anthropic()
+const anthropic = createAnthropicClient()
 
 export async function POST(
   _req: Request,

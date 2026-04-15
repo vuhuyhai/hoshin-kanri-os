@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { VisionAnswers, VisionDraft } from '@/lib/discovery/types'
-import { postJson } from '@/lib/http/fetch-json'
+import { postSse } from '@/lib/http/sse-client'
 
 const VISION_PROMPTS = [
   {
@@ -55,6 +55,7 @@ export function VisionGuide({
 }: VisionGuideProps) {
   const [answers, setAnswers] = useState<VisionAnswers>(initialAnswers)
   const [isLoading, setIsLoading] = useState(false)
+  const [streamChars, setStreamChars] = useState(0)
 
   const updateAnswer = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }))
@@ -67,10 +68,16 @@ export function VisionGuide({
 
   const handleGenerate = async () => {
     setIsLoading(true)
+    setStreamChars(0)
     try {
-      const { draft } = await postJson<{ draft: VisionDraft }>(
+      const { draft } = await postSse<{ draft: VisionDraft }>(
         '/api/discovery/vision-draft',
         { answers, orgContext },
+        (event) => {
+          if (event.type === 'progress' && typeof event.chars === 'number') {
+            setStreamChars(event.chars)
+          }
+        },
       )
       onDraftReady(answers, draft)
     } catch (error) {
@@ -79,6 +86,7 @@ export function VisionGuide({
       toast.error(msg)
     } finally {
       setIsLoading(false)
+      setStreamChars(0)
     }
   }
 
@@ -137,7 +145,9 @@ export function VisionGuide({
         {isLoading ? (
           <span className="flex items-center gap-2">
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            AI đang draft Vision...
+            {streamChars > 0
+              ? `AI đang draft Vision... (${streamChars} ký tự)`
+              : 'Đang kết nối AI...'}
           </span>
         ) : (
           `Tạo Vision Statement (${answeredCount}/5 câu) →`

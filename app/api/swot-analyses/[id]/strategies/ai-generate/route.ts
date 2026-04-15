@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import {
   createClient,
   requireOrgRoleForAnalysis,
@@ -9,8 +8,9 @@ import type { TowsQuadrant, AiStrategyItem } from '@/lib/swot/tows-types'
 import { generateCombinedCode } from '@/lib/swot/factor-utils'
 import { buildTowsPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = new Anthropic()
+const anthropic = createAnthropicClient()
 const VALID_TOWS: TowsQuadrant[] = ['SO', 'WO', 'ST', 'WT']
 
 export async function POST(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { createAnthropicClient } from '@/lib/ai/client'
 import {
   getDraftSystemPrompt,
   buildSuggestMorePrompt,
@@ -36,7 +37,7 @@ function isValidItems(arr: unknown): arr is RawSuggestItem[] {
 }
 
 async function callAI(prompt: string): Promise<RawSuggestItem[]> {
-  const client = new Anthropic()
+  const client = createAnthropicClient()
   const response = await client.messages.create({
     model: AI_MODELS.reasoning,
     max_tokens: 800,

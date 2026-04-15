@@ -1,20 +1,23 @@
+import { NextRequest } from 'next/server'
 import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { synthesizeSwot } from '@/lib/swot/synthesis-engine'
 import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
 import type { Json } from '@/lib/supabase/types'
+import { parseBody, swotSynthesisSchema } from '@/lib/validation'
 
 export const maxDuration = 60
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { org_id, coaching_items, evidence_items } = (await req.json()) as {
-    org_id: string; coaching_items: CoachingItem[]; evidence_items: EvidenceItemV2[]
-  }
-  if (!coaching_items?.length)
-    return Response.json({ error: 'Cần ít nhất 1 coaching item' }, { status: 400 })
+  const body = await parseBody(req, swotSynthesisSchema)
+  if (!body.ok) return body.response
+  const { org_id } = body.data
+  // Zod validates envelope; deep shapes enforced by synthesizeSwot().
+  const coaching_items = body.data.coaching_items as unknown as CoachingItem[]
+  const evidence_items = body.data.evidence_items as unknown as EvidenceItemV2[]
 
   if (!await verifyOrgMembership(supabase, user.id, org_id))
     return Response.json({ error: 'Forbidden' }, { status: 403 })

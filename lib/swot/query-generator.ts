@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
 import type { CoachingItem, GeneratedQuery, OrgContext } from './types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = new Anthropic()
+const anthropic = createAnthropicClient()
 const CURRENT_YEAR = new Date().getFullYear()
 const PREV_YEAR = CURRENT_YEAR - 1
 

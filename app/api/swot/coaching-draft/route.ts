@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { createAnthropicClient } from '@/lib/ai/client'
 import {
   getDraftSystemPrompt,
   buildDraftUserPrompt,
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const client = new Anthropic()
+    const client = createAnthropicClient()
     const prompt = buildDraftUserPrompt(body)
 
     let parsed: RawDraftOutput

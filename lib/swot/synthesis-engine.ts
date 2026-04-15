@@ -1,9 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { randomUUID } from 'crypto'
 import type { CoachingItem, EvidenceItemV2, OrgContext, SynthesizedSwotItem, SynthesisResult } from './types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = new Anthropic()
+const anthropic = createAnthropicClient()
 
 function buildSynthesisPrompt(coaching: CoachingItem[], evidence: EvidenceItemV2[], org: OrgContext): string {
   const byQ = <T extends { quadrant: string }>(items: T[], q: string) => items.filter((i) => i.quadrant === q)

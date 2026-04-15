@@ -1,54 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { getVisionDraftPrompt } from '@/lib/discovery/prompts'
-import type { VisionDraftRequest, VisionDraftResponse } from '@/lib/discovery/types'
+import type {
+  VisionDraft,
+  VisionDraftResponse,
+} from '@/lib/discovery/types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { streamClaudeJson } from '@/lib/ai/stream-json'
+import { parseBody, visionDraftSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: VisionDraftRequest = await request.json()
-    const { answers, orgContext } = body
+  const body = await parseBody(request, visionDraftSchema)
+  if (!body.ok) return body.response
+  const { answers, orgContext } = body.data
 
-    const answeredCount = Object.values(answers).filter(
-      (v) => v.trim().length > 10
-    ).length
-    if (answeredCount < 3) {
-      return NextResponse.json(
-        { error: 'Cần trả lời ít nhất 3 câu hỏi' },
-        { status: 400 }
-      )
-    }
+  const prompt = getVisionDraftPrompt(answers, orgContext)
 
-    const prompt = getVisionDraftPrompt(answers, orgContext)
-    const client = new Anthropic()
-
-    const response = await client.messages.create({
-      model: AI_MODELS.reasoning,
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-
-    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim())
-    const result: VisionDraftResponse = { draft: parsed }
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error('Vision draft error:', error)
-    return NextResponse.json(
-      { error: 'Không thể tạo Vision draft.' },
-      { status: 500 }
-    )
-  }
+  return streamClaudeJson<VisionDraft, VisionDraftResponse>({
+    tag: 'vision-draft',
+    model: AI_MODELS.reasoning,
+    maxTokens: 800,
+    prompt,
+    parse: (text) => JSON.parse(text) as VisionDraft,
+    finalize: (parsed) => ({ draft: parsed }),
+  })
 }

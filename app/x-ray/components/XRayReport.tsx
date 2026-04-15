@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { XRayResult, PillarScore } from '@/lib/x-ray/types'
 import { createClient } from '@/lib/supabase/client'
+import { trackXRayCompleted } from '@/lib/analytics/events'
 import { XRayRadarChart } from './XRayRadarChart'
 import { XRayBarChart } from './XRayBarChart'
 
@@ -233,6 +234,19 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
       setIsLoggedIn(!!data.session)
     })
   }, [])
+
+  // Fire x_ray_completed once on mount. Ref guard defeats StrictMode
+  // double-effect in dev so we don't log two events per page load.
+  const trackedRef = useRef(false)
+  useEffect(() => {
+    if (trackedRef.current) return
+    trackedRef.current = true
+    trackXRayCompleted({
+      overallScore: result.overallScore,
+      overallLevel: result.overallLevel,
+      industry: result.industry,
+    })
+  }, [result.overallScore, result.overallLevel, result.industry])
 
   const handlePrint = () => window.print()
   const handleStartPlanning = () => router.push('/dashboard/discovery')

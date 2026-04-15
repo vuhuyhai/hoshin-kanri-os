@@ -1,7 +1,8 @@
 # MASTER BUILD SPEC — Hoshin Kanri OS
 
-> Upload file nay vao Project Knowledge cua Claude de no hieu ngu canh va cau truc app.
-> Last updated: 2026-04-10 (verified & updated)
+> **Architectural reference only.** For dev setup see `DEVELOPMENT.md`. For AI agent onboarding (conventions, pitfalls, don'ts) see `AGENTS.md`. This file documents *what* the system is — the other two cover *how to work on it*.
+>
+> Last verified: 2026-04-10. Some sections below (latest migration list, directory tree) may lag the actual codebase — trust the code if they conflict.
 
 ---
 

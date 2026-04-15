@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, calculatePillarScore } from '@/lib/x-ray/questions'
 import type { OpexPillar, PillarScore, ScoreLevel, XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
 import type { Json } from '@/lib/supabase/types'
@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { xRayReportEmailTemplate } from '@/lib/email/templates'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { isValidEmail } from '@/lib/validation'
 
@@ -150,7 +151,7 @@ LƯU Ý:
 - Dùng đúng điểm thô đã tính sẵn cho score
 - Feedback phải cụ thể cho ngành ${companyInfo.industry} và quy mô ${headcountLabel}`
 
-    const client = new Anthropic()
+    const client = createAnthropicClient()
 
     const message = await client.messages.create({
       model: AI_MODELS.reasoning,

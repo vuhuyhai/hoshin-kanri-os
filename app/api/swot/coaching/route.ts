@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { createAnthropicClient } from '@/lib/ai/client'
 import {
   getSwCoachingSystemPrompt,
   getOtCoachingSystemPrompt,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
       + (contextSummary ?? '')
       + followUpHint
 
-    const client = new Anthropic()
+    const client = createAnthropicClient()
 
     const response = await client.messages.create({
       model: AI_MODELS.reasoning,

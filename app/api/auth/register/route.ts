@@ -2,30 +2,39 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { verificationEmailTemplate } from '@/lib/email/templates'
+import { parseBody, registerSchema } from '@/lib/validation'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+
+// 5 signup attempts per IP per 15 minutes. Tight enough to block
+// Resend-quota-burning spam, loose enough that a user who mistypes
+// the form a few times won't get locked out.
+const REGISTER_LIMIT = 5
+const REGISTER_WINDOW_SECONDS = 900
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, full_name, phone } = await request.json()
-
-    if (!email || !password) {
+    const ip = getClientIp(request.headers)
+    const rl = await checkRateLimit({
+      key: `auth:register:${ip}`,
+      limit: REGISTER_LIMIT,
+      windowSeconds: REGISTER_WINDOW_SECONDS,
+    })
+    if (!rl.allowed) {
+      const retryAfter = Math.max(
+        1,
+        Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000),
+      )
       return NextResponse.json(
-        { error: 'Email và mật khẩu là bắt buộc' },
-        { status: 400 }
+        {
+          error: `Quá nhiều lần đăng ký. Vui lòng thử lại sau ${Math.ceil(retryAfter / 60)} phút.`,
+        },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } },
       )
     }
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: 'Email không hợp lệ' }, { status: 400 })
-    }
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Mật khẩu phải có ít nhất 8 ký tự' }, { status: 400 })
-    }
-    if (full_name && full_name.trim().length < 2) {
-      return NextResponse.json({ error: 'Họ và tên phải có ít nhất 2 ký tự' }, { status: 400 })
-    }
-    if (phone && !/^0[0-9]{9}$/.test(phone)) {
-      return NextResponse.json({ error: 'Số điện thoại không hợp lệ' }, { status: 400 })
-    }
+    const parsed = await parseBody(request, registerSchema)
+    if (!parsed.ok) return parsed.response
+    const { email, password, full_name, phone } = parsed.data
 
     const admin = createAdminClient()
     const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildConflictCheckPrompt, getDraftSystemPrompt } from '@/lib/swot/coaching-draft-prompt'
 import type { SwotDraft, ConflictCheckResult, ConflictIssue, QuadrantKey } from '@/lib/swot/coaching-types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
 const VALID_QUADRANTS: QuadrantKey[] = ['strengths', 'weaknesses', 'opportunities', 'threats']
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (!hasItems) return NextResponse.json(failSafe())
 
     const prompt = buildConflictCheckPrompt(draft)
-    const client = new Anthropic()
+    const client = createAnthropicClient()
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)

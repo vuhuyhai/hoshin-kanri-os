@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
+import { TrackMount } from '@/components/analytics/TrackMount'
 
 const DISCOVERY_STEPS = [
   {
@@ -99,6 +100,7 @@ export default async function DiscoveryPage() {
 
   return (
     <div className="w-full min-h-full p-6 lg:p-8">
+      <TrackMount event="discovery_start" properties={{ completedCount }} />
       {/* Page header */}
       <div className="mb-8 pb-6">
         <p className="overline mb-1">Discovery</p>

@@ -8,6 +8,7 @@ import {
 import type { XMatrixData } from '@/lib/x-matrix/types'
 import { validateXMatrix } from '@/lib/x-matrix/utils'
 import type { Json } from '@/lib/supabase/types'
+import { parseBody, xMatrixCreateSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +19,12 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await request.json()
-    const { data, year, orgId } = body as {
-      data: XMatrixData
-      year: number
-      orgId: string
-    }
+    const body = await parseBody(request, xMatrixCreateSchema)
+    if (!body.ok) return body.response
+    const { year, orgId } = body.data
+    // Zod validates the envelope shape; validateXMatrix() below enforces
+    // XMatrixData business rules (hoshin/kpi counts, required fields).
+    const data = body.data.data as unknown as XMatrixData
 
     // X-Matrix creation is CEO-only (migration 016). Return 403 early
     // instead of letting the row-level INSERT policy throw a generic 500.

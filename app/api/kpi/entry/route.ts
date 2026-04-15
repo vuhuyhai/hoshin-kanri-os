@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-
-interface EntryRequest {
-  kpiId: string
-  value: number
-  note?: string
-  periodDate: string
-}
+import { parseBody, kpiEntrySchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,22 +11,9 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: EntryRequest = await request.json()
-    const { kpiId, value, note, periodDate } = body
-
-    if (!kpiId || value === undefined || !periodDate) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
-    if (typeof value !== 'number' || isNaN(value)) {
-      return NextResponse.json(
-        { error: 'Value phải là số hợp lệ' },
-        { status: 400 }
-      )
-    }
+    const parsed = await parseBody(request, kpiEntrySchema)
+    if (!parsed.ok) return parsed.response
+    const { kpiId, value, note, periodDate } = parsed.data
 
     // Verify KPI exists
     const { data: kpi } = await supabase

@@ -5,7 +5,8 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { PainPoint, HoshinCandidate } from '@/lib/discovery/types'
-import { postJson } from '@/lib/http/fetch-json'
+import { postSse } from '@/lib/http/sse-client'
+import { trackPainSubmitted } from '@/lib/analytics/events'
 
 interface PainInputFormProps {
   orgContext: { industry: string; city: string; orgName: string }
@@ -19,6 +20,7 @@ export function PainInputForm({ orgContext, onComplete }: PainInputFormProps) {
     { id: 'pain_3', text: '' },
   ])
   const [isLoading, setIsLoading] = useState(false)
+  const [streamChars, setStreamChars] = useState(0)
 
   const updatePain = (id: string, text: string) => {
     setPains((prev) => prev.map((p) => (p.id === id ? { ...p, text } : p)))
@@ -46,16 +48,26 @@ export function PainInputForm({ orgContext, onComplete }: PainInputFormProps) {
     }
 
     setIsLoading(true)
+    setStreamChars(0)
     try {
-      const { candidates } = await postJson<{ candidates: HoshinCandidate[] }>(
+      const { candidates } = await postSse<{ candidates: HoshinCandidate[] }>(
         '/api/discovery/pain-mapper',
         { painPoints: filledPains, orgContext },
+        (event) => {
+          if (event.type === 'progress' && typeof event.chars === 'number') {
+            setStreamChars(event.chars)
+          }
+        },
       )
+      trackPainSubmitted({ count: filledPains.length })
       onComplete(candidates)
-    } catch {
-      toast.error('Không thể phân tích. Thử lại.')
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Không thể phân tích. Thử lại.'
+      toast.error(msg)
     } finally {
       setIsLoading(false)
+      setStreamChars(0)
     }
   }
 
@@ -110,7 +122,9 @@ export function PainInputForm({ orgContext, onComplete }: PainInputFormProps) {
           className="ml-auto"
         >
           {isLoading
-            ? 'Đang phân tích...'
+            ? streamChars > 0
+              ? `Đang phân tích... (${streamChars} ký tự)`
+              : 'Đang kết nối AI...'
             : `Phân tích ${filledPains.length} pain points →`}
         </Button>
       </div>

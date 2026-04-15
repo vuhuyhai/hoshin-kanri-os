@@ -1,9 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { ALL_CREDIBLE_DOMAINS, DOMAIN_WEIGHT_MAP } from './evidence-sources'
 import type { CoachingItem, GeneratedQuery, EvidenceResult } from './types'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = new Anthropic()
+const anthropic = createAnthropicClient()
 const CURRENT_YEAR = new Date().getFullYear()
 
 interface RawSearchResult {

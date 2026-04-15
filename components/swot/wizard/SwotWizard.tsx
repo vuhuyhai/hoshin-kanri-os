@@ -9,6 +9,7 @@ import { SynthesisPhase } from '../SynthesisPhase'
 import { TowsOrchestrator } from '../TowsOrchestrator'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import type { OrgContext, CoachingSummary } from '@/lib/swot/types'
+import { trackCoachingCompleted } from '@/lib/analytics/events'
 
 interface SwotWizardProps {
   orgContext: OrgContext
@@ -127,7 +128,15 @@ export function SwotWizard({ orgContext, userId, analysisId, orgId }: SwotWizard
             orgContext={orgContext}
             userId={userId}
             analysisId={analysisId}
-            onComplete={() => setStep(2)}
+            onComplete={() => {
+              trackCoachingCompleted({
+                strengthsCount: confirmedDraft?.strengths.length ?? 0,
+                weaknessesCount: confirmedDraft?.weaknesses.length ?? 0,
+                opportunitiesCount: confirmedDraft?.opportunities.length ?? 0,
+                threatsCount: confirmedDraft?.threats.length ?? 0,
+              })
+              setStep(2)
+            }}
           />
         )}
         {step === 2 && (

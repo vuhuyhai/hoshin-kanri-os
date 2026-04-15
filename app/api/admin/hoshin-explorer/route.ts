@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findConceptById, HK_SYSTEM_PROMPT } from '@/lib/admin/hoshin-explorer-data'
 import { AI_MODELS } from '@/lib/ai/models'
+import { createAnthropicClient } from '@/lib/ai/client'
 
 export interface HKExplorerContent {
   level1: string
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Concept không tồn tại' }, { status: 400 })
     }
 
-    const client = new Anthropic()
+    const client = createAnthropicClient()
     const message = await client.messages.create({
       model: AI_MODELS.reasoning,
       max_tokens: 1500,

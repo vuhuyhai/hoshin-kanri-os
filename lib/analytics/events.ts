@@ -15,10 +15,14 @@ export function trackEvent(event: string, properties?: Record<string, unknown>) 
   getPostHog()?.capture(event, properties)
 }
 
-// Activation events
+// Activation events.
+// NOTE: do not pass PII (email, phone) as event properties — PostHog's
+// distinctId already identifies the user. Raw identifiers in properties
+// are hard to scrub later and bloat the event index.
 export function trackXRayCompleted(props: {
   overallScore: number
-  email: string
+  overallLevel?: string
+  industry?: string
 }) {
   getPostHog()?.capture('x_ray_completed', props)
 }
@@ -27,6 +31,35 @@ export function trackDiscoveryStepCompleted(
   step: 'swot' | 'pain_mapper' | 'vision' | 'benchmark'
 ) {
   getPostHog()?.capture('discovery_step_completed', { step })
+}
+
+// ============================================================
+// Funnel events — distinct names so PostHog Funnels UI can filter
+// them directly without property-filtering on `step`.
+// ============================================================
+
+export function trackDiscoveryStarted(props?: { entryPoint?: string }) {
+  getPostHog()?.capture('discovery_start', props)
+}
+
+export function trackPainSubmitted(props: { count: number }) {
+  getPostHog()?.capture('pain_submitted', props)
+}
+
+export function trackCoachingCompleted(props?: {
+  strengthsCount?: number
+  weaknessesCount?: number
+  opportunitiesCount?: number
+  threatsCount?: number
+}) {
+  getPostHog()?.capture('coaching_completed', props)
+}
+
+export function trackSynthesisViewed(props?: {
+  itemsCount?: number
+  hasWarnings?: boolean
+}) {
+  getPostHog()?.capture('synthesis_viewed', props)
 }
 
 export function trackXMatrixCompleted(props: {

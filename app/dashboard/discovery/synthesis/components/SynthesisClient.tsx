@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { XMatrixPrefill, PrefillHoshin } from '@/lib/discovery/types'
 import { cn } from '@/lib/utils'
-import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
+import { postSse, SseError } from '@/lib/http/sse-client'
+import { trackSynthesisViewed } from '@/lib/analytics/events'
 
 // ============================================================
 // TYPES
@@ -373,6 +374,22 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
     return () => clearInterval(interval)
   }, [status])
 
+  // Fire synthesis_viewed once when result flips to 'done' with data.
+  // Ref guard prevents double-fire from StrictMode effect replay.
+  const viewedFired = useRef(false)
+  useEffect(() => {
+    if (status !== 'done' || !prefill || viewedFired.current) return
+    viewedFired.current = true
+    const itemsCount =
+      (prefill.hoshinCandidates?.length ?? 0) +
+      (prefill.initiatives?.length ?? 0) +
+      (prefill.kpiSuggestions?.length ?? 0)
+    trackSynthesisViewed({
+      itemsCount,
+      hasWarnings: (prefill.warnings ?? []).length > 0,
+    })
+  }, [status, prefill])
+
   const runSynthesis = async () => {
     setStatus('running')
     setProgressMsg(PROGRESS_MESSAGES[0])
@@ -387,7 +404,7 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
     }
 
     try {
-      const data = await postJson<{
+      const data = await postSse<{
         prefill: XMatrixPrefill
         dataWarnings?: string[]
         savedSuccessfully?: boolean
@@ -427,7 +444,7 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
       // to signal that prerequisite Discovery steps are incomplete.
       // Surface that as the dedicated 'missing' UI branch instead of a
       // generic error toast.
-      if (error instanceof FetchJsonError && error.body && typeof error.body === 'object') {
+      if (error instanceof SseError && error.body && typeof error.body === 'object') {
         const body = error.body as { missing?: { vision?: boolean; painMapper?: boolean } }
         if (body.missing) {
           setMissingData({
