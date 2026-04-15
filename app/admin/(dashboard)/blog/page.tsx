@@ -3,10 +3,8 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { adminListAllPosts, type BlogPostSummary } from '@/lib/blog/queries'
+import { describeDbError } from '@/lib/blog/errors'
 import { DeletePostButton } from './DeletePostButton'
-
-const MIGRATION_HINT =
-  'Database chưa sẵn sàng: bảng blog_posts chưa tồn tại. Hãy apply migration 022_blog_posts.sql qua Supabase SQL Editor trước khi dùng CMS.'
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'
@@ -26,16 +24,7 @@ async function BlogAdminContent() {
     posts = await adminListAllPosts()
   } catch (e) {
     console.error('[admin/blog] adminListAllPosts failed:', e)
-    const err = e as { code?: string; message?: string }
-    if (
-      err.code === 'PGRST205' ||
-      err.code === '42P01' ||
-      err.message?.includes("Could not find the table 'public.blog_posts'")
-    ) {
-      loadError = MIGRATION_HINT
-    } else {
-      loadError = err.message ?? 'Không tải được danh sách bài viết'
-    }
+    loadError = describeDbError(e)
   }
 
   const publishedCount = posts.filter((p) => p.status === 'published').length

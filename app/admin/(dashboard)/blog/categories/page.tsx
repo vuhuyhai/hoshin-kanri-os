@@ -3,12 +3,10 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { adminListCategories } from '@/lib/blog/queries'
+import { describeDbError } from '@/lib/blog/errors'
 import { createCategoryAction } from '../_actions'
 import { CategoryForm } from './CategoryForm'
 import { EditableCategoryRow } from './EditableCategoryRow'
-
-const MIGRATION_HINT =
-  'Database chưa sẵn sàng: bảng blog_categories chưa tồn tại. Hãy apply migration 023_blog_categories.sql qua Supabase SQL Editor.'
 
 async function CategoriesContent() {
   let rows: Awaited<ReturnType<typeof adminListCategories>> = []
@@ -17,16 +15,7 @@ async function CategoriesContent() {
     rows = await adminListCategories()
   } catch (e) {
     console.error('[admin/blog/categories] list failed:', e)
-    const err = e as { code?: string; message?: string }
-    if (
-      err.code === 'PGRST205' ||
-      err.code === '42P01' ||
-      err.message?.includes("Could not find the table 'public.blog_categories'")
-    ) {
-      loadError = MIGRATION_HINT
-    } else {
-      loadError = err.message ?? 'Không tải được danh mục'
-    }
+    loadError = describeDbError(e)
   }
 
   return (

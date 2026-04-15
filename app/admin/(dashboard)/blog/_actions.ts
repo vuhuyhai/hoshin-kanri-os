@@ -15,29 +15,11 @@ import {
   adminGetCategoryBySlug,
 } from '@/lib/blog/queries'
 import { blogPostSchema, blogCategorySchema } from '@/lib/blog/schema'
+import { describeDbError } from '@/lib/blog/errors'
 
 type ActionResult =
   | { ok: true }
   | { ok: false; error: string; fieldErrors?: Record<string, string> }
-
-// PostgREST error code for "table missing from schema cache" — fires
-// when the migration hasn't been applied yet. Surface a specific
-// message so the user knows what to do instead of seeing a raw 500.
-const MIGRATION_NOT_APPLIED_MESSAGE =
-  'Database chưa sẵn sàng: bảng blog_posts chưa tồn tại. Hãy apply migration 022_blog_posts.sql qua Supabase SQL Editor trước khi đăng bài.'
-
-function describeDbError(e: unknown): string {
-  if (e && typeof e === 'object') {
-    const err = e as { code?: string; message?: string }
-    if (err.code === 'PGRST205') return MIGRATION_NOT_APPLIED_MESSAGE
-    if (err.code === '42P01') return MIGRATION_NOT_APPLIED_MESSAGE
-    if (err.message?.includes("Could not find the table 'public.blog_posts'")) {
-      return MIGRATION_NOT_APPLIED_MESSAGE
-    }
-    if (err.message) return err.message
-  }
-  return 'Lỗi không xác định'
-}
 
 // Defense-in-depth: middleware already gates /admin/* routes, but server
 // actions are cheap to re-verify. Returns the authenticated super-admin
