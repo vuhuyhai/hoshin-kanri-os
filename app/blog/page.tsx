@@ -162,8 +162,9 @@ export default async function BlogIndexPage({
                 </>
               ) : (
                 <>
-                  Kiến thức chiến lược cho{' '}
-                  <span className="text-accent-brand">SME Việt Nam</span>
+                  Kiến thức chiến lược
+                  <br />
+                  cho <span className="text-accent-brand">SME Việt Nam</span>
                 </>
               )}
             </h1>
