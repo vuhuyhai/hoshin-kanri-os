@@ -21,6 +21,12 @@ export default async function LandingPage() {
           </Link>
           <nav aria-label="Menu chính" className="flex items-center gap-3">
             <Link
+              href="/blog"
+              className="hidden font-display text-xs font-semibold uppercase tracking-wider text-ink transition-colors hover:text-accent-brand md:inline-block"
+            >
+              Blog
+            </Link>
+            <Link
               href="/x-ray"
               className="hidden font-display text-xs font-semibold uppercase tracking-wider text-ink transition-colors hover:text-accent-brand md:inline-block"
             >

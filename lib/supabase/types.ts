@@ -57,6 +57,51 @@ export type Database = {
           },
         ]
       }
+      blog_posts: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          excerpt: string
+          cover_url: string | null
+          content_md: string
+          status: string
+          author_id: string | null
+          published_at: string | null
+          views_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          excerpt: string
+          cover_url?: string | null
+          content_md: string
+          status?: string
+          author_id?: string | null
+          published_at?: string | null
+          views_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          excerpt?: string
+          cover_url?: string | null
+          content_md?: string
+          status?: string
+          author_id?: string | null
+          published_at?: string | null
+          views_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discovery_sessions: {
         Row: {
           created_at: string | null
@@ -951,6 +996,10 @@ export type Database = {
       get_user_org_ids: { Args: { uid: string }; Returns: string[] }
       increment_rate_limit: {
         Args: { p_bucket: string; p_window_start: string }
+        Returns: number
+      }
+      increment_blog_post_views: {
+        Args: { p_slug: string }
         Returns: number
       }
     }
