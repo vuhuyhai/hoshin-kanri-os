@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { slugifyHeading } from '@/lib/blog/toc'
 
 function childrenToText(node: React.ReactNode): string {
@@ -27,6 +28,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
     <div className="blog-prose font-sans text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => (
             <h1 className="mt-12 mb-6 font-display text-4xl font-black uppercase tracking-tight text-ink">
@@ -136,6 +138,11 @@ export function MarkdownRenderer({ content }: { content: string }) {
           hr: () => <hr className="my-10 border-t-[3px] border-ink" />,
           strong: ({ children }) => (
             <strong className="font-bold text-ink">{children}</strong>
+          ),
+          u: ({ children }) => (
+            <u className="underline underline-offset-4 decoration-[2px] decoration-accent-brand">
+              {children}
+            </u>
           ),
         }}
       >

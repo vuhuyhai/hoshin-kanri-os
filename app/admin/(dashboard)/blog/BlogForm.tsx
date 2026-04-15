@@ -1,9 +1,46 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import {
+  useActionState,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer'
+
+function ToolbarBtn({
+  onClick,
+  title,
+  children,
+}: {
+  onClick: () => void
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="flex h-8 min-w-[34px] items-center justify-center border-[2px] border-ink bg-bg-warm px-2 font-display text-[12px] font-bold text-ink transition-transform hover:bg-accent-brand hover:text-bg-warm active:translate-y-[1px]"
+    >
+      {children}
+    </button>
+  )
+}
+
+function ToolbarDivider() {
+  return (
+    <div
+      aria-hidden="true"
+      className="mx-1 w-[2px] self-stretch bg-ink/30"
+    />
+  )
+}
 
 type BlogFormInitial = {
   slug: string
@@ -90,6 +127,131 @@ export function BlogForm({
   const [showPreview, setShowPreview] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  type TransformResult = { value: string; selStart: number; selEnd: number }
+
+  const applyTransform = (
+    fn: (value: string, start: number, end: number) => TransformResult
+  ) => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const next = fn(ta.value, ta.selectionStart, ta.selectionEnd)
+    setContent(next.value)
+    requestAnimationFrame(() => {
+      const el = textareaRef.current
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(next.selStart, next.selEnd)
+    })
+  }
+
+  const wrap = (before: string, after: string, placeholder: string) => {
+    applyTransform((value, start, end) => {
+      const selected = value.slice(start, end)
+      const inner = selected || placeholder
+      const newValue =
+        value.slice(0, start) + before + inner + after + value.slice(end)
+      return {
+        value: newValue,
+        selStart: start + before.length,
+        selEnd: start + before.length + inner.length,
+      }
+    })
+  }
+
+  const prefixLines = (prefix: string) => {
+    applyTransform((value, start, end) => {
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1
+      const nextNl = value.indexOf('\n', end)
+      const lineEnd = nextNl === -1 ? value.length : nextNl
+      const block = value.slice(lineStart, lineEnd)
+      const newBlock = block
+        .split('\n')
+        .map((line) => (line.length > 0 ? prefix + line : prefix.trimEnd()))
+        .join('\n')
+      const newValue =
+        value.slice(0, lineStart) + newBlock + value.slice(lineEnd)
+      return {
+        value: newValue,
+        selStart: lineStart,
+        selEnd: lineStart + newBlock.length,
+      }
+    })
+  }
+
+  const insertBlock = (text: string) => {
+    applyTransform((value, start, end) => {
+      const newValue = value.slice(0, start) + text + value.slice(end)
+      const pos = start + text.length
+      return { value: newValue, selStart: pos, selEnd: pos }
+    })
+  }
+
+  const insertLink = () => {
+    applyTransform((value, start, end) => {
+      const selected = value.slice(start, end) || 'văn bản'
+      const insertion = `[${selected}](url)`
+      const newValue = value.slice(0, start) + insertion + value.slice(end)
+      const urlStart = start + 1 + selected.length + 2
+      return {
+        value: newValue,
+        selStart: urlStart,
+        selEnd: urlStart + 3,
+      }
+    })
+  }
+
+  const insertImage = () => {
+    applyTransform((value, start, end) => {
+      const selected = value.slice(start, end) || 'mô tả ảnh'
+      const insertion = `![${selected}](url)`
+      const newValue = value.slice(0, start) + insertion + value.slice(end)
+      const urlStart = start + 2 + selected.length + 2
+      return {
+        value: newValue,
+        selStart: urlStart,
+        selEnd: urlStart + 3,
+      }
+    })
+  }
+
+  const insertCodeBlock = () => {
+    applyTransform((value, start, end) => {
+      const selected = value.slice(start, end)
+      const inner = selected || 'code'
+      const newValue =
+        value.slice(0, start) +
+        '\n```\n' +
+        inner +
+        '\n```\n' +
+        value.slice(end)
+      const innerStart = start + 5
+      return {
+        value: newValue,
+        selStart: innerStart,
+        selEnd: innerStart + inner.length,
+      }
+    })
+  }
+
+  const handleContentKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!(e.ctrlKey || e.metaKey)) return
+    const key = e.key.toLowerCase()
+    if (key === 'b') {
+      e.preventDefault()
+      wrap('**', '**', 'đậm')
+    } else if (key === 'i') {
+      e.preventDefault()
+      wrap('*', '*', 'nghiêng')
+    } else if (key === 'u') {
+      e.preventDefault()
+      wrap('<u>', '</u>', 'gạch chân')
+    } else if (key === 'k') {
+      e.preventDefault()
+      insertLink()
+    }
+  }
 
   const toggleTag = (id: string) => {
     setTagIds((prev) =>
@@ -377,7 +539,7 @@ export function BlogForm({
       <div>
         <div className="flex items-center justify-between">
           <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
-            Nội dung (Markdown)
+            Nội dung
           </label>
           <button
             type="button"
@@ -396,15 +558,113 @@ export function BlogForm({
             )}
           </div>
         ) : (
-          <textarea
-            name="content_md"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            required
-            rows={22}
-            className="mt-2 w-full border-[3px] border-ink bg-bg-warm px-4 py-3 font-mono text-[14px] leading-relaxed text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
-            placeholder={`# Tiêu đề H1\n\nMột đoạn mở đầu...\n\n## Mục 1\n\n- Gạch đầu dòng\n- **Đậm** và *nghiêng*\n\n> Trích dẫn\n\n\`\`\`bash\nlệnh code\n\`\`\`\n`}
-          />
+          <>
+            <div className="mt-2 flex flex-wrap items-stretch gap-1.5 border-[3px] border-b-0 border-ink bg-bg-muted-warm p-2">
+              <ToolbarBtn onClick={() => prefixLines('# ')} title="Tiêu đề 1">
+                H1
+              </ToolbarBtn>
+              <ToolbarBtn onClick={() => prefixLines('## ')} title="Tiêu đề 2">
+                H2
+              </ToolbarBtn>
+              <ToolbarBtn onClick={() => prefixLines('### ')} title="Tiêu đề 3">
+                H3
+              </ToolbarBtn>
+              <ToolbarBtn onClick={() => prefixLines('#### ')} title="Tiêu đề 4">
+                H4
+              </ToolbarBtn>
+              <ToolbarDivider />
+              <ToolbarBtn
+                onClick={() => wrap('**', '**', 'đậm')}
+                title="Đậm (Ctrl+B)"
+              >
+                <span className="font-black">B</span>
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => wrap('*', '*', 'nghiêng')}
+                title="Nghiêng (Ctrl+I)"
+              >
+                <span className="font-bold italic">I</span>
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => wrap('<u>', '</u>', 'gạch chân')}
+                title="Gạch chân (Ctrl+U)"
+              >
+                <span className="font-bold underline underline-offset-2">
+                  U
+                </span>
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => wrap('~~', '~~', 'gạch ngang')}
+                title="Gạch ngang"
+              >
+                <span className="font-bold line-through">S</span>
+              </ToolbarBtn>
+              <ToolbarDivider />
+              <ToolbarBtn
+                onClick={() => prefixLines('- ')}
+                title="Danh sách gạch đầu dòng"
+              >
+                •
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => prefixLines('1. ')}
+                title="Danh sách đánh số"
+              >
+                1.
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => prefixLines('> ')}
+                title="Trích dẫn"
+              >
+                &ldquo;
+              </ToolbarBtn>
+              <ToolbarDivider />
+              <ToolbarBtn
+                onClick={() => wrap('`', '`', 'code')}
+                title="Code inline"
+              >
+                &lt;/&gt;
+              </ToolbarBtn>
+              <ToolbarBtn onClick={insertCodeBlock} title="Khối code">
+                {'{ }'}
+              </ToolbarBtn>
+              <ToolbarDivider />
+              <ToolbarBtn onClick={insertLink} title="Liên kết (Ctrl+K)">
+                Link
+              </ToolbarBtn>
+              <ToolbarBtn onClick={insertImage} title="Ảnh">
+                IMG
+              </ToolbarBtn>
+              <ToolbarDivider />
+              <ToolbarBtn
+                onClick={() => insertBlock('\n\n---\n\n')}
+                title="Đường kẻ ngang"
+              >
+                —
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => insertBlock('\n\n')}
+                title="Ngắt đoạn (cách dòng)"
+              >
+                ¶
+              </ToolbarBtn>
+            </div>
+            <textarea
+              ref={textareaRef}
+              name="content_md"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleContentKeyDown}
+              required
+              rows={22}
+              className="w-full border-[3px] border-ink bg-bg-warm px-4 py-3 font-mono text-[14px] leading-relaxed text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
+              placeholder={`# Tiêu đề H1\n\nMột đoạn mở đầu...\n\n## Mục lớn\n\n### Mục nhỏ\n\n- Gạch đầu dòng\n- **Đậm**, *nghiêng*, <u>gạch chân</u>\n\n> Trích dẫn\n\nPhím tắt: Ctrl+B đậm • Ctrl+I nghiêng • Ctrl+U gạch chân • Ctrl+K link`}
+            />
+            <p className="mt-1 font-body text-[11px] text-text-3">
+              Bôi đen văn bản rồi bấm nút toolbar hoặc dùng phím tắt. Hỗ trợ
+              Markdown và thẻ HTML (vd. <code>&lt;u&gt;</code> cho gạch chân).
+            </p>
+          </>
         )}
         {showPreview && (
           <input type="hidden" name="content_md" value={content} />
