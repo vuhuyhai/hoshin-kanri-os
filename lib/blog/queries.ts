@@ -2,9 +2,17 @@
 // applies (only 'published' rows visible). Admin CMS reads/writes go
 // through the service-role admin client so drafts are visible and
 // writes bypass RLS — super-admin gating happens in server actions.
+//
+// Posts and categories are fetched in two separate round-trips
+// (post query first, then a single batch category lookup via
+// attachCategories) instead of a PostgREST embed. That way the blog
+// keeps working even if the blog_categories table hasn't been
+// created yet — a PostgREST embed would fail the whole post query
+// with a schema-cache error on an un-applied migration.
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isMissingTableError } from './errors'
 
 export type BlogCategory = {
   id: string
@@ -14,6 +22,8 @@ export type BlogCategory = {
   created_at: string
   updated_at: string
 }
+
+export type CategoryRef = Pick<BlogCategory, 'id' | 'slug' | 'name'>
 
 export type BlogPost = {
   id: string
@@ -31,44 +41,113 @@ export type BlogPost = {
   updated_at: string
 }
 
-// Listing/detail rows include the resolved category so the UI doesn't
-// need a second round-trip per post.
-export type BlogPostWithCategory = BlogPost & {
-  category: Pick<BlogCategory, 'id' | 'slug' | 'name'> | null
-}
-
+export type BlogPostWithCategory = BlogPost & { category: CategoryRef | null }
 export type BlogPostSummary = Omit<BlogPostWithCategory, 'content_md'>
 
-// Raw shape Supabase returns for the joined select. `category` comes
-// back as a single-object relation because blog_posts.category_id is
-// a 1-N FK — but the Supabase TS generator doesn't always infer this,
-// so we cast through unknown below.
-type RawJoinedPost = Omit<BlogPost, never> & {
-  category: Pick<BlogCategory, 'id' | 'slug' | 'name'> | null
+// Minimum shape any row we want to enrich with a category must have.
+type HasCategoryId = { category_id: string | null }
+
+// Lightweight client surface so this helper is reusable by both
+// the anon (user-scoped) and service-role admin clients.
+type SupabaseLike = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      in: (column: string, values: string[]) => Promise<{
+        data: unknown[] | null
+        error: { code?: string; message?: string } | null
+      }>
+    }
+  }
 }
 
 const POST_SUMMARY_COLUMNS =
-  'id, slug, title, excerpt, cover_url, status, author_id, category_id, published_at, views_count, created_at, updated_at, category:blog_categories(id, slug, name)'
+  'id, slug, title, excerpt, cover_url, status, author_id, category_id, published_at, views_count, created_at, updated_at'
 
-const POST_FULL_COLUMNS = `*, category:blog_categories(id, slug, name)`
+/**
+ * Attach resolved category objects to an array of rows in a single
+ * batch query. Fail-soft: if blog_categories doesn't exist yet
+ * (migration not applied), every row comes back with category: null
+ * instead of throwing.
+ */
+async function attachCategories<T extends HasCategoryId>(
+  supabase: SupabaseLike,
+  rows: T[]
+): Promise<(T & { category: CategoryRef | null })[]> {
+  if (rows.length === 0) return []
 
-function normalizePost(raw: unknown): BlogPostWithCategory {
-  const r = raw as BlogPost & {
-    category:
-      | Pick<BlogCategory, 'id' | 'slug' | 'name'>
-      | Pick<BlogCategory, 'id' | 'slug' | 'name'>[]
-      | null
+  const ids = Array.from(
+    new Set(
+      rows
+        .map((r) => r.category_id)
+        .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    )
+  )
+
+  if (ids.length === 0) {
+    return rows.map((r) => ({ ...r, category: null }))
   }
-  // Supabase can return either an object or an array depending on how
-  // the FK is declared. Flatten to a single object or null.
-  const cat = Array.isArray(r.category) ? (r.category[0] ?? null) : r.category
-  return { ...(r as BlogPost), category: cat ?? null }
+
+  try {
+    const { data, error } = await supabase
+      .from('blog_categories')
+      .select('id, slug, name')
+      .in('id', ids)
+    if (error) throw error
+
+    const map = new Map<string, CategoryRef>()
+    for (const row of (data ?? []) as CategoryRef[]) {
+      map.set(row.id, row)
+    }
+
+    return rows.map((r) => ({
+      ...r,
+      category: r.category_id ? (map.get(r.category_id) ?? null) : null,
+    }))
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return rows.map((r) => ({ ...r, category: null }))
+    }
+    throw e
+  }
 }
 
-function normalizeSummary(raw: unknown): BlogPostSummary {
-  const full = normalizePost(raw)
-  const { content_md: _ignored, ...summary } = full
-  return summary
+// ============================================================
+// Public reads — categories
+// ============================================================
+
+export async function listCategories(): Promise<BlogCategory[]> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('blog_categories')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (error) throw error
+    return (data ?? []) as BlogCategory[]
+  } catch (e) {
+    if (isMissingTableError(e)) return []
+    throw e
+  }
+}
+
+export async function getCategoryBySlug(
+  slug: string
+): Promise<BlogCategory | null> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('blog_categories')
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (error) throw error
+    return (data as BlogCategory | null) ?? null
+  } catch (e) {
+    if (isMissingTableError(e)) return null
+    throw e
+  }
 }
 
 // ============================================================
@@ -84,6 +163,16 @@ export async function listPublishedPosts(params?: {
   const limit = params?.limit ?? 20
   const offset = params?.offset ?? 0
 
+  // Resolve category slug → id in a separate lookup. Done first so
+  // that filtering by a non-existent slug short-circuits to zero
+  // results instead of ignoring the filter.
+  let categoryFilterId: string | undefined
+  if (params?.categorySlug) {
+    const cat = await getCategoryBySlug(params.categorySlug)
+    if (!cat) return []
+    categoryFilterId = cat.id
+  }
+
   let query = supabase
     .from('blog_posts')
     .select(POST_SUMMARY_COLUMNS)
@@ -91,31 +180,40 @@ export async function listPublishedPosts(params?: {
     .order('published_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
-  if (params?.categorySlug) {
-    // Filter by the joined category's slug. PostgREST supports dotted
-    // filters on embedded tables.
-    query = query.eq('category.slug', params.categorySlug)
+  if (categoryFilterId) {
+    query = query.eq('category_id', categoryFilterId)
   }
 
   const { data, error } = await query
   if (error) throw error
-  return (data ?? []).map(normalizeSummary)
+
+  const rows = (data ?? []) as (Omit<BlogPost, 'content_md'>)[]
+  const withCategory = await attachCategories(
+    supabase as unknown as SupabaseLike,
+    rows
+  )
+  return withCategory as BlogPostSummary[]
 }
 
 export async function countPublishedPosts(params?: {
   categorySlug?: string
 }): Promise<number> {
   const supabase = await createClient()
+
+  let categoryFilterId: string | undefined
+  if (params?.categorySlug) {
+    const cat = await getCategoryBySlug(params.categorySlug)
+    if (!cat) return 0
+    categoryFilterId = cat.id
+  }
+
   let query = supabase
     .from('blog_posts')
-    .select('id, category:blog_categories(id, slug)', {
-      count: 'exact',
-      head: true,
-    })
+    .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
 
-  if (params?.categorySlug) {
-    query = query.eq('category.slug', params.categorySlug)
+  if (categoryFilterId) {
+    query = query.eq('category_id', categoryFilterId)
   }
 
   const { count, error } = await query
@@ -129,14 +227,19 @@ export async function getPublishedPostBySlug(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('blog_posts')
-    .select(POST_FULL_COLUMNS)
+    .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
 
   if (error) throw error
   if (!data) return null
-  return normalizePost(data)
+
+  const [enriched] = await attachCategories(
+    supabase as unknown as SupabaseLike,
+    [data as BlogPost]
+  )
+  return enriched as BlogPostWithCategory
 }
 
 export async function listAllPublishedSlugs(): Promise<
@@ -154,35 +257,6 @@ export async function listAllPublishedSlugs(): Promise<
 }
 
 // ============================================================
-// Public reads — categories
-// ============================================================
-
-export async function listCategories(): Promise<BlogCategory[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('blog_categories')
-    .select('*')
-    .order('name', { ascending: true })
-
-  if (error) throw error
-  return (data ?? []) as BlogCategory[]
-}
-
-export async function getCategoryBySlug(
-  slug: string
-): Promise<BlogCategory | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('blog_categories')
-    .select('*')
-    .eq('slug', slug)
-    .maybeSingle()
-
-  if (error) throw error
-  return (data as BlogCategory | null) ?? null
-}
-
-// ============================================================
 // Admin reads/writes — posts (service role, bypass RLS)
 // ============================================================
 
@@ -194,7 +268,13 @@ export async function adminListAllPosts(): Promise<BlogPostSummary[]> {
     .order('updated_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []).map(normalizeSummary)
+
+  const rows = (data ?? []) as (Omit<BlogPost, 'content_md'>)[]
+  const withCategory = await attachCategories(
+    db as unknown as SupabaseLike,
+    rows
+  )
+  return withCategory as BlogPostSummary[]
 }
 
 export async function adminGetPost(
@@ -203,13 +283,17 @@ export async function adminGetPost(
   const db = createAdminClient()
   const { data, error } = await db
     .from('blog_posts')
-    .select(POST_FULL_COLUMNS)
+    .select('*')
     .eq('id', id)
     .maybeSingle()
 
   if (error) throw error
   if (!data) return null
-  return normalizePost(data)
+
+  const [enriched] = await attachCategories(db as unknown as SupabaseLike, [
+    data as BlogPost,
+  ])
+  return enriched as BlogPostWithCategory
 }
 
 export async function adminGetPostBySlug(
@@ -218,13 +302,17 @@ export async function adminGetPostBySlug(
   const db = createAdminClient()
   const { data, error } = await db
     .from('blog_posts')
-    .select(POST_FULL_COLUMNS)
+    .select('*')
     .eq('slug', slug)
     .maybeSingle()
 
   if (error) throw error
   if (!data) return null
-  return normalizePost(data)
+
+  const [enriched] = await attachCategories(db as unknown as SupabaseLike, [
+    data as BlogPost,
+  ])
+  return enriched as BlogPostWithCategory
 }
 
 type UpsertInput = {
@@ -245,24 +333,40 @@ export async function adminCreatePost(
   const publishedAt =
     input.status === 'published' ? new Date().toISOString() : null
 
-  const { data, error } = await db
-    .from('blog_posts')
-    .insert({
-      slug: input.slug,
-      title: input.title,
-      excerpt: input.excerpt,
-      cover_url: input.cover_url,
-      content_md: input.content_md,
-      status: input.status,
-      category_id: input.category_id,
-      author_id: authorId,
-      published_at: publishedAt,
-    })
-    .select('*')
-    .single()
+  // Swallow category_id if the column doesn't exist yet (migration
+  // 023 not applied). Retry without the column on schema-cache
+  // error so the admin can still create posts before running 023.
+  const basePayload = {
+    slug: input.slug,
+    title: input.title,
+    excerpt: input.excerpt,
+    cover_url: input.cover_url,
+    content_md: input.content_md,
+    status: input.status,
+    author_id: authorId,
+    published_at: publishedAt,
+  }
 
-  if (error) throw error
-  return data as BlogPost
+  try {
+    const { data, error } = await db
+      .from('blog_posts')
+      .insert({ ...basePayload, category_id: input.category_id })
+      .select('*')
+      .single()
+    if (error) throw error
+    return data as BlogPost
+  } catch (e) {
+    if (isColumnMissingError(e, 'category_id')) {
+      const { data, error } = await db
+        .from('blog_posts')
+        .insert(basePayload)
+        .select('*')
+        .single()
+      if (error) throw error
+      return data as BlogPost
+    }
+    throw e
+  }
 }
 
 export async function adminUpdatePost(
@@ -280,25 +384,48 @@ export async function adminUpdatePost(
     ? new Date().toISOString()
     : existing.published_at
 
-  const { data, error } = await db
-    .from('blog_posts')
-    .update({
-      slug: input.slug,
-      title: input.title,
-      excerpt: input.excerpt,
-      cover_url: input.cover_url,
-      content_md: input.content_md,
-      status: input.status,
-      category_id: input.category_id,
-      published_at: publishedAt,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select('*')
-    .single()
+  const basePayload = {
+    slug: input.slug,
+    title: input.title,
+    excerpt: input.excerpt,
+    cover_url: input.cover_url,
+    content_md: input.content_md,
+    status: input.status,
+    published_at: publishedAt,
+    updated_at: new Date().toISOString(),
+  }
 
-  if (error) throw error
-  return data as BlogPost
+  try {
+    const { data, error } = await db
+      .from('blog_posts')
+      .update({ ...basePayload, category_id: input.category_id })
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) throw error
+    return data as BlogPost
+  } catch (e) {
+    if (isColumnMissingError(e, 'category_id')) {
+      const { data, error } = await db
+        .from('blog_posts')
+        .update(basePayload)
+        .eq('id', id)
+        .select('*')
+        .single()
+      if (error) throw error
+      return data as BlogPost
+    }
+    throw e
+  }
+}
+
+function isColumnMissingError(e: unknown, column: string): boolean {
+  if (!e || typeof e !== 'object') return false
+  const err = e as { code?: string; message?: string }
+  // PostgREST returns PGRST204 for "column does not exist in schema
+  // cache" and 42703 for the raw Postgres code.
+  if (err.code !== 'PGRST204' && err.code !== '42703') return false
+  return err.message?.includes(column) ?? false
 }
 
 export async function adminDeletePost(id: string): Promise<void> {
@@ -323,15 +450,20 @@ export async function adminListCategories(): Promise<
 
   // Count posts per category in a second roundtrip — simpler than a
   // JSON aggregation RPC and fine for the small scale we expect here.
-  const { data: posts, error: postErr } = await db
-    .from('blog_posts')
-    .select('category_id')
-  if (postErr) throw postErr
-
-  const counts = new Map<string, number>()
-  for (const p of posts ?? []) {
-    const cid = (p as { category_id: string | null }).category_id
-    if (cid) counts.set(cid, (counts.get(cid) ?? 0) + 1)
+  let counts = new Map<string, number>()
+  try {
+    const { data: posts, error: postErr } = await db
+      .from('blog_posts')
+      .select('category_id')
+    if (postErr) throw postErr
+    counts = new Map<string, number>()
+    for (const p of posts ?? []) {
+      const cid = (p as { category_id: string | null }).category_id
+      if (cid) counts.set(cid, (counts.get(cid) ?? 0) + 1)
+    }
+  } catch (e) {
+    // category_id column not yet applied → every count stays at 0.
+    if (!isColumnMissingError(e, 'category_id')) throw e
   }
 
   return ((categories ?? []) as BlogCategory[]).map((c) => ({
