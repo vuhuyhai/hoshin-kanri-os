@@ -5,7 +5,7 @@ import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
 import type { Json } from '@/lib/supabase/types'
 import { parseBody, swotSynthesisSchema } from '@/lib/validation'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()

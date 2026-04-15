@@ -137,7 +137,7 @@ export async function callSynthesisAPI(
   const evidenceItems = contextCardsToEvidence(contextCards)
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 58000)
+  const timeoutId = setTimeout(() => controller.abort(), 115000)
 
   try {
     const data = await fetchJson<SynthesisResult>('/api/swot/synthesis', {

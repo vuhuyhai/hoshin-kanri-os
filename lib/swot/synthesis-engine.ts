@@ -250,7 +250,7 @@ export async function synthesizeSwot(
   const prompt = buildSynthesisPrompt(coachingItems, evidenceItems, org)
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 55_000)
+  const timeoutId = setTimeout(() => controller.abort(), 110_000)
 
   try {
     let raw: RawSynthesisOutput
@@ -259,7 +259,7 @@ export async function synthesizeSwot(
       raw = await callSynthesisAI(client, prompt, controller.signal)
     } catch (firstErr) {
       if (firstErr instanceof Error && firstErr.name === 'AbortError') {
-        throw new Error('AI synthesis timeout sau 55 giây. Vui lòng thử lại.')
+        throw new Error('AI synthesis timeout sau 110 giây. Vui lòng thử lại.')
       }
       firstReason = (firstErr as Error).message
       console.warn('[swot-synthesis] first attempt failed:', firstReason)
@@ -267,7 +267,7 @@ export async function synthesizeSwot(
         raw = await callSynthesisAI(client, prompt, controller.signal)
       } catch (secondErr) {
         if (secondErr instanceof Error && secondErr.name === 'AbortError') {
-          throw new Error('AI synthesis timeout sau 55 giây. Vui lòng thử lại.')
+          throw new Error('AI synthesis timeout sau 110 giây. Vui lòng thử lại.')
         }
         const secondReason = (secondErr as Error).message
         console.error('[swot-synthesis] retry also failed:', secondReason)

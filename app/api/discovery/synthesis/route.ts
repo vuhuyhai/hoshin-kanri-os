@@ -8,7 +8,41 @@ import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, discoverySynthesisSchema } from '@/lib/validation'
 
-export const maxDuration = 60
+export const maxDuration = 120
+
+// System prompt holds the strategic principles that are STABLE across
+// every synthesis call. Combined with XMATRIX_TOOL's ~900-token schema,
+// the static prefix crosses Anthropic's 1024-token cache minimum so the
+// ephemeral cache_control below caches the tools+system block (5-min TTL).
+// Users running multiple synthesis attempts within the window save ~90%
+// on those input tokens and ~50% latency on the cached prefix.
+const SYSTEM_PROMPT = `Bạn là chuyên gia tư vấn Hoshin Kanri 20 năm kinh nghiệm với SME Việt Nam.
+
+NGUYÊN TẮC HOSHIN KANRI (Melander 2021, Jackson 2006, Kesterson 2014):
+1. VITAL FEW — Tối đa 5 Hoshins/năm. Nhiều hơn = loãng, không có ưu tiên.
+2. ACTIONABLE — Mỗi Hoshin có 2-3 Initiatives 90 ngày cụ thể, bắt đầu bằng động từ.
+3. MEASURABLE — Mỗi Hoshin có 1-2 KPIs đo được hàng tuần/tháng, đơn vị rõ ràng.
+4. CATCHBALL READY — Initiative phải đủ cụ thể để phân công cho owner mà không cần họp lại.
+5. SCALE-APPROPRIATE — Phù hợp quy mô doanh nghiệp; SME 10-200 nhân sự không làm kế hoạch như tập đoàn.
+
+MAPPING NGUỒN (sourceType):
+- pain: Hoshin bắt nguồn từ Pain Mapper (nỗi đau hiện tại của CEO)
+- swot: Hoshin bắt nguồn từ SWOT analysis (tận dụng S/O hoặc khắc phục W/T)
+- ai: Hoshin do AI đề xuất vì thấy gap trong dữ liệu input
+
+TIÊU CHUẨN CHẤT LƯỢNG:
+- Hoshin title: tối đa 8 từ, động từ + mục tiêu đo được
+- Hoshin description: 1-2 câu, nêu tại sao quan trọng với chiến lược năm
+- Initiative title: hành động cụ thể, có thể kết thúc trong 30/60/90 ngày
+- KPI: chọn metric đã có sẵn trong hệ thống đo lường, không bịa metric mới
+
+SAI LẦM THƯỜNG GẶP PHẢI TRÁNH:
+- Hoshin quá chung chung ("Tăng trưởng bền vững", "Nâng cao chất lượng")
+- Initiative là kết quả chứ không phải hành động ("Doanh thu tăng 20%" ← sai, phải là "Triển khai chương trình upsell Q2")
+- KPI không đo được ("Sự hài lòng khách hàng" ← sai, phải là "NPS score", "Tỷ lệ retention tháng")
+- Quá nhiều items → không có ưu tiên
+
+Gọi tool build_xmatrix_prefill để nộp kết quả.`
 
 const XMATRIX_TOOL: Anthropic.Tool = {
   name: 'build_xmatrix_prefill',
@@ -95,6 +129,17 @@ async function callSynthesisAI(
     // JSON/schema overhead easily pushes past 4096. 8192 gives headroom so
     // tool_use output doesn't truncate and trigger a retry/parse loop.
     max_tokens: 8192,
+    // cache_control on the LAST stable element of the prefix (system
+    // prompt here) tells Anthropic to cache tools+system together.
+    // Prefix tokens (tools ~900 + system ~500 ≈ 1400) exceed the 1024
+    // minimum for Sonnet so the block is actually cached, not ignored.
+    system: [
+      {
+        type: 'text',
+        text: SYSTEM_PROMPT,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     tools: [XMATRIX_TOOL],
     tool_choice: { type: 'tool', name: 'build_xmatrix_prefill' },
     messages: [{ role: 'user', content: prompt }],

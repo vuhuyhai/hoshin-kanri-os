@@ -13,7 +13,7 @@ import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, generateStrategySchema } from '@/lib/validation'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 const STRATEGIES_TOOL: Anthropic.Tool = {
   name: 'submit_strategies',
