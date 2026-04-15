@@ -55,11 +55,11 @@ export function SwotWorkshop({ orgId, onComplete }: SwotWorkshopProps) {
     try {
       const input: SwotContextInput = {
         orgName: 'Doanh nghiệp',
-        city: contextData.city,
+        city: contextData.mainMarket,
         industry: contextData.industry,
         headcount: contextData.headcount,
         topChallenges: contextData.topChallenges,
-        currentStrengths: contextData.additionalContext || 'Chưa xác định cụ thể',
+        currentStrengths: contextData.competitiveAdvantage,
         breakthroughGoal: contextData.yearGoal,
         selectedFrameworks: ['8Ms', '5Forces', 'PESTEL'],
       }

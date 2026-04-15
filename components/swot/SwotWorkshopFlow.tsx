@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
-import { SwotContextForm } from './workshop/SwotContextForm'
+import { SwotContextForm } from './SwotContextForm'
 import { SwotWorkshop } from './SwotWorkshop'
 import { SwotFinalizeList } from './SwotFinalizeList'
 import type { SwotWorkshopStep } from '@/lib/swot/types'

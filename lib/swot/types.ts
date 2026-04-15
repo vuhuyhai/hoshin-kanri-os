@@ -462,11 +462,19 @@ export interface SwotIngredient {
 
 export interface SwotContextData {
   industry: string
-  headcount: string
-  city: string
+  headcount: '1-10' | '10-50' | '50-200'
   mainMarket: string
+
+  revenueRange: '<1B' | '1-5B' | '5-20B' | '20-100B' | '>100B'
+  revenueTrend: 'growing' | 'stable' | 'declining'
+  coreProducts: string
+  targetCustomers: string
+
+  mainCompetitors: string
+  competitiveAdvantage: string
   yearGoal: string
   topChallenges: string
+
   additionalContext?: string
 }
 

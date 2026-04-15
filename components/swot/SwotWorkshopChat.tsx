@@ -48,7 +48,7 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
           orgId,
           orgName: 'Doanh nghiệp',
           industry: contextData.industry,
-          city: contextData.city,
+          city: contextData.mainMarket,
           headcount: contextData.headcount,
         },
         currentFramework: 'sw',
