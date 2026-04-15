@@ -56,14 +56,14 @@ export function SwotWorkshopFlow({ orgData, orgId, analysisId }: SwotWorkshopFlo
 
   const goToWorkshop = () => setWorkshopStep('workshop')
   const goToFinalize = () => setWorkshopStep('finalize')
-  const goToTows = () => router.push('/dashboard/discovery/swot')
+  const goToTows = () => router.push('/dashboard/discovery/synthesis')
 
   return (
     <div className="flex flex-col h-full min-h-0">
       <ProgressIndicator current={workshopStep} />
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0">
         {workshopStep === 'context' && (
-          <div className="p-4 md:p-6">
+          <div className="h-full overflow-y-auto p-4 md:p-6">
             <SwotContextForm orgData={orgData} onComplete={goToWorkshop} />
           </div>
         )}
@@ -75,7 +75,7 @@ export function SwotWorkshopFlow({ orgData, orgId, analysisId }: SwotWorkshopFlo
           />
         )}
         {workshopStep === 'finalize' && (
-          <div className="p-4 md:p-6">
+          <div className="h-full overflow-y-auto p-4 md:p-6">
             <SwotFinalizeList
               analysisId={analysisId}
               orgId={orgId}
