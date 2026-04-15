@@ -3,6 +3,12 @@ import { listAllPublishedSlugs } from '@/lib/blog/queries'
 
 const SITE_URL = 'https://chienluoc.org'
 
+// Re-generate at most once a minute so newly-published blog posts
+// show up in the sitemap without waiting for a full redeploy.
+// Without this, Next.js caches the file at build time and drops any
+// posts added after the latest deployment.
+export const revalidate = 60
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: 'weekly', priority: 1 },
