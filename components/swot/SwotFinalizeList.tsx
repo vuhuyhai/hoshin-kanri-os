@@ -28,7 +28,6 @@ function domainOf(url: string): string {
 export function SwotFinalizeList({ analysisId, orgId, onComplete }: SwotFinalizeListProps) {
   const ingredients = useSwotStore((s) => s.ingredients)
   const setWorkshopStep = useSwotStore((s) => s.setWorkshopStep)
-  const setIngredients = useSwotStore((s) => s.setIngredients)
   const toggleIngredientSelected = useSwotStore((s) => s.toggleIngredientSelected)
   const selectAllByQuadrant = useSwotStore((s) => s.selectAllByQuadrant)
   const [loading, setLoading] = useState(false)
@@ -48,8 +47,12 @@ export function SwotFinalizeList({ analysisId, orgId, onComplete }: SwotFinalize
     try {
       await persistWorkshopSelection(analysisId, orgId, selected)
       toast.success(`Đã lưu ${selectedCount} nguyên liệu SWOT`)
-      setWorkshopStep('context')
-      setIngredients([])
+      // Navigate FIRST. The old code reset the store to step='context' and
+      // cleared ingredients before pushing — that made SwotWorkshopFlow
+      // re-render and paint the context form for one frame (the "flash
+      // through Bối cảnh doanh nghiệp" bug). Leaving store state as-is
+      // means re-visits land on finalize with previously-saved ingredients,
+      // which is the correct behavior; users can edit via "Quay lại".
       onComplete()
     } catch (err) {
       console.error('[SwotFinalizeList] persist failed:', err)

@@ -56,7 +56,7 @@ export function SwotWorkshopFlow({ orgData, orgId, analysisId }: SwotWorkshopFlo
 
   const goToWorkshop = () => setWorkshopStep('workshop')
   const goToFinalize = () => setWorkshopStep('finalize')
-  const goToTows = () => router.push('/dashboard/discovery/synthesis')
+  const goToTows = () => router.push('/dashboard/discovery/swot/strategy')
 
   return (
     <div className="flex flex-col h-full min-h-0">
