@@ -57,6 +57,33 @@ export type Database = {
           },
         ]
       }
+      blog_categories: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           id: string
@@ -67,6 +94,7 @@ export type Database = {
           content_md: string
           status: string
           author_id: string | null
+          category_id: string | null
           published_at: string | null
           views_count: number
           created_at: string
@@ -81,6 +109,7 @@ export type Database = {
           content_md: string
           status?: string
           author_id?: string | null
+          category_id?: string | null
           published_at?: string | null
           views_count?: number
           created_at?: string
@@ -95,12 +124,21 @@ export type Database = {
           content_md?: string
           status?: string
           author_id?: string | null
+          category_id?: string | null
           published_at?: string | null
           views_count?: number
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discovery_sessions: {
         Row: {

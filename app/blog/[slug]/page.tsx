@@ -148,6 +148,14 @@ export default async function BlogPostPage({ params }: Props) {
 
           <header className="mb-10 border-b-[3px] border-ink pb-8">
             <p className="heading-overline mb-4">Bài viết</p>
+            {post.category && (
+              <Link
+                href={`/blog?category=${post.category.slug}`}
+                className="badge-brutal mb-4 inline-block border-accent-brand text-accent-brand hover:bg-accent-brand hover:text-bg-warm"
+              >
+                {post.category.name}
+              </Link>
+            )}
             <h1
               className="font-display font-black uppercase text-ink leading-[1.1]"
               style={{ fontSize: 'clamp(32px, 4.5vw, 56px)' }}

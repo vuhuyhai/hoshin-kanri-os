@@ -1,12 +1,21 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { adminGetPost } from '@/lib/blog/queries'
+import { adminGetPost, adminListCategories } from '@/lib/blog/queries'
 import { BlogForm } from '../../BlogForm'
 import { updateBlogPostAction } from '../../_actions'
 
 export const dynamic = 'force-dynamic'
 
 type Props = { params: Promise<{ id: string }> }
+
+async function safeListCategories() {
+  try {
+    return await adminListCategories()
+  } catch (e) {
+    console.error('[admin/blog/edit] category list failed:', e)
+    return []
+  }
+}
 
 export default async function EditBlogPostPage({ params }: Props) {
   const { id } = await params
@@ -21,6 +30,7 @@ export default async function EditBlogPostPage({ params }: Props) {
   }
   if (!post) notFound()
 
+  const categories = await safeListCategories()
   const boundAction = updateBlogPostAction.bind(null, id)
 
   return (
@@ -46,8 +56,10 @@ export default async function EditBlogPostPage({ params }: Props) {
           cover_url: post.cover_url ?? '',
           content_md: post.content_md,
           status: post.status,
+          category_id: post.category_id ?? '',
         }}
         submitLabel="Lưu thay đổi"
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
       />
     </div>
   )

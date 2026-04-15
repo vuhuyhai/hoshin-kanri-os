@@ -1,10 +1,21 @@
 import Link from 'next/link'
 import { BlogForm } from '../BlogForm'
 import { createBlogPostAction } from '../_actions'
+import { adminListCategories } from '@/lib/blog/queries'
 
 export const dynamic = 'force-dynamic'
 
-export default function NewBlogPostPage() {
+async function safeListCategories() {
+  try {
+    return await adminListCategories()
+  } catch (e) {
+    console.error('[admin/blog/new] category list failed:', e)
+    return []
+  }
+}
+
+export default async function NewBlogPostPage() {
+  const categories = await safeListCategories()
   return (
     <div className="space-y-6">
       <div>
@@ -18,7 +29,11 @@ export default function NewBlogPostPage() {
           Bài viết mới
         </h1>
       </div>
-      <BlogForm action={createBlogPostAction} submitLabel="Tạo bài viết" />
+      <BlogForm
+        action={createBlogPostAction}
+        submitLabel="Tạo bài viết"
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      />
     </div>
   )
 }

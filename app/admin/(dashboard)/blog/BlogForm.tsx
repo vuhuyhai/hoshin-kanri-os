@@ -11,6 +11,12 @@ type BlogFormInitial = {
   cover_url: string
   content_md: string
   status: 'draft' | 'published'
+  category_id: string
+}
+
+export type CategoryOption = {
+  id: string
+  name: string
 }
 
 type ActionState =
@@ -30,6 +36,7 @@ const EMPTY: BlogFormInitial = {
   cover_url: '',
   content_md: '',
   status: 'draft',
+  category_id: '',
 }
 
 function slugify(input: string): string {
@@ -49,10 +56,12 @@ export function BlogForm({
   action,
   initial = EMPTY,
   submitLabel = 'Lưu bài viết',
+  categories = [],
 }: {
   action: BlogFormAction
   initial?: BlogFormInitial
   submitLabel?: string
+  categories?: CategoryOption[]
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     action,
@@ -66,6 +75,7 @@ export function BlogForm({
   const [coverUrl, setCoverUrl] = useState(initial.cover_url)
   const [content, setContent] = useState(initial.content_md)
   const [status, setStatus] = useState<'draft' | 'published'>(initial.status)
+  const [categoryId, setCategoryId] = useState(initial.category_id)
   const [showPreview, setShowPreview] = useState(false)
 
   const fieldErrors =
@@ -118,6 +128,42 @@ export function BlogForm({
             <option value="published">Published (đăng)</option>
           </select>
         </div>
+      </div>
+
+      <div>
+        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+          Danh mục
+        </label>
+        <select
+          name="category_id"
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          className="mt-2 w-full border-[3px] border-ink bg-bg-warm px-4 py-3 font-display text-sm font-bold text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
+        >
+          <option value="">— Không có danh mục —</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {fieldErrors.category_id && (
+          <p className="mt-1 font-body text-xs text-accent-brand">
+            {fieldErrors.category_id}
+          </p>
+        )}
+        {categories.length === 0 && (
+          <p className="mt-1 font-body text-[11px] text-text-3">
+            Chưa có danh mục nào. Tạo danh mục tại{' '}
+            <a
+              href="/admin/blog/categories"
+              className="font-semibold text-accent-brand underline"
+            >
+              /admin/blog/categories
+            </a>
+            .
+          </p>
+        )}
       </div>
 
       <div>

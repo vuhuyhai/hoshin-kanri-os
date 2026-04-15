@@ -1,27 +1,62 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { listPublishedPosts, countPublishedPosts } from '@/lib/blog/queries'
+import {
+  listPublishedPosts,
+  countPublishedPosts,
+  listCategories,
+  getCategoryBySlug,
+} from '@/lib/blog/queries'
 
 export const dynamic = 'force-dynamic'
 
 const SITE_URL = 'https://chienluoc.org'
 const PAGE_SIZE = 12
 
-export const metadata: Metadata = {
-  title: 'Blog — Hoshin Kanri OS',
-  description:
-    'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam từ đội ngũ Hoshin Kanri OS.',
-  alternates: { canonical: `${SITE_URL}/blog` },
-  openGraph: {
-    type: 'website',
-    url: `${SITE_URL}/blog`,
-    title: 'Blog — Hoshin Kanri OS',
-    description:
-      'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam.',
-    locale: 'vi_VN',
-    siteName: 'Hoshin Kanri OS',
-  },
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>
+}): Promise<Metadata> {
+  const { category } = await searchParams
+  const slug = category?.trim()
+  if (!slug) {
+    return {
+      title: 'Blog — Hoshin Kanri OS',
+      description:
+        'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam từ đội ngũ Hoshin Kanri OS.',
+      alternates: { canonical: `${SITE_URL}/blog` },
+      openGraph: {
+        type: 'website',
+        url: `${SITE_URL}/blog`,
+        title: 'Blog — Hoshin Kanri OS',
+        description:
+          'Kiến thức chiến lược, Hoshin Kanri, OKR và điều hành SME Việt Nam.',
+        locale: 'vi_VN',
+        siteName: 'Hoshin Kanri OS',
+      },
+    }
+  }
+
+  const cat = await getCategoryBySlug(slug).catch(() => null)
+  const name = cat?.name ?? slug
+  const url = `${SITE_URL}/blog?category=${slug}`
+  const description =
+    cat?.description ??
+    `Bài viết thuộc danh mục ${name} trên blog Hoshin Kanri OS.`
+  return {
+    title: `${name} — Blog Hoshin Kanri OS`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      url,
+      title: `${name} — Blog Hoshin Kanri OS`,
+      description,
+      locale: 'vi_VN',
+      siteName: 'Hoshin Kanri OS',
+    },
+  }
 }
 
 function formatDate(iso: string | null): string {
@@ -33,31 +68,38 @@ function formatDate(iso: string | null): string {
   })
 }
 
-type SearchParams = Promise<{ page?: string }>
+type SearchParams = Promise<{ page?: string; category?: string }>
 
 export default async function BlogIndexPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, category: categoryParam } = await searchParams
   const pageNum = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const offset = (pageNum - 1) * PAGE_SIZE
+  const categorySlug = categoryParam?.trim() || undefined
 
   // Resilient: if the DB is unreachable or the table is missing (e.g.
   // migration not yet applied in the target env), show the empty state
   // instead of crashing the whole page with a 500.
   let posts: Awaited<ReturnType<typeof listPublishedPosts>> = []
   let total = 0
+  let categories: Awaited<ReturnType<typeof listCategories>> = []
+  let activeCategory: Awaited<ReturnType<typeof getCategoryBySlug>> = null
   try {
-    ;[posts, total] = await Promise.all([
-      listPublishedPosts({ limit: PAGE_SIZE, offset }),
-      countPublishedPosts(),
+    ;[posts, total, categories, activeCategory] = await Promise.all([
+      listPublishedPosts({ limit: PAGE_SIZE, offset, categorySlug }),
+      countPublishedPosts({ categorySlug }),
+      listCategories(),
+      categorySlug ? getCategoryBySlug(categorySlug) : Promise.resolve(null),
     ])
   } catch (e) {
     console.error('/blog listing failed to load posts:', e)
   }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const baseHref = activeCategory ? `/blog?category=${activeCategory.slug}&` : '/blog?'
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -104,37 +146,106 @@ export default async function BlogIndexPage({
       <main className="flex-1 bg-bg-warm">
         <section className="w-full border-b-[3px] border-ink">
           <div className="mx-auto max-w-[1440px] px-6 py-16 text-center lg:px-12 lg:py-24">
-            <p className="heading-overline mb-3">Blog</p>
+            <p className="heading-overline mb-3">
+              {activeCategory ? `Danh mục: ${activeCategory.name}` : 'Blog'}
+            </p>
             <h1
               className="font-display font-black uppercase text-ink leading-[1.05]"
               style={{ fontSize: 'clamp(36px, 5vw, 64px)' }}
             >
-              Kiến thức chiến lược cho{' '}
-              <span className="text-accent-brand">SME Việt Nam</span>
+              {activeCategory ? (
+                <>
+                  {activeCategory.name}{' '}
+                  <span className="text-accent-brand">
+                    ({total})
+                  </span>
+                </>
+              ) : (
+                <>
+                  Kiến thức chiến lược cho{' '}
+                  <span className="text-accent-brand">SME Việt Nam</span>
+                </>
+              )}
             </h1>
             <p className="mx-auto mt-6 max-w-2xl font-body text-lg text-text-2">
-              Hoshin Kanri, OKR, X-Matrix, SWOT và những bài học thực chiến
-              từ việc đồng hành với chủ doanh nghiệp nhỏ và vừa.
+              {activeCategory?.description ??
+                'Hoshin Kanri, OKR, X-Matrix, SWOT và những bài học thực chiến từ việc đồng hành với chủ doanh nghiệp nhỏ và vừa.'}
             </p>
           </div>
         </section>
+
+        {categories.length > 0 && (
+          <section className="w-full border-b-[3px] border-ink bg-bg-warm">
+            <div className="mx-auto max-w-[1440px] px-6 py-5 lg:px-12">
+              <div
+                className="flex flex-wrap items-center gap-2 overflow-x-auto"
+                aria-label="Danh mục bài viết"
+              >
+                <Link
+                  href="/blog"
+                  className={
+                    activeCategory
+                      ? 'btn-brutal-secondary px-4 py-2 text-[11px]'
+                      : 'btn-brutal-primary px-4 py-2 text-[11px]'
+                  }
+                >
+                  Tất cả
+                </Link>
+                {categories.map((c) => {
+                  const isActive = activeCategory?.slug === c.slug
+                  return (
+                    <Link
+                      key={c.id}
+                      href={`/blog?category=${c.slug}`}
+                      className={
+                        isActive
+                          ? 'btn-brutal-primary px-4 py-2 text-[11px]'
+                          : 'btn-brutal-secondary px-4 py-2 text-[11px]'
+                      }
+                    >
+                      {c.name}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="w-full bg-bg-muted-warm py-16 lg:py-20">
           <div className="mx-auto max-w-[1440px] px-6 lg:px-12">
             {posts.length === 0 ? (
               <div className="card-brutal mx-auto max-w-xl p-10 text-center">
                 <p className="font-display text-lg font-bold uppercase text-ink">
-                  Chưa có bài viết nào
+                  {activeCategory
+                    ? 'Chưa có bài viết trong danh mục này'
+                    : 'Chưa có bài viết nào'}
                 </p>
                 <p className="mt-3 font-body text-text-2">
-                  Blog sẽ có bài mới rất sớm. Trong khi chờ, bạn có thể thử{' '}
-                  <Link
-                    href="/x-ray"
-                    className="font-semibold text-accent-brand underline"
-                  >
-                    Business X-Ray
-                  </Link>{' '}
-                  để chẩn đoán doanh nghiệp trong 10 phút.
+                  {activeCategory ? (
+                    <>
+                      Quay lại{' '}
+                      <Link
+                        href="/blog"
+                        className="font-semibold text-accent-brand underline"
+                      >
+                        tất cả bài viết
+                      </Link>
+                      .
+                    </>
+                  ) : (
+                    <>
+                      Blog sẽ có bài mới rất sớm. Trong khi chờ, bạn có thể
+                      thử{' '}
+                      <Link
+                        href="/x-ray"
+                        className="font-semibold text-accent-brand underline"
+                      >
+                        Business X-Ray
+                      </Link>{' '}
+                      để chẩn đoán doanh nghiệp trong 10 phút.
+                    </>
+                  )}
                 </p>
               </div>
             ) : (
@@ -165,9 +276,20 @@ export default async function BlogIndexPage({
                       </Link>
                     )}
                     <div className="flex flex-1 flex-col p-6">
-                      <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">
-                        {formatDate(post.published_at)}
-                      </p>
+                      <div className="mb-2 flex flex-wrap items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-wider text-text-3">
+                        <span>{formatDate(post.published_at)}</span>
+                        {post.category && (
+                          <>
+                            <span aria-hidden>•</span>
+                            <Link
+                              href={`/blog?category=${post.category.slug}`}
+                              className="text-accent-brand hover:underline"
+                            >
+                              {post.category.name}
+                            </Link>
+                          </>
+                        )}
+                      </div>
                       <h2 className="mb-3 font-display text-xl font-black uppercase leading-tight text-ink">
                         <Link
                           href={`/blog/${post.slug}`}
@@ -198,7 +320,7 @@ export default async function BlogIndexPage({
               >
                 {pageNum > 1 ? (
                   <Link
-                    href={`/blog?page=${pageNum - 1}`}
+                    href={`${baseHref}page=${pageNum - 1}`}
                     className="btn-brutal-secondary px-5 py-2.5 text-xs"
                   >
                     ← Trang trước
@@ -213,7 +335,7 @@ export default async function BlogIndexPage({
                 </span>
                 {pageNum < totalPages ? (
                   <Link
-                    href={`/blog?page=${pageNum + 1}`}
+                    href={`${baseHref}page=${pageNum + 1}`}
                     className="btn-brutal-secondary px-5 py-2.5 text-xs"
                   >
                     Trang sau →

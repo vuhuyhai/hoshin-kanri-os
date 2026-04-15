@@ -30,6 +30,36 @@ export const blogPostSchema = z.object({
     .transform((v) => (v && v.length > 0 ? v : null)),
   content_md: z.string().min(50, 'Nội dung phải có ít nhất 50 ký tự'),
   status: z.enum(['draft', 'published']).default('draft'),
+  category_id: z
+    .string()
+    .trim()
+    .uuid('category_id không hợp lệ')
+    .or(z.literal(''))
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
 })
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>
+
+export const blogCategorySchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2, 'Slug phải có ít nhất 2 ký tự')
+    .max(60, 'Slug tối đa 60 ký tự')
+    .regex(SLUG_RE, 'Slug chỉ gồm chữ thường, số và dấu gạch ngang'),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Tên danh mục phải có ít nhất 2 ký tự')
+    .max(80, 'Tên tối đa 80 ký tự'),
+  description: z
+    .string()
+    .trim()
+    .max(300, 'Mô tả tối đa 300 ký tự')
+    .or(z.literal(''))
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+})
+
+export type BlogCategoryInput = z.infer<typeof blogCategorySchema>

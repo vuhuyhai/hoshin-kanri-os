@@ -9,8 +9,12 @@ import {
   adminUpdatePost,
   adminDeletePost,
   adminGetPostBySlug,
+  adminCreateCategory,
+  adminUpdateCategory,
+  adminDeleteCategory,
+  adminGetCategoryBySlug,
 } from '@/lib/blog/queries'
-import { blogPostSchema } from '@/lib/blog/schema'
+import { blogPostSchema, blogCategorySchema } from '@/lib/blog/schema'
 
 type ActionResult =
   | { ok: true }
@@ -64,6 +68,15 @@ function parseFormData(formData: FormData) {
     cover_url: formData.get('cover_url') ?? '',
     content_md: formData.get('content_md') ?? '',
     status: formData.get('status') ?? 'draft',
+    category_id: formData.get('category_id') ?? '',
+  })
+}
+
+function parseCategoryFormData(formData: FormData) {
+  return blogCategorySchema.safeParse({
+    slug: formData.get('slug') ?? '',
+    name: formData.get('name') ?? '',
+    description: formData.get('description') ?? '',
   })
 }
 
@@ -109,6 +122,7 @@ export async function createBlogPostAction(
         cover_url: parsed.data.cover_url ?? null,
         content_md: parsed.data.content_md,
         status: parsed.data.status,
+        category_id: parsed.data.category_id ?? null,
       },
       userId
     )
@@ -165,6 +179,7 @@ export async function updateBlogPostAction(
       cover_url: parsed.data.cover_url ?? null,
       content_md: parsed.data.content_md,
       status: parsed.data.status,
+      category_id: parsed.data.category_id ?? null,
     })
   } catch (e) {
     console.error('[updateBlogPostAction] update failed:', e)
@@ -190,6 +205,129 @@ export async function deleteBlogPostAction(
     return { ok: false, error: describeDbError(e) }
   }
 
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { ok: true }
+}
+
+// ============================================================
+// Categories
+// ============================================================
+
+export async function createCategoryAction(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireSuperAdmin()
+
+  const parsed = parseCategoryFormData(formData)
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]
+    return {
+      ok: false,
+      error: first?.message ?? 'Dữ liệu không hợp lệ',
+      fieldErrors: Object.fromEntries(
+        parsed.error.issues.map((i) => [String(i.path[0] ?? ''), i.message])
+      ),
+    }
+  }
+
+  let existing: Awaited<ReturnType<typeof adminGetCategoryBySlug>>
+  try {
+    existing = await adminGetCategoryBySlug(parsed.data.slug)
+  } catch (e) {
+    console.error('[createCategoryAction] slug lookup failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+  if (existing) {
+    return {
+      ok: false,
+      error: 'Slug đã tồn tại, chọn slug khác',
+      fieldErrors: { slug: 'Slug đã tồn tại' },
+    }
+  }
+
+  try {
+    await adminCreateCategory({
+      slug: parsed.data.slug,
+      name: parsed.data.name,
+      description: parsed.data.description ?? null,
+    })
+  } catch (e) {
+    console.error('[createCategoryAction] create failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+
+  revalidatePath('/admin/blog/categories')
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { ok: true }
+}
+
+export async function updateCategoryAction(
+  id: string,
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireSuperAdmin()
+
+  const parsed = parseCategoryFormData(formData)
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]
+    return {
+      ok: false,
+      error: first?.message ?? 'Dữ liệu không hợp lệ',
+      fieldErrors: Object.fromEntries(
+        parsed.error.issues.map((i) => [String(i.path[0] ?? ''), i.message])
+      ),
+    }
+  }
+
+  let existing: Awaited<ReturnType<typeof adminGetCategoryBySlug>>
+  try {
+    existing = await adminGetCategoryBySlug(parsed.data.slug)
+  } catch (e) {
+    console.error('[updateCategoryAction] slug lookup failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+  if (existing && existing.id !== id) {
+    return {
+      ok: false,
+      error: 'Slug đã tồn tại ở danh mục khác',
+      fieldErrors: { slug: 'Slug đã tồn tại' },
+    }
+  }
+
+  try {
+    await adminUpdateCategory(id, {
+      slug: parsed.data.slug,
+      name: parsed.data.name,
+      description: parsed.data.description ?? null,
+    })
+  } catch (e) {
+    console.error('[updateCategoryAction] update failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+
+  revalidatePath('/admin/blog/categories')
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { ok: true }
+}
+
+export async function deleteCategoryAction(
+  id: string
+): Promise<ActionResult> {
+  await requireSuperAdmin()
+
+  try {
+    await adminDeleteCategory(id)
+  } catch (e) {
+    console.error('[deleteCategoryAction] delete failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
+
+  revalidatePath('/admin/blog/categories')
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
   return { ok: true }
