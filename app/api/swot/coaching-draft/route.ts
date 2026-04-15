@@ -223,9 +223,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(draft)
   } catch (error) {
     console.error('Coaching draft API error:', error)
-    return NextResponse.json(
-      { error: 'Không thể kết nối AI. Vui lòng thử lại.' },
-      { status: 500 }
-    )
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Không thể kết nối AI. Vui lòng thử lại.'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

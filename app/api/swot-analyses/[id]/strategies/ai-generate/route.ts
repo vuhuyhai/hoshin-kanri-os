@@ -1,16 +1,140 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import type Anthropic from '@anthropic-ai/sdk'
 import {
   createClient,
   requireOrgRoleForAnalysis,
   WRITE_ROLES,
 } from '@/lib/supabase/server'
-import type { AiStrategyItem } from '@/lib/swot/tows-types'
+import type { AiStrategyItem, BscPerspective } from '@/lib/swot/tows-types'
 import { generateCombinedCode } from '@/lib/swot/factor-utils'
 import { buildTowsPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, generateStrategySchema } from '@/lib/validation'
+
+export const maxDuration = 60
+
+const STRATEGIES_TOOL: Anthropic.Tool = {
+  name: 'submit_strategies',
+  description:
+    'Submit 2-3 TOWS strategies combining SW and OT factors for a single quadrant.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      strategies: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 5,
+        items: {
+          type: 'object',
+          properties: {
+            strategy_title: {
+              type: 'string',
+              description: 'Tên chiến lược ngắn gọn',
+            },
+            strategy_statement: {
+              type: 'string',
+              description:
+                'Mô tả 2-3 câu, actionable, bắt đầu bằng động từ',
+            },
+            bsc_perspective: {
+              type: 'string',
+              enum: ['finance', 'customer', 'process', 'learning'],
+            },
+          },
+          required: [
+            'strategy_title',
+            'strategy_statement',
+            'bsc_perspective',
+          ],
+        },
+      },
+    },
+    required: ['strategies'],
+  },
+}
+
+const VALID_BSC: readonly BscPerspective[] = [
+  'finance',
+  'customer',
+  'process',
+  'learning',
+]
+
+async function callStrategiesAI(
+  client: Anthropic,
+  prompt: string,
+): Promise<AiStrategyItem[]> {
+  const response = await client.messages.create({
+    model: AI_MODELS.reasoning,
+    // 2-3 strategies × (title + 2-3 sentence statement) in Vietnamese plus
+    // JSON/schema overhead. 1000 was truncating strategy_statement mid-
+    // sentence. 4096 is comfortable.
+    max_tokens: 4096,
+    tools: [STRATEGIES_TOOL],
+    tool_choice: { type: 'tool', name: 'submit_strategies' },
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  if (response.stop_reason === 'max_tokens') {
+    console.error(
+      '[tows-ai-generate] hit max_tokens before completing tool call',
+    )
+    throw new Error('max_tokens')
+  }
+
+  const toolBlock = response.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
+  )
+
+  if (!toolBlock) {
+    console.error(
+      '[tows-ai-generate] no tool_use block. stop_reason=',
+      response.stop_reason,
+      'content:',
+      JSON.stringify(response.content).slice(0, 800),
+    )
+    throw new Error('no_tool_use')
+  }
+
+  const parsed = toolBlock.input as { strategies?: unknown }
+
+  if (!Array.isArray(parsed.strategies) || parsed.strategies.length === 0) {
+    throw new Error('missing_strategies')
+  }
+
+  const items: AiStrategyItem[] = []
+  for (let i = 0; i < parsed.strategies.length; i++) {
+    const raw = parsed.strategies[i]
+    if (!raw || typeof raw !== 'object') {
+      throw new Error(`invalid_item_${i}`)
+    }
+    const rec = raw as Record<string, unknown>
+    if (
+      typeof rec.strategy_title !== 'string' ||
+      !rec.strategy_title.trim()
+    ) {
+      throw new Error(`missing_title_${i}`)
+    }
+    if (
+      typeof rec.strategy_statement !== 'string' ||
+      !rec.strategy_statement.trim()
+    ) {
+      throw new Error(`missing_statement_${i}`)
+    }
+    if (!VALID_BSC.includes(rec.bsc_perspective as BscPerspective)) {
+      throw new Error(`invalid_bsc_${i}`)
+    }
+    items.push({
+      strategy_title: rec.strategy_title,
+      strategy_statement: rec.strategy_statement,
+      bsc_perspective: rec.bsc_perspective as BscPerspective,
+    })
+  }
+
+  return items
+}
 
 export async function POST(
   req: NextRequest,
@@ -58,7 +182,7 @@ export async function POST(
       .single()
     if (!org) return NextResponse.json({ error: 'Tổ chức không tồn tại' }, { status: 404 })
 
-    // Build prompt and call AI
+    // Build prompt and call AI with retry-once pattern
     const prompt = buildTowsPrompt({
       sw_factors: (swFactors ?? []).map((f) => ({
         code: f.code,
@@ -78,25 +202,27 @@ export async function POST(
       },
     })
 
-    const anthropic = createAnthropicClient()
-    const message = await anthropic.messages.create({
-      model: AI_MODELS.reasoning,
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const rawText =
-      message.content[0].type === 'text' ? message.content[0].text : ''
-    const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-
+    const client = createAnthropicClient()
     let items: AiStrategyItem[]
+    let firstReason = ''
     try {
-      items = JSON.parse(cleaned) as AiStrategyItem[]
-    } catch {
-      return NextResponse.json(
-        { error: 'AI trả về JSON không hợp lệ. Vui lòng thử lại.' },
-        { status: 500 },
-      )
+      items = await callStrategiesAI(client, prompt)
+    } catch (firstErr) {
+      firstReason = (firstErr as Error).message
+      console.warn('[tows-ai-generate] first attempt failed:', firstReason)
+      try {
+        items = await callStrategiesAI(client, prompt)
+      } catch (secondErr) {
+        const secondReason = (secondErr as Error).message
+        console.error('[tows-ai-generate] retry also failed:', secondReason)
+        return NextResponse.json(
+          {
+            error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,
+            debug: { firstReason, secondReason },
+          },
+          { status: 500 },
+        )
+      }
     }
 
     // Generate combined code base

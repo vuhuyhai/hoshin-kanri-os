@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type Anthropic from '@anthropic-ai/sdk'
 import {
   createClient,
   requireOrgRole,
@@ -8,6 +9,90 @@ import type { SwotQuadrant } from '@/lib/swot/types'
 import { buildQualityCheckPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
+
+interface QualityAssessment {
+  score: number
+  feedback: string
+  improved: string | null
+}
+
+const QUALITY_TOOL: Anthropic.Tool = {
+  name: 'submit_quality_assessment',
+  description:
+    'Submit quality score, feedback, and optional improved version for a SWOT factor.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      score: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 5,
+        description: '1-5 điểm đánh giá chất lượng',
+      },
+      feedback: {
+        type: 'string',
+        description: 'Nhận xét ngắn gọn về chất lượng',
+      },
+      improved: {
+        type: 'string',
+        description:
+          'Phiên bản cải thiện (để trống nếu yếu tố đã tốt, score >= 4)',
+      },
+    },
+    required: ['score', 'feedback'],
+  },
+}
+
+async function callQualityAI(
+  client: Anthropic,
+  prompt: string,
+): Promise<QualityAssessment> {
+  const response = await client.messages.create({
+    model: AI_MODELS.fast,
+    max_tokens: 512,
+    tools: [QUALITY_TOOL],
+    tool_choice: { type: 'tool', name: 'submit_quality_assessment' },
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  if (response.stop_reason === 'max_tokens') {
+    console.error('[quality-check] hit max_tokens before completing tool call')
+    throw new Error('max_tokens')
+  }
+
+  const toolBlock = response.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
+  )
+
+  if (!toolBlock) {
+    console.error(
+      '[quality-check] no tool_use block. stop_reason=',
+      response.stop_reason,
+    )
+    throw new Error('no_tool_use')
+  }
+
+  const parsed = toolBlock.input as {
+    score?: unknown
+    feedback?: unknown
+    improved?: unknown
+  }
+
+  const score = Number(parsed.score)
+  if (!Number.isInteger(score) || score < 1 || score > 5) {
+    throw new Error('invalid_score')
+  }
+  if (typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) {
+    throw new Error('missing_feedback')
+  }
+
+  const improved =
+    typeof parsed.improved === 'string' && parsed.improved.trim()
+      ? parsed.improved
+      : null
+
+  return { score, feedback: parsed.feedback, improved }
+}
 
 export async function POST(
   _req: Request,
@@ -19,7 +104,6 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Fetch factor, then verify role (writes quality_score, so WRITE_ROLES).
     const { data: factor } = await supabase
       .from('swot_factors')
       .select('id, org_id, content, quadrant')
@@ -35,23 +119,25 @@ export async function POST(
       factor.quadrant as SwotQuadrant,
     )
 
-    const anthropic = createAnthropicClient()
-    const message = await anthropic.messages.create({
-      model: AI_MODELS.fast,
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const rawText =
-      message.content[0].type === 'text' ? message.content[0].text : ''
-    const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-    const result = JSON.parse(cleaned) as {
-      score: number
-      feedback: string
-      improved: string | null
+    const client = createAnthropicClient()
+    let result: QualityAssessment
+    try {
+      result = await callQualityAI(client, prompt)
+    } catch (firstErr) {
+      const firstReason = (firstErr as Error).message
+      console.warn('[quality-check] first attempt failed:', firstReason)
+      try {
+        result = await callQualityAI(client, prompt)
+      } catch (secondErr) {
+        const secondReason = (secondErr as Error).message
+        console.error('[quality-check] retry also failed:', secondReason)
+        return NextResponse.json(
+          { error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.` },
+          { status: 500 },
+        )
+      }
     }
 
-    // Persist quality_score
     await supabase
       .from('swot_factors')
       .update({ quality_score: result.score })
