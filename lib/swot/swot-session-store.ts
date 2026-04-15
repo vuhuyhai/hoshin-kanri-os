@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
+import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/client'
 import type { Json } from '@/lib/supabase/types'
 import type {
@@ -9,6 +10,11 @@ import type {
   ExternalFrameworkChoice,
   DimensionInsight,
   ContextCard,
+  SwotQuadrant,
+  SwotIngredient,
+  SwotContextData,
+  SwotWorkshopStep,
+  TavilyEvidenceResult,
 } from './types'
 import type {
   SwotDraft,
@@ -488,6 +494,28 @@ interface SwotStoreState extends SwotSession {
     selectedExternalFramework: ExternalFrameworkChoice
   ) => void
   jumpToDimension: (dimension: string) => void
+
+  // Workshop slice — B1 context → B2 ingredients → B3 finalize
+  workshopStep: SwotWorkshopStep
+  contextData: SwotContextData | null
+  ingredients: SwotIngredient[]
+  activeEvidenceItemId: string | null
+
+  setWorkshopStep: (step: SwotWorkshopStep) => void
+  setContextData: (data: SwotContextData) => void
+  setIngredients: (items: SwotIngredient[]) => void
+  addIngredient: (
+    item: Omit<SwotIngredient, 'id' | 'selected' | 'isSearching' | 'evidence'>
+  ) => void
+  updateIngredient: (id: string, patch: Partial<SwotIngredient>) => void
+  removeIngredient: (id: string) => void
+  toggleIngredientSelected: (id: string) => void
+  selectAllByQuadrant: (quadrant: SwotQuadrant) => void
+  setItemEvidence: (id: string, evidence: TavilyEvidenceResult[]) => void
+  setItemSearching: (id: string, loading: boolean) => void
+  setActiveEvidenceItemId: (id: string | null) => void
+  getByQuadrant: (quadrant: SwotQuadrant) => SwotIngredient[]
+  getSelectedIngredients: () => SwotIngredient[]
 }
 
 // Module-level synthesis recovery timer — resets stuck 'in_progress' status
@@ -1446,6 +1474,84 @@ export const useSwotStore = create<SwotStoreState>()(
       },
     })
   },
+
+  // ============================================================
+  // WORKSHOP — B1 context → B2 ingredients → B3 finalize
+  // ============================================================
+
+  workshopStep: 'context' as SwotWorkshopStep,
+  contextData: null as SwotContextData | null,
+  ingredients: [] as SwotIngredient[],
+  activeEvidenceItemId: null as string | null,
+
+  setWorkshopStep: (step) => set({ workshopStep: step }),
+  setContextData: (data) => set({ contextData: data }),
+
+  setIngredients: (items) => set({ ingredients: items }),
+
+  addIngredient: (item) =>
+    set((state) => ({
+      ingredients: [
+        ...state.ingredients,
+        {
+          ...item,
+          id: nanoid(),
+          evidence: [],
+          isSearching: false,
+          selected: false,
+        },
+      ],
+    })),
+
+  updateIngredient: (id, patch) =>
+    set((state) => ({
+      ingredients: state.ingredients.map((it) =>
+        it.id === id ? { ...it, ...patch } : it
+      ),
+    })),
+
+  removeIngredient: (id) =>
+    set((state) => ({
+      ingredients: state.ingredients.filter((it) => it.id !== id),
+      activeEvidenceItemId:
+        state.activeEvidenceItemId === id ? null : state.activeEvidenceItemId,
+    })),
+
+  toggleIngredientSelected: (id) =>
+    set((state) => ({
+      ingredients: state.ingredients.map((it) =>
+        it.id === id ? { ...it, selected: !it.selected } : it
+      ),
+    })),
+
+  selectAllByQuadrant: (quadrant) =>
+    set((state) => ({
+      ingredients: state.ingredients.map((it) =>
+        it.quadrant === quadrant ? { ...it, selected: true } : it
+      ),
+    })),
+
+  setItemEvidence: (id, evidence) =>
+    set((state) => ({
+      ingredients: state.ingredients.map((it) =>
+        it.id === id ? { ...it, evidence, isSearching: false } : it
+      ),
+    })),
+
+  setItemSearching: (id, loading) =>
+    set((state) => ({
+      ingredients: state.ingredients.map((it) =>
+        it.id === id ? { ...it, isSearching: loading } : it
+      ),
+    })),
+
+  setActiveEvidenceItemId: (id) => set({ activeEvidenceItemId: id }),
+
+  getByQuadrant: (quadrant) =>
+    get().ingredients.filter((it) => it.quadrant === quadrant),
+
+  getSelectedIngredients: () =>
+    get().ingredients.filter((it) => it.selected),
     }),
     {
       name: SWOT_STORE_NAME,
@@ -1465,6 +1571,9 @@ export const useSwotStore = create<SwotStoreState>()(
       partialize: (state) => ({
         swotPhase: state.swotPhase,
         confirmedDraft: state.confirmedDraft,
+        workshopStep: state.workshopStep,
+        contextData: state.contextData,
+        ingredients: state.ingredients,
         // Only persist resumable wizard fields. Transient UI state
         // (loadingMessage, suggestState, conflictResult, isCheckingConflicts)
         // is recomputed on interaction and should not survive a refresh.

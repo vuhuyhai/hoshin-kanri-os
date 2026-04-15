@@ -269,6 +269,15 @@ export const swotEvidenceSchema = z.object({
 })
 export type SwotEvidenceInput = z.infer<typeof swotEvidenceSchema>
 
+// POST /api/swot/item-evidence
+export const swotItemEvidenceSchema = z.object({
+  statement: z.string().trim().min(5, 'Statement phải có ít nhất 5 ký tự'),
+  quadrant: z.enum(['S', 'W', 'O', 'T']),
+  orgContext: z.string().trim().min(1, 'Thiếu bối cảnh doanh nghiệp'),
+  analysisId: z.string().optional(),
+})
+export type SwotItemEvidenceInput = z.infer<typeof swotItemEvidenceSchema>
+
 // POST /api/swot/sync-xmatrix
 export const swotSyncXMatrixSchema = z.object({
   analysisId: z.string().min(1, 'Thiếu analysisId'),

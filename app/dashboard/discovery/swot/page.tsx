@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SwotWizard } from '@/components/swot/wizard/SwotWizard'
-import type { OrgContext } from '@/lib/swot/types'
+import { SwotWorkshopFlow } from '@/components/swot/SwotWorkshopFlow'
 
 export default async function SwotPage() {
   const supabase = await createClient()
@@ -26,15 +25,6 @@ export default async function SwotPage() {
 
   if (!org) redirect('/onboarding/setup-org')
 
-  const orgContext: OrgContext = {
-    orgId: membership.org_id,
-    orgName: org.name,
-    industry: org.industry,
-    city: org.city,
-    headcount: org.headcount,
-  }
-
-  // Find most recent swot_analyses entry for this org (acts as session anchor for swot_factors)
   const { data: existingAnalysis } = await supabase
     .from('swot_analyses')
     .select('id')
@@ -45,7 +35,6 @@ export default async function SwotPage() {
 
   let analysisId = existingAnalysis?.id
 
-  // If none exists, create an anchor entry
   if (!analysisId) {
     const { data: newAnalysis } = await supabase
       .from('swot_analyses')
@@ -71,12 +60,15 @@ export default async function SwotPage() {
   }
 
   return (
-    <div className="w-full min-h-full">
-      <SwotWizard
-        orgContext={orgContext}
-        userId={user.id}
-        analysisId={analysisId}
+    <div className="w-full h-full min-h-0">
+      <SwotWorkshopFlow
+        orgData={{
+          industry: org.industry,
+          headcount: org.headcount,
+          city: org.city,
+        }}
         orgId={membership.org_id}
+        analysisId={analysisId}
       />
     </div>
   )

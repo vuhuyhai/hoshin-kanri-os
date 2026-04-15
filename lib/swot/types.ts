@@ -429,3 +429,45 @@ export interface TowsResult {
   hoshin_candidates: HoshinCandidate[]
   ai_recommendation: string
 }
+
+// ─── PER-ITEM EVIDENCE (POST /api/swot/item-evidence) ────────────
+
+export interface TavilyEvidenceResult {
+  title: string
+  url: string
+  snippet: string
+  score: number
+  published_date?: string
+}
+
+export interface ItemEvidenceResponse {
+  query: string
+  results: TavilyEvidenceResult[]
+  cached: boolean
+}
+
+// ─── WORKSHOP (B1 context → B2 ingredients → B3 finalize) ────────
+
+export type IngredientSource = 'ai_draft' | 'chat_extract' | 'manual'
+
+export interface SwotIngredient {
+  id: string
+  quadrant: SwotQuadrant
+  statement: string
+  source: IngredientSource
+  evidence: TavilyEvidenceResult[]
+  isSearching: boolean
+  selected: boolean
+}
+
+export interface SwotContextData {
+  industry: string
+  headcount: string
+  city: string
+  mainMarket: string
+  yearGoal: string
+  topChallenges: string
+  additionalContext?: string
+}
+
+export type SwotWorkshopStep = 'context' | 'workshop' | 'finalize'
