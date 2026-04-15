@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { OrgContext, CoachingSummary, ContextCardsOutput } from '@/lib/swot/types'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
+import { parseBody, swotContextCardsSchema } from '@/lib/validation'
 
 const CONTEXT_CARDS_SYSTEM_PROMPT = `
 Bạn là chuyên gia phân tích thị trường cho SME Việt Nam.
@@ -76,11 +77,10 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = (await request.json()) as {
-      summary: CoachingSummary
-      orgContext: OrgContext
-    }
-    const { summary, orgContext } = body
+    const parsed = await parseBody(request, swotContextCardsSchema)
+    if (!parsed.ok) return parsed.response
+    const summary = parsed.data.summary as unknown as CoachingSummary
+    const orgContext = parsed.data.orgContext as unknown as OrgContext
 
     const coachingSummary = [
       'Điểm mạnh: ' + summary.strengths.map((s) => s.content).join('; '),

@@ -17,11 +17,12 @@ Current version: **Next.js 16.2.3 + React 19.2.4.** Your training data is probab
 
 ## Non-obvious facts
 
-1. **Not a git repo.** No `.git`, no commit history. Work accordingly — no `git log`, no `git blame`, no rollback via revert. If you break something, you break it.
+1. **Git repo, solo branch (`master`).** Single-author vibe-coding, no PR flow, no code review, no release branches. Work directly on `master` and push when the build is green. `git log` shows *some* history but large untracked blobs of WIP often sit for days — check `git status` before assuming master reflects reality.
 2. **Solo founder, vibe-coding style.** User is Vũ Hải, SME Hoshin Kanri SaaS for Vietnam. Direct communication, no corporate fluff, Vietnamese preferred for user-facing replies. Don't nịnh.
 3. **No test suite.** Verification = typecheck + build + manual browser exercise. If you claim "tested", say what you actually did — don't paper over "unable to test in browser" with "tests pass".
-4. **No CI.** Vercel auto-deploys from push. That's the whole pipeline.
-5. **Single-tenant per-org model.** RLS is the security boundary, not middleware. Every query must respect `org_id`.
+4. **No CI.** Vercel auto-deploys from `master` push. That's the whole pipeline. Branch is `master`, not `main`.
+5. **Single-tenant per-org model** for app tenants (`org_id` on every row). RLS is the security boundary, not middleware. Every query must respect `org_id` — **except** the blog (`blog_posts`), which is platform-level content authored only by super-admin and public-readable.
+6. **Two protected areas.** `/dashboard` is per-org authed (respects `org_members.role`). `/admin` is super-admin only, gated in `proxy.ts` via `profiles.is_super_admin`. Never conflate them.
 
 ---
 
@@ -32,7 +33,7 @@ npm run typecheck    # must pass — ~5-15s
 npm run build        # must pass — ~30-60s, runs TS check + route generation
 ```
 
-If these don't pass on `main`, something is already broken. Investigate before adding your own changes.
+If these don't pass on `master`, something is already broken. Investigate before adding your own changes.
 
 ---
 
@@ -43,12 +44,15 @@ These are enforced by the code review bar. Deviate only with a concrete reason:
 ### Claude API
 - **Never** `new Anthropic()` directly. Import `createAnthropicClient` from `@/lib/ai/client` — it sets `maxRetries: 3` and `timeout: 180000` so transient 429s and 5xx don't surface to users.
 - **Never** hard-code model IDs. Import `AI_MODELS.reasoning` or `AI_MODELS.fast` from `@/lib/ai/models`.
+- **Instantiate inside the handler, not at module scope.** A top-level `const anthropic = createAnthropicClient()` fires during Next's build-time static analysis where env vars may not be set — put the call inside `POST(...)` instead.
 - **Discovery AI routes stream** via `streamClaudeJson` from `@/lib/ai/stream-json`. Client uses `postSse` from `@/lib/http/sse-client` and reads `progress` events for a live char counter.
 
 ### Validation
-- **Every POST/PUT API route with a body validates with Zod.** Add the schema to `lib/validation/schemas.ts` next to the matching domain, then use `parseBody(request, schema)` — it returns a discriminated union `{ ok: true, data } | { ok: false, response }` matching the `requireOrgRole` pattern in `lib/supabase/server.ts`.
+- **Every POST/PUT/PATCH API route with a body validates with Zod.** Add the schema to `lib/validation/schemas.ts` next to the matching domain, then use `parseBody(request, schema)` — it returns a discriminated union `{ ok: true, data } | { ok: false, response }` matching the `requireOrgRole` pattern in `lib/supabase/server.ts`.
+- **Feature-local schemas** (e.g. `lib/blog/schema.ts`) are fine when they belong to exactly one domain and don't need to be imported by other routes. Keep cross-cutting shapes in `lib/validation/schemas.ts`.
 - **Envelope-only validation** when a domain function already handles deep validation (see `validateXMatrix`, `synthesizeSwot`). Zod guards shape at the boundary, domain code handles rules.
 - **Don't duplicate** validation between client form and server — define once in Zod, reuse on both sides.
+- **Variable naming.** Don't shadow inside handlers: many routes have a later `parsed` variable for AI JSON output. Use `bodyParsed` (or inline destructure) for `parseBody`'s return to avoid collision.
 
 ### Auth & RLS
 - Use `createClient()` from `@/lib/supabase/server` for user-scoped queries (respects RLS).
@@ -95,10 +99,12 @@ These are enforced by the code review bar. Deviate only with a concrete reason:
 | Task | Files |
 |---|---|
 | Add API route | `app/api/<domain>/<action>/route.ts` + `lib/validation/schemas.ts` |
-| Add migration | `supabase/migrations/0NN_<slug>.sql` + regen `lib/supabase/types.ts` |
+| Add migration | `supabase/migrations/0NN_<slug>.sql` + add the table type manually to `lib/supabase/types.ts` (auto-gen has been flaky; append-only edits are fine) |
+| Apply migration | Paste into Supabase SQL Editor OR `SUPABASE_ACCESS_TOKEN=sbp_xxx node scripts/apply-migration.mjs 0NN_<slug>.sql` |
 | Add UI component | `components/<domain>/` or `app/<route>/components/` |
 | Add business logic | `lib/<domain>/` |
-| Wire an event | `lib/analytics/events.ts` + call site |
+| Add blog post | `/admin/blog/new` in the running app — super-admin only, Markdown + live preview, auto-slugify |
+| Wire an event | `lib/analytics/events.ts` + call site (or `<TrackMount event="..." />` in a Server Component page) |
 | Change Claude prompt | `lib/swot/coaching-prompts.ts`, `lib/swot/coaching-draft-prompt.ts`, `lib/discovery/prompts.ts`, or inline in the route |
 
 ---

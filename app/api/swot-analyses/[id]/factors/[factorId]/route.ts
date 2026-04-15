@@ -1,14 +1,11 @@
+import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import {
   createClient,
   requireOrgRole,
   WRITE_ROLES,
 } from '@/lib/supabase/server'
-import type { SwotFactor } from '@/lib/swot/tows-types'
-
-type UpdatableFields = Partial<
-  Pick<SwotFactor, 'content' | 'evidence_text' | 'is_key_factor' | 'quality_score'>
->
+import { parseBody, updateSwotFactorSchema } from '@/lib/validation'
 
 async function getFactorOrgId(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -23,7 +20,7 @@ async function getFactorOrgId(
 }
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; factorId: string }> },
 ) {
   try {
@@ -40,22 +37,9 @@ export async function PATCH(
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
     const { orgId } = check
 
-    const body = (await req.json()) as UpdatableFields
-
-    const updates: {
-      content?: string
-      evidence_text?: string | null
-      is_key_factor?: boolean
-      quality_score?: number | null
-    } = {}
-    if (body.content !== undefined) updates.content = body.content
-    if (body.evidence_text !== undefined) updates.evidence_text = body.evidence_text
-    if (body.is_key_factor !== undefined) updates.is_key_factor = body.is_key_factor
-    if (body.quality_score !== undefined) updates.quality_score = body.quality_score
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'Không có trường nào để cập nhật' }, { status: 400 })
-    }
+    const parsed = await parseBody(req, updateSwotFactorSchema)
+    if (!parsed.ok) return parsed.response
+    const updates = parsed.data
 
     const { data: updated, error } = await supabase
       .from('swot_factors')

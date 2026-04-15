@@ -9,8 +9,6 @@ import { buildQualityCheckPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 
-const anthropic = createAnthropicClient()
-
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string; factorId: string }> },
@@ -37,6 +35,7 @@ export async function POST(
       factor.quadrant as SwotQuadrant,
     )
 
+    const anthropic = createAnthropicClient()
     const message = await anthropic.messages.create({
       model: AI_MODELS.fast,
       max_tokens: 300,

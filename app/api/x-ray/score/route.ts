@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
 import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, calculatePillarScore } from '@/lib/x-ray/questions'
-import type { OpexPillar, PillarScore, ScoreLevel, XRayScoreRequest, XRayResult } from '@/lib/x-ray/types'
+import type { OpexPillar, PillarScore, ScoreLevel, XRayResult } from '@/lib/x-ray/types'
 import type { Json } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -10,7 +10,7 @@ import { xRayReportEmailTemplate } from '@/lib/email/templates'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-import { isValidEmail } from '@/lib/validation'
+import { parseBody, xRayScoreSchema, type XRayScoreInput } from '@/lib/validation'
 
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_SECONDS = 600
@@ -33,22 +33,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body: XRayScoreRequest = await request.json()
-    const { answers, companyInfo } = body
-
-    if (!companyInfo?.email || !isValidEmail(companyInfo.email)) {
-      return NextResponse.json(
-        { error: 'Email không hợp lệ' },
-        { status: 400 }
-      )
-    }
-
-    if (!companyInfo.companyName?.trim()) {
-      return NextResponse.json(
-        { error: 'Vui lòng nhập tên công ty' },
-        { status: 400 }
-      )
-    }
+    const parsed = await parseBody(request, xRayScoreSchema)
+    if (!parsed.ok) return parsed.response
+    const { answers, companyInfo } = parsed.data
 
     if (Object.keys(answers).length < X_RAY_QUESTIONS.length) {
       return NextResponse.json(
@@ -302,8 +289,8 @@ async function markDiscoveryComplete(
 }
 
 async function saveLead(
-  companyInfo: XRayScoreRequest['companyInfo'],
-  answers: XRayScoreRequest['answers'],
+  companyInfo: XRayScoreInput['companyInfo'],
+  answers: XRayScoreInput['answers'],
   result: XRayResult
 ) {
   try {

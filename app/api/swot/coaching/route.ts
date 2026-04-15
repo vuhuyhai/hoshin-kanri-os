@@ -18,10 +18,12 @@ import {
   trackerToCoachingContext,
 } from '@/lib/swot/coaching-tracker'
 import type {
-  CoachingRequest,
   CoachingResponse,
   CoachingTrackerState,
+  OrgContext,
+  CoachingContext,
 } from '@/lib/swot/types'
+import { parseBody, swotCoachingSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,20 +34,20 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: CoachingRequest = await request.json()
-    const { messages, orgContext, currentFramework, coachingTracker } = body
-
-    if (!messages || !orgContext) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
+    const bodyParsed = await parseBody(request, swotCoachingSchema)
+    if (!bodyParsed.ok) return bodyParsed.response
+    const body = bodyParsed.data
+    const messages = body.messages
+    const orgContext = body.orgContext as unknown as OrgContext
+    const currentFramework = body.currentFramework
+    const coachingTracker = body.coachingTracker as
+      | CoachingTrackerState
+      | undefined
 
     // Derive coaching context from tracker (if provided), for prompt injection
     const coachingContext = coachingTracker
       ? trackerToCoachingContext(coachingTracker)
-      : body.coachingContext
+      : (body.coachingContext as CoachingContext | undefined)
 
     // Use tracker's framework if available, otherwise use request field
     const effectiveFramework = coachingTracker
@@ -100,17 +102,17 @@ export async function POST(request: NextRequest) {
       .join('')
 
     // Parse structured JSON output with text fallback
-    const parsed = parseCoachingAIOutput(rawText)
+    const aiOutput = parseCoachingAIOutput(rawText)
 
     // Check completion markers
     const isSwComplete =
-      effectiveFramework === 'sw' && parsed.message.includes('[SW_COMPLETE]')
+      effectiveFramework === 'sw' && aiOutput.message.includes('[SW_COMPLETE]')
     const isOtComplete =
-      effectiveFramework === 'ot' && parsed.message.includes('[OT_COMPLETE]')
+      effectiveFramework === 'ot' && aiOutput.message.includes('[OT_COMPLETE]')
     const isCoachingComplete = isSwComplete || isOtComplete
 
     // Clean markers from display message
-    const cleanMessage = parsed.message
+    const cleanMessage = aiOutput.message
       .replace('[SW_COMPLETE]', '')
       .replace('[OT_COMPLETE]', '')
       .trim()
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest) {
     if (coachingTracker) {
       updatedCoachingTracker = computeUpdatedTracker(
         coachingTracker,
-        parsed,
+        aiOutput,
         isSwComplete,
         isOtComplete
       )
@@ -129,9 +131,9 @@ export async function POST(request: NextRequest) {
     const result: CoachingResponse = {
       message: { role: 'assistant', content: cleanMessage },
       isCoachingComplete,
-      extractedInsight: parsed.extractedInsight,
-      shouldTransition: parsed.shouldTransition,
-      nextDimension: parsed.nextDimension,
+      extractedInsight: aiOutput.extractedInsight,
+      shouldTransition: aiOutput.shouldTransition,
+      nextDimension: aiOutput.nextDimension,
       updatedCoachingTracker,
     }
 

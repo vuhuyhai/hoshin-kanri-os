@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { findConceptById, HK_SYSTEM_PROMPT } from '@/lib/admin/hoshin-explorer-data'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
+import { parseBody, hoshinExplorerSchema } from '@/lib/validation'
 
 export interface HKExplorerContent {
   level1: string
@@ -32,11 +33,10 @@ export async function POST(request: NextRequest) {
     const isSuperAdmin = (profile as unknown as { is_super_admin: boolean } | null)?.is_super_admin === true
     if (!isSuperAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const body = await request.json()
-    const { conceptId, conceptName, conceptKanji, conceptDesc, books, layer } = body as {
-      conceptId: string; conceptName: string; conceptKanji: string
-      conceptDesc: string; books: string; layer: string
-    }
+    const bodyParsed = await parseBody(request, hoshinExplorerSchema)
+    if (!bodyParsed.ok) return bodyParsed.response
+    const { conceptId, conceptName, conceptKanji, conceptDesc, books, layer } =
+      bodyParsed.data
 
     if (!findConceptById(conceptId)) {
       return NextResponse.json({ error: 'Concept không tồn tại' }, { status: 400 })

@@ -137,11 +137,16 @@ Use `streamClaudeJson` so the client gets a TTFB of ~200ms instead of waiting fo
 
 1. Create `supabase/migrations/0NN_my_change.sql` with the next sequential number.
 2. Always include `enable row level security;` on new tables + write policies in the same migration — don't leave RLS for later.
-3. Apply via `supabase db push` (if using Supabase CLI) or paste into SQL editor on the dashboard.
-4. Regenerate types:
-   ```bash
-   npx supabase gen types typescript --project-id <your-project-id> > lib/supabase/types.ts
-   ```
+3. Apply it. Three options, pick whichever is available:
+   - **Dashboard SQL editor** (fastest, always works): paste and click Run.
+   - **Helper script** (no CLI needed — uses the Supabase Management API):
+     ```bash
+     # get a Personal Access Token at https://supabase.com/dashboard/account/tokens
+     SUPABASE_ACCESS_TOKEN=sbp_xxx node scripts/apply-migration.mjs 0NN_my_change.sql
+     ```
+     Project ref is read from `NEXT_PUBLIC_SUPABASE_URL` in `.env.local`.
+   - **Supabase CLI** if you already have it linked: `supabase db push`.
+4. Update `lib/supabase/types.ts` with the new table / function type. Auto-gen via `npx supabase gen types typescript` works if the CLI is installed; otherwise hand-append the `Row` / `Insert` / `Update` shape following the existing table entries — append-only edits are safe.
 5. Run `npm run typecheck` — if queries resolve to `never`, types are stale.
 
 ### 5.4 New PostHog event
@@ -192,13 +197,15 @@ If you touch auth or RLS, test the negative cases too — Member role trying to 
 - **Platform**: Vercel
 - **Preset**: Next.js (from `vercel.json`)
 - **Env vars**: set in Vercel Project Settings → Environment Variables (separate for Production / Preview / Development)
-- **Promote to prod**: push to `main` branch → Vercel auto-deploys
+- **Promote to prod**: push to `master` branch → Vercel auto-deploys
 - **Rollback**: Vercel dashboard → Deployments → previous deployment → Promote
 
 **Before promoting a migration change to prod:**
-1. Apply migration to production Supabase first
-2. Then merge/deploy the code
+1. Apply migration to production Supabase first (SQL editor or `scripts/apply-migration.mjs`)
+2. Then push the code to `master` so Vercel rebuilds
 3. If reversed, the new code hits an old schema and crashes
+
+Server components that query new tables should be written to **degrade gracefully** when the table is missing (log, return empty state) so the window between step 1 and step 2 doesn't bring down public pages. See `app/blog/page.tsx` and `app/sitemap.ts` for the pattern.
 
 ---
 

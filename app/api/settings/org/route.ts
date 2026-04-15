@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { parseBody, createOrgSchema, updateOrgSchema } from '@/lib/validation'
 
 // POST: Create new org + add user as CEO (onboarding)
 // Uses service role to bypass RLS (new user has no org_members yet)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -21,23 +22,16 @@ export async function POST(request: NextRequest) {
     if (existing)
       return NextResponse.json({ error: 'Bạn đã có tổ chức' }, { status: 409 })
 
-    const body = await request.json()
-    const { name, industry, headcount, city } = body as {
-      name: string; industry: string; headcount: string; city: string
-    }
-
-    if (!name?.trim() || !industry)
-      return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 })
+    const parsed = await parseBody(request, createOrgSchema)
+    if (!parsed.ok) return parsed.response
+    const { name, industry, headcount, city } = parsed.data
 
     // Use service role to bypass RLS for atomic org + member creation
-    const adminDb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const adminDb = createAdminClient()
 
     const { data: org, error: orgError } = await adminDb
       .from('organizations')
-      .insert({ name: name.trim(), industry, headcount, city })
+      .insert({ name, industry, headcount, city })
       .select('id')
       .single()
 
@@ -63,7 +57,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -86,35 +80,9 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { name, industry, headcount, city } = body as {
-      name?: string
-      industry?: string
-      headcount?: string
-      city?: string
-    }
-
-    if (name !== undefined && !name.trim()) {
-      return NextResponse.json(
-        { error: 'Tên công ty không được trống' },
-        { status: 400 }
-      )
-    }
-
-    const updates: {
-      name?: string
-      industry?: string
-      headcount?: string
-      city?: string
-    } = {}
-    if (name !== undefined) updates.name = name.trim()
-    if (industry !== undefined) updates.industry = industry
-    if (headcount !== undefined) updates.headcount = headcount
-    if (city !== undefined) updates.city = city
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'Không có thay đổi' }, { status: 400 })
-    }
+    const parsed = await parseBody(request, updateOrgSchema)
+    if (!parsed.ok) return parsed.response
+    const updates = parsed.data
 
     const { data: org, error } = await supabase
       .from('organizations')

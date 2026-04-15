@@ -1,9 +1,11 @@
+import type { NextRequest } from 'next/server'
 import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { generateQueriesForItem } from '@/lib/swot/query-generator'
 import { searchEvidenceForItem } from '@/lib/swot/evidence-searcher'
 import pLimit from 'p-limit'
 import type { CoachingItem, EvidenceResult, OrgContext } from '@/lib/swot/types'
 import type { Json } from '@/lib/supabase/types'
+import { parseBody, swotEvidenceSchema } from '@/lib/validation'
 
 const limit = pLimit(4)
 
@@ -23,15 +25,17 @@ interface EvidenceResultItem {
   queries_used?: string[]
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { items, org_id } = (await req.json()) as { items: CoachingItem[]; org_id: string }
-  if (!items?.length) return Response.json({ error: 'Cần ít nhất 1 item' }, { status: 400 })
+  const parsed = await parseBody(req, swotEvidenceSchema)
+  if (!parsed.ok) return parsed.response
+  const items = parsed.data.items as unknown as CoachingItem[]
+  const org_id = parsed.data.org_id
 
-  if (!org_id || !await verifyOrgMembership(supabase, user.id, org_id))
+  if (!(await verifyOrgMembership(supabase, user.id, org_id)))
     return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: org } = await supabase.from('organizations')

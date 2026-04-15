@@ -5,6 +5,7 @@ import {
   ADMIN_ROLES,
 } from '@/lib/supabase/server'
 import { syncTowsStrategiesToXMatrix } from '@/lib/swot/sync-to-xmatrix'
+import { parseBody, swotSyncXMatrixSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,12 +17,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { analysisId } = body as { analysisId?: string }
-
-    if (!analysisId || typeof analysisId !== 'string') {
-      return NextResponse.json({ error: 'Thiếu analysisId' }, { status: 400 })
-    }
+    const parsed = await parseBody(request, swotSyncXMatrixSchema)
+    if (!parsed.ok) return parsed.response
+    const { analysisId } = parsed.data
 
     // Sync writes to x_matrices (CEO-only per migration 016).
     const check = await requireOrgRoleForAnalysis(supabase, user.id, analysisId, ADMIN_ROLES)

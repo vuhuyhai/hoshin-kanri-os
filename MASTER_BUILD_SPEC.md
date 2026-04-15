@@ -2,7 +2,7 @@
 
 > **Architectural reference only.** For dev setup see `DEVELOPMENT.md`. For AI agent onboarding (conventions, pitfalls, don'ts) see `AGENTS.md`. This file documents *what* the system is — the other two cover *how to work on it*.
 >
-> Last verified: 2026-04-10. Some sections below (latest migration list, directory tree) may lag the actual codebase — trust the code if they conflict.
+> Last verified: 2026-04-15. Sections below reflect the state after the `chore: consolidate pending refactors` + `feat(blog)` commits. The directory tree and migrations list can still drift — `ls supabase/migrations/` and `find app lib -type d` are authoritative when in doubt.
 
 ---
 
@@ -53,154 +53,109 @@
 hoshin-kanri-os/
 ├── app/                          # Next.js App Router
 │   ├── layout.tsx                # Root layout (ThemeProvider, PHProvider, AuthListener, Toaster)
-│   ├── page.tsx                  # Landing page (public)
-│   ├── globals.css               # Global styles
+│   ├── page.tsx                  # Landing page (public) — redirects authed users to /dashboard
+│   ├── globals.css               # Global styles (neo-brutalism design tokens)
+│   ├── sitemap.ts                # Dynamic sitemap.xml (static routes + blog slugs)
+│   ├── robots.ts                 # robots.txt (blocks /admin, /dashboard, /api)
 │   │
-│   ├── (auth)/                   # Auth route group
-│   │   ├── login/page.tsx        # Magic link login (Supabase OTP)
-│   │   └── auth/callback/route.ts # OAuth callback handler
+│   ├── (auth)/login/page.tsx     # Email/password login
+│   ├── register/page.tsx         # Sign-up
+│   ├── reset-password/, update-password/, auth/callback/
 │   │
-│   ├── x-ray/                    # Public - Business X-Ray (lead gen tool)
-│   │   ├── page.tsx
-│   │   └── components/           # XRayForm, QuestionStep, XRayReport, EmailCaptureStep, XRayProgress
+│   ├── x-ray/                    # Public — Business X-Ray (lead gen tool)
+│   ├── x/[slug]/page.tsx         # Public — Shared X-Matrix view
 │   │
+│   ├── blog/                     # Public — Content marketing (chienluoc.org/blog)
+│   │   ├── page.tsx              # Listing (paginated)
+│   │   └── [slug]/               # Detail page + ViewTracker client component
 │   │
-│   ├── x/[slug]/page.tsx         # Public - Shared X-Matrix view
+│   ├── lien-he/, dieu-khoan/, chinh-sach-bao-mat/  # Static pages
 │   │
-│   ├── onboarding/
-│   │   └── setup-org/page.tsx    # Org setup after first login
+│   ├── onboarding/setup-org/     # Org setup after first login
 │   │
-│   ├── dashboard/                # Protected - requires auth + org membership
-│   │   ├── layout.tsx            # Dashboard shell (Sidebar + Header + auth guard)
-│   │   ├── page.tsx              # Dashboard home (discovery checklist OR quick actions)
-│   │   │
+│   ├── dashboard/                # Protected — requires auth + org_members row
+│   │   ├── layout.tsx            # Shell (Sidebar + Header + auth guard)
+│   │   ├── page.tsx, help/
 │   │   ├── discovery/            # Strategy Discovery Hub
-│   │   │   ├── page.tsx          # Hub overview
-│   │   │   ├── swot/             # SWOT Analysis module (3-phase AI-guided)
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── coaching/     # Phase 1: AI coaching
-│   │   │   │   ├── strategy/     # Strategy generation from SWOT
-│   │   │   │   └── components/   # SwotContainer, Phase1-3, SwotResults, SwotHubClient
-│   │   │   ├── pain-mapper/      # Pain → Goal Mapper
-│   │   │   ├── vision-workshop/  # Vision Workshop (AI-assisted)
-│   │   │   ├── synthesis/        # AI Strategy Synthesis (aggregate all discovery data)
-│   │   │   ├── benchmark/        # KPI Benchmark Library
-│   │   │   └── xray-history/     # X-Ray Assessment History
-│   │   │       ├── page.tsx      # List past X-Ray assessments
-│   │   │       └── [id]/page.tsx # View specific past assessment
-│   │   │
-│   │   ├── x-matrix/
-│   │   │   └── new/page.tsx      # X-Matrix Wizard (5-step creation)
-│   │   │
-│   │   ├── kpi/                  # KPI Dashboard & Tracker
-│   │   │   ├── page.tsx
-│   │   │   └── components/       # KpiCard, KpiDashboardClient, KpiSparkline, KpiUpdateForm
-│   │   │
-│   │   ├── report/page.tsx       # Monthly Report (AI-generated)
-│   │   │
-│   │   └── settings/             # Org settings
-│   │       ├── page.tsx
-│   │       └── components/
+│   │   │   ├── swot/             # 3-phase AI-guided SWOT + coaching + guide
+│   │   │   ├── pain-mapper/, vision-workshop/, synthesis/
+│   │   │   ├── benchmark/
+│   │   │   └── xray-history/
+│   │   ├── x-matrix/new/         # X-Matrix Wizard (5-step)
+│   │   ├── kpi/                  # KPI dashboard + tracker
+│   │   ├── report/               # AI monthly report
+│   │   └── settings/
 │   │
-│   └── api/                      # API Routes
-│       ├── auth/dev-login/       # Dev-only login helper
-│       ├── debug/                # Debug endpoint
-│       ├── discovery/            # pain-mapper, synthesis, vision-draft, vision-save
-│       ├── kpi/                  # entry, list
-│       ├── pql/check/            # PQL signal detection
-│       ├── report/monthly/       # AI monthly report generation
-│       ├── settings/org/         # Org settings CRUD
-│       ├── swot/                 # coaching, evidence, generate-queries, strategy, sync-xmatrix, synthesis
-│       ├── x-matrix/             # create, prefill, share
-│       └── x-ray/                # X-Ray
-│           ├── score/            # X-Ray scoring (AI)
-│           └── history/          # X-Ray assessment history
+│   ├── admin/                    # Super-admin only (is_super_admin flag)
+│   │   ├── login/                # Admin sign-in (redirects to /admin on success)
+│   │   ├── _components/          # AdminSidebar, PlanBadge, CustomerFilter, etc.
+│   │   ├── _actions.ts           # Server actions (changePlan, addNote, ...)
+│   │   └── (dashboard)/          # Layout group with sidebar
+│   │       ├── page.tsx, customers/, hoshin-explorer/
+│   │       └── blog/             # Blog CMS — list, new, [id]/edit, BlogForm, _actions
+│   │
+│   └── api/                      # API Routes — see Section 6 for full list
 │
 ├── components/
-│   ├── analytics/IdentifyUser.tsx    # PostHog user identification
-│   ├── layout/
-│   │   ├── header.tsx                # Top header bar
-│   │   ├── sidebar.tsx               # Navigation sidebar (desktop + mobile sheet)
-│   │   ├── bottom-nav.tsx            # Mobile bottom navigation
-│   │   └── footer.tsx                # Footer component
-│   ├── providers/
-│   │   ├── auth-listener.tsx         # Supabase auth state listener
-│   │   ├── posthog-provider.tsx      # PostHog provider
-│   │   └── theme-provider.tsx        # next-themes provider
-│   ├── swot/                         # SWOT-specific UI components
-│   │   ├── AiCoachAvatar.tsx
-│   │   ├── ChatMessage.tsx
-│   │   ├── ExtendedSwotMatrix.tsx
-│   │   ├── PhaseCard.tsx
-│   │   └── SwotCell.tsx
-│   ├── ui/                           # shadcn/ui components
-│   │   ├── alert-dialog, avatar, badge, button, card, checkbox
-│   │   ├── dropdown-menu, input, label, logo, radio-group
-│   │   ├── select, separator, sheet, textarea
-│   └── x-matrix/                     # X-Matrix Wizard components
-│       ├── XMatrixWizard.tsx         # Main wizard orchestrator
-│       ├── Step1Vision.tsx           # Vision & Year Goals
-│       ├── Step2Hoshins.tsx          # Annual Hoshins (max 5)
-│       ├── Step3Initiatives.tsx      # Initiatives per Hoshin
-│       ├── Step4Kpis.tsx             # KPIs per Hoshin
-│       ├── XMatrixReview.tsx         # Final review step
-│       └── WizardProgress.tsx        # Step indicator
+│   ├── analytics/
+│   │   ├── IdentifyUser.tsx      # PostHog user identification
+│   │   └── TrackMount.tsx        # Fire PostHog event on mount (StrictMode-safe)
+│   ├── blog/MarkdownRenderer.tsx # react-markdown + remark-gfm + neo-brutal styling
+│   ├── layout/                   # header, sidebar, bottom-nav, footer
+│   ├── providers/                # auth-listener, posthog-provider, theme-provider
+│   ├── swot/                     # SWOT-specific UI (wizard, matrix, cells, chat)
+│   ├── ui/                       # shadcn/ui primitives
+│   └── x-matrix/                 # X-Matrix wizard steps + review
 │
 ├── lib/
-│   ├── utils.ts                      # cn() utility
-│   ├── supabase/
-│   │   ├── client.ts                 # Browser Supabase client
-│   │   ├── server.ts                 # Server Supabase client
-│   │   └── types.ts                  # Auto-generated DB types
+│   ├── utils.ts
+│   ├── supabase/                 # client.ts · server.ts (+ role helpers) · admin.ts (service-role) · types.ts
 │   ├── ai/
-│   │   └── swot-strategy.ts          # SWOT strategy AI logic
-│   ├── analytics/
-│   │   └── events.ts                 # PostHog event tracking functions
-│   ├── discovery/
-│   │   ├── types.ts                  # PainMapper, Vision, Benchmark, Synthesis types
-│   │   ├── prompts.ts                # AI prompts for discovery
-│   │   └── benchmark-data.ts         # Industry KPI benchmark data
-│   ├── pql/
-│   │   └── signals.ts                # PQL detection logic
-│   ├── swot/
-│   │   ├── types.ts                  # SWOT types (8M, Porter, PESTEL)
-│   │   ├── frameworks.ts             # Framework definitions (8M, Porter 5 Forces, PESTEL)
-│   │   ├── coaching-prompts.ts       # AI coaching prompts
-│   │   ├── coaching-persistence.ts   # Persist coaching session state
-│   │   ├── coaching-tracker.ts       # Track coaching progress
-│   │   ├── swot-session-store.ts     # Zustand store for SWOT session
-│   │   └── sync-to-xmatrix.ts        # Sync SWOT results to X-Matrix
-│   ├── x-matrix/
-│   │   ├── types.ts                  # X-Matrix data types + limits
-│   │   └── utils.ts                  # X-Matrix utilities
-│   └── x-ray/
-│       ├── types.ts                  # X-Ray types
-│       └── questions.ts              # X-Ray assessment questions
+│   │   ├── client.ts             # createAnthropicClient() — single factory w/ retries + timeout
+│   │   ├── models.ts             # AI_MODELS.reasoning / .fast semantic aliases
+│   │   └── stream-json.ts        # streamClaudeJson() SSE helper
+│   ├── http/
+│   │   ├── fetch-json.ts         # postJson + FetchJsonError
+│   │   └── sse-client.ts         # postSse + SseError
+│   ├── validation/
+│   │   ├── index.ts              # parseBody() + isValidEmail()
+│   │   └── schemas.ts            # Zod schemas grouped by domain
+│   ├── blog/                     # queries.ts · schema.ts (domain-local Zod)
+│   ├── admin/                    # queries.ts, hoshin-explorer-data.ts
+│   ├── email/                    # send.ts · templates.ts
+│   ├── analytics/events.ts       # Typed PostHog event helpers
+│   ├── discovery/                # types · prompts · benchmark-data
+│   ├── pql/signals.ts
+│   ├── swot/                     # types · frameworks · coaching-prompts · coaching-draft-prompt · coaching-tracker · tows-* · factor-utils · sync-to-xmatrix · xray-to-swot-mapper · evidence-searcher · query-generator · synthesis-engine
+│   ├── x-matrix/                 # types · utils
+│   ├── x-ray/                    # types · questions
+│   ├── kpi/                      # (if present)
+│   └── rate-limit.ts             # DB-backed rate limit (fail-open)
 │
 ├── supabase/
-│   ├── migrations/
-│   │   ├── 001_initial_schema.sql    # Core tables + indexes + triggers
-│   │   ├── 002_rls_policies.sql      # Row Level Security policies
-│   │   ├── 003_fix_step_completed_constraint.sql  # Expand discovery step_completed CHECK
-│   │   ├── 004_xray_leads.sql        # xray_leads table (public lead capture)
-│   │   └── 005_xray_results.sql      # xray_results table (org-linked history)
-│   └── seed.sql                      # Seed data
+│   ├── migrations/               # 001 → 022 (sequential, apply in order)
+│   ├── manual-scripts/           # One-off data migrations not part of the ordered sequence
+│   ├── cleanup_users.sql
+│   └── seed.sql
 │
-├── middleware.ts                      # Supabase session refresh middleware
-├── next.config.ts                     # Next.js config
-├── vercel.json                        # Vercel deployment config
-├── package.json
-├── tsconfig.json
-├── components.json                    # shadcn/ui config
-├── postcss.config.mjs
-└── eslint.config.mjs
+├── scripts/
+│   └── apply-migration.mjs       # Apply a migration via Supabase Management API (no CLI needed)
+│
+├── proxy.ts                      # Next.js middleware — session refresh + /admin gating
+├── next.config.ts                # Minimal (ignoreBuildErrors removed — types are clean now)
+├── vercel.json                   # Vercel deployment config
+├── package.json, tsconfig.json, components.json, postcss.config.mjs, eslint.config.mjs
+├── AGENTS.md, DEVELOPMENT.md, MASTER_BUILD_SPEC.md, README.md
+└── plans/                        # Work-in-progress notes (not shipped code)
 ```
+
+**Latest migration as of this writing**: `022_blog_posts.sql`. Check `ls supabase/migrations/` for the real top of the list.
 
 ---
 
 ## 4. Database Schema
 
-**11 tables** trong Supabase PostgreSQL, tat ca co RLS (Row Level Security).
+**15+ tables** trong Supabase PostgreSQL (and growing — `ls supabase/migrations/` to see latest). Tat ca co RLS (Row Level Security).
 
 ### Core Tables
 
@@ -256,22 +211,64 @@ hoshin-kanri-os/
 - `overall_score`, `overall_level`
 - `result_json` (JSONB), `answers_json` (JSONB)
 
+### Content / Admin Tables
+
+#### `profiles`
+- `id` (FK → auth.users), `full_name`, `avatar_url`
+- `is_super_admin` (boolean) — gated at `proxy.ts` for `/admin/*` routes
+
+#### `admin_notes`
+- `org_id` (FK), `content`, `created_at`
+- Free-form notes on customers, super-admin only
+
+#### `subscriptions`
+- `org_id` (FK, unique), `plan`, `status`, `current_period_end`
+- Synced with future billing integration; used for MRR dashboard
+
+#### `blog_posts`
+- `id` (uuid PK), `slug` (unique), `title`, `excerpt`, `cover_url`
+- `content_md` (text), `status` ('draft'|'published'), `author_id` (FK → auth.users)
+- `published_at`, `views_count`, `created_at`, `updated_at`
+- **Not org-scoped** — platform-level content for chienluoc.org
+- RLS: public SELECT where `status='published'`; super-admin SELECT all; writes go through service-role from `/admin/blog` server actions
+- RPC `increment_blog_post_views(slug)` runs with security-definer, revoked from anon/authenticated — called from `/api/blog/[slug]/view` through the admin client
+
+### Infra Tables
+
+#### `rate_limits`
+- `bucket`, `window_start`, `count` — service-role-only, no policies
+- Written via `increment_rate_limit` RPC from `lib/rate-limit.ts`
+- Cleaned up daily by pg_cron (migration 020)
+
+#### `swot_factors`
+- Per-row S/W/O/T items with atomic code reservation via `reserve_factor_codes` RPC (migration 014)
+
+#### `tows_strategies`
+- AI-generated or hand-written SO/ST/WO/WT strategies, synced into `x_matrices` on demand
+
+#### `evidence_cache`
+- Tavily search result cache keyed on normalized query, 7-day TTL
+
 ### RLS Rules Summary
-- **SELECT**: User chi thay data cua org minh (thong qua org_members)
+- **SELECT** (per-org tables): User chi thay data cua org minh (thong qua org_members)
+- **SELECT blog_posts**: Public — only rows where `status='published'`. Super-admin can read drafts too.
 - **INSERT x_matrices, swot**: Chi CEO
 - **INSERT kpis**: CEO hoac Manager
 - **INSERT kpi_entries**: Chi user do (user_id = auth.uid())
 - **UPDATE org**: Chi CEO
+- **All writes on `blog_posts`, `rate_limits`**: service-role only (no policies granted to anon/authenticated)
 
 ---
 
 ## 5. Authentication
 
-- **Method**: Magic Link (Supabase OTP via email)
-- **Flow**: Enter email → Receive magic link → Click link → `/auth/callback` exchanges code for session
-- **Middleware** (`middleware.ts`): Refreshes Supabase session cookies for `/dashboard/*`, `/onboarding/*`, `/login`
-- **Auth Guard**: `dashboard/layout.tsx` checks `supabase.auth.getUser()` → redirect to `/login` if no user, redirect to `/onboarding/setup-org` if no org membership
-- **Dev Login**: `/api/auth/dev-login` — development only helper
+- **Method**: Email/password (Supabase auth). Magic link flow is wired but not the primary path anymore.
+- **Registration**: `/register` → `/api/auth/register` (Zod-validated, rate-limited, sends verification email via Resend) → email confirm → `/login`.
+- **Password reset**: `/reset-password` → `/api/auth/forgot-password` (dual-key rate limit: IP + email bucket, returns fake-success for unknown emails to avoid user enumeration) → email link → `/update-password`.
+- **Middleware** (`proxy.ts`): Refreshes Supabase session cookies for `/dashboard/*`, `/onboarding/*`, `/login`, `/admin/*`. **Also gates `/admin/*` against `profiles.is_super_admin`** using a service-role client (see pitfall #6 in AGENTS.md) — non-admin authed users hitting `/admin/*` are redirected to `/dashboard`.
+- **Auth Guard**: `dashboard/layout.tsx` checks `supabase.auth.getUser()` → redirect to `/login` if no user, redirect to `/onboarding/setup-org` if no org membership.
+- **Role-based writes**: `requireOrgRole(supabase, userId, orgId, ALLOWED_ROLES)` in `lib/supabase/server.ts` returns a clean 403 *before* the RLS policy would throw 42501. Always use it on write routes so the client gets a friendly error message instead of a raw 500.
+- **Dev Login**: `/api/auth/dev-login` — development helper, not used in prod.
 
 ---
 
@@ -333,6 +330,28 @@ Dashboard → Monthly Report → AI generates report based on KPI data
 Dashboard → Share X-Matrix → generates slug → /x/[slug] (public page)
 ```
 
+### Flow G: Blog (Public + Admin CMS)
+```
+Public:  /blog → listing (12/page) → /blog/[slug] detail
+         Emits: view-count API (rate-limited 1/30min/IP+slug, session-dedup'd)
+         SEO:   generateMetadata + OG + JSON-LD Article + sitemap.xml entry
+
+Admin:   /admin/blog → list (drafts + published)
+         /admin/blog/new  (Markdown editor + live preview + auto-slugify)
+         /admin/blog/[id]/edit
+         Auth gate: proxy.ts checks profiles.is_super_admin
+         Storage: blog_posts table (not org-scoped), RLS public-read published
+```
+
+### Flow H: Super-Admin Dashboard (Auth-gated)
+```
+/admin/login → proxy.ts verifies is_super_admin → /admin
+  · /admin/customers           Customer list + plan management
+  · /admin/customers/[id]      Detail + notes + plan toggle
+  · /admin/hoshin-explorer     AI-powered concept research
+  · /admin/blog                Blog CMS (see Flow G)
+```
+
 ---
 
 ## 7. AI Integration
@@ -341,23 +360,32 @@ Dashboard → Share X-Matrix → generates slug → /x/[slug] (public page)
 
 ### AI-Powered Features
 
-| Feature | API Route | What AI Does |
-|---------|-----------|-------------|
-| X-Ray Scoring | `/api/x-ray/score` | Scores 5 dimensions, generates executive summary |
-| SWOT Coaching | `/api/swot/coaching` | Conversational coaching using 8M/Porter/PESTEL frameworks |
-| Search Query Gen | `/api/swot/generate-queries` | Generates web search queries for evidence |
-| SWOT Synthesis | `/api/swot/synthesis` | Combines CEO input + evidence → structured SWOT items |
-| SWOT Strategy | `/api/swot/strategy` | Generates SO/ST/WO/WT strategies from SWOT |
-| Pain Mapper | `/api/discovery/pain-mapper` | Converts pain points → Hoshin candidates with rationale |
-| Vision Draft | `/api/discovery/vision-draft` | Generates vision statement + year goals from workshop answers |
-| AI Synthesis | `/api/discovery/synthesis` | Aggregates all discovery data → X-Matrix prefill |
-| X-Matrix Prefill | `/api/x-matrix/prefill` | Pre-fills wizard with AI-suggested data |
-| Monthly Report | `/api/report/monthly` | AI-generated monthly performance report |
+| Feature | API Route | Model | What AI Does |
+|---------|-----------|-------|-------------|
+| X-Ray Scoring | `/api/x-ray/score` | reasoning | Scores 7 OPEX pillars, exec summary, top 3 actions |
+| SWOT Coaching (turn-by-turn) | `/api/swot/coaching` | reasoning | Conversational 8M/Porter/PESTEL coaching loop |
+| SWOT Draft (one-shot) | `/api/swot/coaching-draft` | reasoning + `tool_use` | Full 4-quadrant draft via forced tool call |
+| SWOT Suggest More | `/api/swot/suggest-more` | reasoning | Add items to a single quadrant on demand |
+| SWOT Conflict Check | `/api/swot/conflict-check` | reasoning | Flag contradictions/duplicates across quadrants |
+| SWOT Context Cards | `/api/swot/context-cards` | reasoning | Generate 6 external-context cards (3 O + 3 T) |
+| SWOT Synthesis | `/api/swot/synthesis` | — | Rules-based engine (`synthesizeSwot`), no AI call |
+| SWOT Evidence | `/api/swot/evidence` | — | Tavily web search + cache, not Claude |
+| SWOT Factor Quality | `/api/swot-analyses/[id]/factors/[factorId]/quality-check` | **fast** | Score & improve a single S/W/O/T item |
+| TOWS Strategy | `/api/swot-analyses/[id]/strategies/ai-generate` | reasoning | Generate SO/ST/WO/WT strategies from paired factors |
+| Pain Mapper | `/api/discovery/pain-mapper` | reasoning (streamed) | Pain points → Hoshin candidates, streamed via `streamClaudeJson` |
+| Vision Draft | `/api/discovery/vision-draft` | reasoning (streamed) | Workshop answers → vision + year goals, streamed |
+| Discovery Synthesis | `/api/discovery/synthesis` | reasoning (streamed) | Aggregate all discovery data → X-Matrix prefill, streamed |
+| X-Matrix Prefill | `/api/x-matrix/prefill` | reasoning | Wizard pre-fill from discovery data |
+| Monthly Report | `/api/report/monthly` | reasoning | KPI data → exec-style monthly report |
+| Hoshin Explorer (admin) | `/api/admin/hoshin-explorer` | reasoning | Super-admin research tool — concept breakdown w/ Vietnamese examples |
+
+**All routes** go through `createAnthropicClient()` (retries, timeout) and `AI_MODELS.reasoning` / `AI_MODELS.fast` — never instantiate the SDK or hard-code a model ID. Streaming routes use `streamClaudeJson()` + client-side `postSse()` so TTFB is ~200ms regardless of total generation time.
 
 ### Analysis Frameworks Used
 - **Internal (Strengths/Weaknesses)**: 8M Model (Man, Machine, Material, Method, Measurement, Nature, Management, Money)
 - **External (Opportunities/Threats)**: Porter's 5 Forces + PESTEL Analysis
-- **Strategy Matrix**: SO/ST/WO/WT cross-analysis
+- **Strategy Matrix**: SO/ST/WO/WT cross-analysis (TOWS)
+- **Operational Assessment**: 7 OPEX pillars (Lean, Six Sigma, Workplace, Value Chain, CX, Value Innovation, Value AI) — powers `/x-ray`
 
 ---
 
@@ -429,9 +457,12 @@ NEXT_PUBLIC_APP_URL=                # e.g. https://hoshinkanri.vn
 
 ### Code Patterns
 - **Server Components by default**, `'use client'` only when needed (interactivity, hooks)
-- **API routes** use `createClient()` from `lib/supabase/server.ts` for auth
+- **API routes** use `createClient()` from `lib/supabase/server.ts` for auth; `createAdminClient()` from `lib/supabase/admin.ts` for service-role writes only
 - **Client components** use `createClient()` from `lib/supabase/client.ts`
-- **AI API routes**: Accept request body → call Anthropic API → return structured response
+- **Every POST/PUT/PATCH route with a body** validates with Zod via `parseBody(request, schema)` — schemas in `lib/validation/schemas.ts` grouped by domain, or a feature-local file like `lib/blog/schema.ts`
+- **AI API routes**: Go through `createAnthropicClient()` (retries, timeout) and `AI_MODELS.reasoning | .fast`. Streaming routes use `streamClaudeJson()`; client consumes with `postSse()` from `lib/http/sse-client.ts`
+- **Rate limit public routes** with `checkRateLimit({ key, limit, windowSeconds })` (IP-based, fail-open on infra errors). Dual-key IP + identifier for endpoints that can be weaponized against a specific victim
+- **Role checks** before writes: `requireOrgRole(supabase, user.id, orgId, ADMIN_ROLES|WRITE_ROLES|ALL_ROLES)` returns a clean 403 before the RLS policy throws 42501
 - **Zustand stores** for complex client-side state (SWOT session)
 - **JSONB columns** for flexible/nested data (vision_json, evidence_json, data_json)
 

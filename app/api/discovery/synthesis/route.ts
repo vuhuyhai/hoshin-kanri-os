@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSynthesisPrompt } from '@/lib/discovery/prompts'
-import type {
-  SynthesisRequest,
-  XMatrixPrefill,
-} from '@/lib/discovery/types'
+import type { XMatrixPrefill } from '@/lib/discovery/types'
 import type { Json } from '@/lib/supabase/types'
 import { AI_MODELS } from '@/lib/ai/models'
 import { streamClaudeJson } from '@/lib/ai/stream-json'
+import { parseBody, discoverySynthesisSchema } from '@/lib/validation'
 
 interface SynthesisFinal {
   prefill: XMatrixPrefill
@@ -24,15 +22,9 @@ export async function POST(request: NextRequest) {
   if (!user)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json()
-  const { orgId, orgContext } = body as SynthesisRequest
-
-  const selectedKpis: Array<{
-    name: string
-    unit: string
-    targetValue: number
-    frequency: string
-  }> = Array.isArray(body.selectedKpis) ? body.selectedKpis : []
+  const parsed = await parseBody(request, discoverySynthesisSchema)
+  if (!parsed.ok) return parsed.response
+  const { orgId, orgContext, selectedKpis } = parsed.data
 
   // ============================================================
   // DATA GUARDS — check what's available before calling AI

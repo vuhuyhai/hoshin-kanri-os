@@ -13,6 +13,7 @@ import type {
   SwotDraftItem,
   AnalysisFramework,
 } from '@/lib/swot/coaching-types'
+import { parseBody, swotCoachingDraftSchema } from '@/lib/validation'
 
 interface RawDraftItem {
   statement: string
@@ -164,32 +165,20 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: SwotContextInput = await request.json()
-
-    if (
-      !body.orgName ||
-      !body.industry ||
-      !body.topChallenges ||
-      !body.currentStrengths ||
-      !body.breakthroughGoal ||
-      !body.selectedFrameworks?.length
-    ) {
-      return NextResponse.json(
-        { error: 'Thiếu thông tin bắt buộc' },
-        { status: 400 }
-      )
-    }
+    const bodyParsed = await parseBody(request, swotCoachingDraftSchema)
+    if (!bodyParsed.ok) return bodyParsed.response
+    const body = bodyParsed.data as unknown as SwotContextInput
 
     const client = createAnthropicClient()
     const prompt = buildDraftUserPrompt(body)
 
-    let parsed: RawDraftOutput
+    let aiResult: RawDraftOutput
     try {
-      parsed = await callDraftAI(client, prompt)
+      aiResult = await callDraftAI(client, prompt)
     } catch {
       // Retry once on any parse/validation/truncation failure
       try {
-        parsed = await callDraftAI(client, prompt)
+        aiResult = await callDraftAI(client, prompt)
       } catch {
         return NextResponse.json(
           { error: 'AI trả về định dạng không hợp lệ, vui lòng thử lại' },
@@ -199,10 +188,10 @@ export async function POST(request: NextRequest) {
     }
 
     const draft: SwotDraft = {
-      strengths: hydrateItems(parsed.strengths),
-      weaknesses: hydrateItems(parsed.weaknesses),
-      opportunities: hydrateItems(parsed.opportunities),
-      threats: hydrateItems(parsed.threats),
+      strengths: hydrateItems(aiResult.strengths),
+      weaknesses: hydrateItems(aiResult.weaknesses),
+      opportunities: hydrateItems(aiResult.opportunities),
+      threats: hydrateItems(aiResult.threats),
       generatedAt: new Date().toISOString(),
       frameworksUsed: body.selectedFrameworks,
     }

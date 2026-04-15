@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import {
   createClient,
@@ -8,9 +9,8 @@ import {
 import type { Database } from '@/lib/supabase/types'
 import type {
   TowsStrategyWithFactorsRecord,
-  StrategyStatus,
-  BscPerspective,
 } from '@/lib/swot/tows-types'
+import { parseBody, updateStrategySchema } from '@/lib/validation'
 
 type FactorRow = Database['public']['Tables']['swot_factors']['Row']
 
@@ -69,7 +69,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -82,34 +82,14 @@ export async function PATCH(
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
     const { orgId } = check
 
-    const body = (await req.json()) as {
-      id: string
-      status?: StrategyStatus
-      order_index?: number
-      bsc_perspective?: BscPerspective
-    }
-
-    if (!body.id) {
-      return NextResponse.json({ error: 'Thiếu id chiến lược' }, { status: 400 })
-    }
-
-    const updates: {
-      status?: string
-      order_index?: number
-      bsc_perspective?: string
-    } = {}
-    if (body.status !== undefined) updates.status = body.status
-    if (body.order_index !== undefined) updates.order_index = body.order_index
-    if (body.bsc_perspective !== undefined) updates.bsc_perspective = body.bsc_perspective
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'Không có trường nào để cập nhật' }, { status: 400 })
-    }
+    const parsed = await parseBody(req, updateStrategySchema)
+    if (!parsed.ok) return parsed.response
+    const { id: strategyId, ...updates } = parsed.data
 
     const { data: updated, error } = await supabase
       .from('tows_strategies')
       .update(updates)
-      .eq('id', body.id)
+      .eq('id', strategyId)
       .eq('org_id', orgId)
       .select()
       .single()

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { VisionSaveRequest } from '@/lib/discovery/types'
 import type { Json } from '@/lib/supabase/types'
+import { parseBody, visionSaveSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: VisionSaveRequest = await request.json()
+    const parsed = await parseBody(request, visionSaveSchema)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.data
 
     const { data: membership } = await supabase
       .from('org_members')

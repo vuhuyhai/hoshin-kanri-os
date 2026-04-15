@@ -12,8 +12,7 @@ import type {
   SuggestMoreResponse,
   AnalysisFramework,
 } from '@/lib/swot/coaching-types'
-
-const VALID_QUADRANTS = ['strengths', 'weaknesses', 'opportunities', 'threats']
+import { parseBody, swotSuggestMoreSchema } from '@/lib/validation'
 
 interface RawSuggestItem {
   statement: string
@@ -70,14 +69,9 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body: SuggestMoreRequest = await request.json()
-
-    if (!VALID_QUADRANTS.includes(body.quadrant) || !body.contextInput?.orgName) {
-      return NextResponse.json(
-        { error: 'Thiếu thông tin bắt buộc' },
-        { status: 400 }
-      )
-    }
+    const parsed = await parseBody(request, swotSuggestMoreSchema)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.data as unknown as SuggestMoreRequest
 
     const prompt = buildSuggestMorePrompt(body)
 

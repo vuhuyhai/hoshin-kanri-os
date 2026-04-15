@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import {
   createClient,
@@ -6,10 +7,8 @@ import {
   WRITE_ROLES,
 } from '@/lib/supabase/server'
 import type { SwotQuadrant } from '@/lib/swot/types'
-import type { CreateSwotFactorDto } from '@/lib/swot/tows-types'
 import { reserveFactorCodes } from '@/lib/swot/factor-utils'
-
-const VALID_QUADRANTS = ['S', 'W', 'O', 'T']
+import { parseBody, createSwotFactorSchema } from '@/lib/validation'
 
 export async function GET(
   _req: Request,
@@ -45,7 +44,7 @@ export async function GET(
 }
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -54,13 +53,9 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = (await req.json()) as CreateSwotFactorDto
-    if (!body.content?.trim()) {
-      return NextResponse.json({ error: 'Nội dung không được để trống' }, { status: 400 })
-    }
-    if (!VALID_QUADRANTS.includes(body.quadrant)) {
-      return NextResponse.json({ error: 'Quadrant không hợp lệ' }, { status: 400 })
-    }
+    const parsed = await parseBody(req, createSwotFactorSchema)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.data
 
     const check = await requireOrgRoleForAnalysis(supabase, user.id, analysisId, WRITE_ROLES)
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
@@ -84,7 +79,7 @@ export async function POST(
         swot_analysis_id: analysisId,
         quadrant: body.quadrant,
         code,
-        content: body.content.trim(),
+        content: body.content,
         source_framework: body.source_framework ?? null,
         source_ref: body.source_ref ?? null,
         evidence_text: body.evidence_text ?? null,

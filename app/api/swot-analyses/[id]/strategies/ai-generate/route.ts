@@ -1,20 +1,19 @@
+import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import {
   createClient,
   requireOrgRoleForAnalysis,
   WRITE_ROLES,
 } from '@/lib/supabase/server'
-import type { TowsQuadrant, AiStrategyItem } from '@/lib/swot/tows-types'
+import type { AiStrategyItem } from '@/lib/swot/tows-types'
 import { generateCombinedCode } from '@/lib/swot/factor-utils'
 import { buildTowsPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
-
-const anthropic = createAnthropicClient()
-const VALID_TOWS: TowsQuadrant[] = ['SO', 'WO', 'ST', 'WT']
+import { parseBody, generateStrategySchema } from '@/lib/validation'
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -23,22 +22,9 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = (await req.json()) as {
-      sw_factor_ids: string[]
-      ot_factor_ids: string[]
-      quadrant: TowsQuadrant
-    }
-
-    // Validate inputs
-    if (!body.sw_factor_ids?.length) {
-      return NextResponse.json({ error: 'Cần ít nhất 1 yếu tố S/W' }, { status: 400 })
-    }
-    if (!body.ot_factor_ids?.length) {
-      return NextResponse.json({ error: 'Cần ít nhất 1 yếu tố O/T' }, { status: 400 })
-    }
-    if (!VALID_TOWS.includes(body.quadrant)) {
-      return NextResponse.json({ error: 'Quadrant TOWS không hợp lệ' }, { status: 400 })
-    }
+    const parsed = await parseBody(req, generateStrategySchema)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.data
 
     const check = await requireOrgRoleForAnalysis(supabase, user.id, analysisId, WRITE_ROLES)
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status })
@@ -92,6 +78,7 @@ export async function POST(
       },
     })
 
+    const anthropic = createAnthropicClient()
     const message = await anthropic.messages.create({
       model: AI_MODELS.reasoning,
       max_tokens: 1000,

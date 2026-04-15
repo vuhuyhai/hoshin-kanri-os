@@ -5,6 +5,7 @@ import { buildConflictCheckPrompt, getDraftSystemPrompt } from '@/lib/swot/coach
 import type { SwotDraft, ConflictCheckResult, ConflictIssue, QuadrantKey } from '@/lib/swot/coaching-types'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
+import { parseBody, swotConflictCheckSchema } from '@/lib/validation'
 
 const VALID_QUADRANTS: QuadrantKey[] = ['strengths', 'weaknesses', 'opportunities', 'threats']
 
@@ -27,7 +28,9 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { draft }: { draft: SwotDraft } = await request.json()
+    const bodyParsed = await parseBody(request, swotConflictCheckSchema)
+    if (!bodyParsed.ok) return bodyParsed.response
+    const draft = bodyParsed.data.draft as unknown as SwotDraft
 
     // Validate draft has items in all quadrants
     const hasItems = VALID_QUADRANTS.every((q) => draft[q]?.length >= 1)
@@ -62,18 +65,18 @@ export async function POST(request: NextRequest) {
     const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (fenceMatch) jsonText = fenceMatch[1].trim()
 
-    let parsed: { issues: ConflictIssue[] }
+    let aiResult: { issues: ConflictIssue[] }
     try {
-      parsed = JSON.parse(jsonText)
+      aiResult = JSON.parse(jsonText)
     } catch {
       return NextResponse.json(failSafe())
     }
 
-    if (!Array.isArray(parsed.issues)) return NextResponse.json(failSafe())
+    if (!Array.isArray(aiResult.issues)) return NextResponse.json(failSafe())
 
     // Filter out issues with hallucinated item IDs
     const validIds = collectAllIds(draft)
-    const validIssues = parsed.issues.filter((issue) =>
+    const validIssues = aiResult.issues.filter((issue) =>
       issue.affectedItems?.every(
         (ai) =>
           VALID_QUADRANTS.includes(ai.quadrant) && validIds.has(ai.itemId)
