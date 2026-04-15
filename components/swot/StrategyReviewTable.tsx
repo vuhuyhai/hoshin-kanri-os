@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Download, Target, Loader2 } from 'lucide-react'
 import type {
@@ -35,7 +34,6 @@ const STATUS_LABELS: Record<StrategyStatus, string> = {
 export function StrategyReviewTable({
   analysisId, strategies, onStatusChange, onBscChange, onSendToXMatrix,
 }: Props) {
-  const router = useRouter()
   const [isSyncing, setIsSyncing] = useState(false)
 
   if (strategies.length === 0) {
@@ -96,11 +94,19 @@ export function StrategyReviewTable({
         '/api/swot/sync-xmatrix',
         { analysisId },
       )
-      for (const s of approvedStrategies.slice(0, data.syncedCount)) onStatusChange(s.id, 'in_x_matrix')
+      // Server's sync-to-xmatrix sorts by order_index asc before slicing.
+      // Mirror that order client-side so optimistic in_x_matrix marks land
+      // on the same rows the DB actually updated.
+      const syncedSlice = [...approvedStrategies]
+        .sort((a, b) => a.order_index - b.order_index)
+        .slice(0, data.syncedCount)
+      for (const s of syncedSlice) onStatusChange(s.id, 'in_x_matrix')
       toast.success(`Đã sync ${data.syncedCount} chiến lược vào X-Matrix`)
       if (data.errors?.length && data.errors.length > 0) toast.warning(data.errors[0])
+      // Navigation is owned by the parent via onSendToXMatrix → onComplete.
+      // Prior code also did router.push here, racing with the parent's
+      // push and causing double-navigation chaos.
       onSendToXMatrix?.(approvedStrategies)
-      setTimeout(() => router.push('/dashboard/x-matrix/new'), 800)
     } catch (err) {
       console.error('[StrategyReviewTable] sync error:', err)
       toast.error(err instanceof Error ? err.message : 'Lỗi khi sync vào X-Matrix')

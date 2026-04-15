@@ -18,7 +18,7 @@ export function TowsStrategyClient({
 
   const handleComplete = (strategies: TowsStrategyWithFactorsRecord[]) => {
     toast.success(`Đã gửi ${strategies.length} chiến lược sang X-Matrix`)
-    router.push('/dashboard/discovery')
+    router.push('/dashboard/x-matrix/new')
   }
 
   return (

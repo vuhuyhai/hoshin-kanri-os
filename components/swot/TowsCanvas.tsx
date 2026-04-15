@@ -94,17 +94,29 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
   }
 
   const handleStatusToggle = async (id: string, current: string) => {
-    const next = current === 'in_x_matrix' ? 'draft' : 'in_x_matrix'
+    // Canvas checkbox toggles `approved` ↔ `draft`. `in_x_matrix` is a
+    // terminal state set only by the sync-xmatrix endpoint — don't mint it
+    // here. Phase 3 (StrategyReviewTable) also uses `approved`, so the sync
+    // button's `filter(s => s.status === 'approved')` sees rows toggled on
+    // in either phase.
+    const next = current === 'approved' ? 'draft' : 'approved'
     const prev = strategies
-    setStrategies((s) => s.map((st) => st.id === id ? { ...st, status: next } : st))
+    const optimistic = strategies.map((st) =>
+      st.id === id ? { ...st, status: next } : st,
+    )
+    setStrategies(optimistic)
+    notify(optimistic)
     try {
       await fetchJson(`/api/swot-analyses/${analysisId}/strategies`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: next }),
       })
-      notify(strategies.map((st) => st.id === id ? { ...st, status: next } : st))
-    } catch { setStrategies(prev); notify(prev); toast.error('Lỗi cập nhật') }
+    } catch {
+      setStrategies(prev)
+      notify(prev)
+      toast.error('Lỗi cập nhật')
+    }
   }
 
   if (isLoading) {

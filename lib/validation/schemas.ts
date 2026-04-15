@@ -328,15 +328,21 @@ export const generateStrategySchema = z.object({
 export type GenerateStrategyInput = z.infer<typeof generateStrategySchema>
 
 // PATCH /api/swot-analyses/[id]/strategies
+// Enums must mirror StrategyStatus and BscPerspective in lib/swot/tows-types.ts.
+// An earlier iteration used stale values (`consolidated` / `ready_to_sync` /
+// `synced` / `financial` / `internal_process` / `learning_growth`) which
+// silently 400'd every PATCH from StrategyReviewTable — blocking status
+// toggles and BSC saves. If you bump the type, update this enum in the same
+// commit.
 export const updateStrategySchema = z
   .object({
     id: z.string().min(1, 'Thiếu id chiến lược'),
     status: z
-      .enum(['draft', 'rejected', 'consolidated', 'ready_to_sync', 'synced'])
+      .enum(['draft', 'approved', 'in_x_matrix', 'rejected'])
       .optional(),
     order_index: z.number().int().optional(),
     bsc_perspective: z
-      .enum(['financial', 'customer', 'internal_process', 'learning_growth'])
+      .enum(['finance', 'customer', 'process', 'learning'])
       .optional(),
   })
   .refine(
