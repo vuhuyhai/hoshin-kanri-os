@@ -10,7 +10,15 @@ type Props = { params: Promise<{ id: string }> }
 
 export default async function EditBlogPostPage({ params }: Props) {
   const { id } = await params
-  const post = await adminGetPost(id)
+
+  let post: Awaited<ReturnType<typeof adminGetPost>> = null
+  try {
+    post = await adminGetPost(id)
+  } catch (e) {
+    console.error('[admin/blog/edit] adminGetPost failed:', e)
+    // Fall through to notFound(); the server action will surface the
+    // real error message (missing table, etc.) when the user submits.
+  }
   if (!post) notFound()
 
   const boundAction = updateBlogPostAction.bind(null, id)

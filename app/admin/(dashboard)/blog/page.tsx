@@ -2,8 +2,11 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { adminListAllPosts } from '@/lib/blog/queries'
+import { adminListAllPosts, type BlogPostSummary } from '@/lib/blog/queries'
 import { DeletePostButton } from './DeletePostButton'
+
+const MIGRATION_HINT =
+  'Database chưa sẵn sàng: bảng blog_posts chưa tồn tại. Hãy apply migration 022_blog_posts.sql qua Supabase SQL Editor trước khi dùng CMS.'
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'
@@ -17,7 +20,24 @@ function formatDateTime(iso: string | null): string {
 }
 
 async function BlogAdminContent() {
-  const posts = await adminListAllPosts()
+  let posts: BlogPostSummary[] = []
+  let loadError: string | null = null
+  try {
+    posts = await adminListAllPosts()
+  } catch (e) {
+    console.error('[admin/blog] adminListAllPosts failed:', e)
+    const err = e as { code?: string; message?: string }
+    if (
+      err.code === 'PGRST205' ||
+      err.code === '42P01' ||
+      err.message?.includes("Could not find the table 'public.blog_posts'")
+    ) {
+      loadError = MIGRATION_HINT
+    } else {
+      loadError = err.message ?? 'Không tải được danh sách bài viết'
+    }
+  }
+
   const publishedCount = posts.filter((p) => p.status === 'published').length
   const draftCount = posts.length - publishedCount
 
@@ -43,7 +63,14 @@ async function BlogAdminContent() {
         </Link>
       </div>
 
-      {posts.length === 0 ? (
+      {loadError ? (
+        <div className="card-brutal border-accent-brand p-6">
+          <p className="font-display text-sm font-bold uppercase text-accent-brand">
+            Không tải được bài viết
+          </p>
+          <p className="mt-3 font-body text-[15px] text-ink">{loadError}</p>
+        </div>
+      ) : posts.length === 0 ? (
         <div className="card-brutal p-10 text-center">
           <p className="font-display text-lg font-bold uppercase text-ink">
             Chưa có bài viết nào

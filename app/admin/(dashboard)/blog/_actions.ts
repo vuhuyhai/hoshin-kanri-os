@@ -16,6 +16,25 @@ type ActionResult =
   | { ok: true }
   | { ok: false; error: string; fieldErrors?: Record<string, string> }
 
+// PostgREST error code for "table missing from schema cache" — fires
+// when the migration hasn't been applied yet. Surface a specific
+// message so the user knows what to do instead of seeing a raw 500.
+const MIGRATION_NOT_APPLIED_MESSAGE =
+  'Database chưa sẵn sàng: bảng blog_posts chưa tồn tại. Hãy apply migration 022_blog_posts.sql qua Supabase SQL Editor trước khi đăng bài.'
+
+function describeDbError(e: unknown): string {
+  if (e && typeof e === 'object') {
+    const err = e as { code?: string; message?: string }
+    if (err.code === 'PGRST205') return MIGRATION_NOT_APPLIED_MESSAGE
+    if (err.code === '42P01') return MIGRATION_NOT_APPLIED_MESSAGE
+    if (err.message?.includes("Could not find the table 'public.blog_posts'")) {
+      return MIGRATION_NOT_APPLIED_MESSAGE
+    }
+    if (err.message) return err.message
+  }
+  return 'Lỗi không xác định'
+}
+
 // Defense-in-depth: middleware already gates /admin/* routes, but server
 // actions are cheap to re-verify. Returns the authenticated super-admin
 // user id on success or throws a redirect on failure.
@@ -66,7 +85,13 @@ export async function createBlogPostAction(
     }
   }
 
-  const existing = await adminGetPostBySlug(parsed.data.slug)
+  let existing: Awaited<ReturnType<typeof adminGetPostBySlug>>
+  try {
+    existing = await adminGetPostBySlug(parsed.data.slug)
+  } catch (e) {
+    console.error('[createBlogPostAction] slug lookup failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
   if (existing) {
     return {
       ok: false,
@@ -88,10 +113,8 @@ export async function createBlogPostAction(
       userId
     )
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Lỗi không xác định',
-    }
+    console.error('[createBlogPostAction] create failed:', e)
+    return { ok: false, error: describeDbError(e) }
   }
 
   revalidatePath('/admin/blog')
@@ -119,7 +142,13 @@ export async function updateBlogPostAction(
     }
   }
 
-  const existing = await adminGetPostBySlug(parsed.data.slug)
+  let existing: Awaited<ReturnType<typeof adminGetPostBySlug>>
+  try {
+    existing = await adminGetPostBySlug(parsed.data.slug)
+  } catch (e) {
+    console.error('[updateBlogPostAction] slug lookup failed:', e)
+    return { ok: false, error: describeDbError(e) }
+  }
   if (existing && existing.id !== id) {
     return {
       ok: false,
@@ -138,10 +167,8 @@ export async function updateBlogPostAction(
       status: parsed.data.status,
     })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Lỗi không xác định',
-    }
+    console.error('[updateBlogPostAction] update failed:', e)
+    return { ok: false, error: describeDbError(e) }
   }
 
   revalidatePath('/admin/blog')
@@ -159,10 +186,8 @@ export async function deleteBlogPostAction(
   try {
     await adminDeletePost(id)
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Lỗi không xác định',
-    }
+    console.error('[deleteBlogPostAction] delete failed:', e)
+    return { ok: false, error: describeDbError(e) }
   }
 
   revalidatePath('/admin/blog')
