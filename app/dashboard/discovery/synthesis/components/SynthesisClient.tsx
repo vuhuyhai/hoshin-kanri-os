@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { XMatrixPrefill, PrefillHoshin } from '@/lib/discovery/types'
 import { cn } from '@/lib/utils'
-import { postSse, SseError } from '@/lib/http/sse-client'
+import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
 import { trackSynthesisViewed } from '@/lib/analytics/events'
 
 // ============================================================
@@ -404,7 +404,7 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
     }
 
     try {
-      const data = await postSse<{
+      const data = await postJson<{
         prefill: XMatrixPrefill
         dataWarnings?: string[]
         savedSuccessfully?: boolean
@@ -444,7 +444,7 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
       // to signal that prerequisite Discovery steps are incomplete.
       // Surface that as the dedicated 'missing' UI branch instead of a
       // generic error toast.
-      if (error instanceof SseError && error.body && typeof error.body === 'object') {
+      if (error instanceof FetchJsonError && error.body && typeof error.body === 'object') {
         const body = error.body as { missing?: { vision?: boolean; painMapper?: boolean } }
         if (body.missing) {
           setMissingData({
