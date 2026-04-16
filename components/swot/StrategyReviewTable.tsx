@@ -108,7 +108,6 @@ export function StrategyReviewTable({
       // push and causing double-navigation chaos.
       onSendToXMatrix?.(approvedStrategies)
     } catch (err) {
-      console.error('[StrategyReviewTable] sync error:', err)
       toast.error(err instanceof Error ? err.message : 'Lỗi khi sync vào X-Matrix')
     } finally {
       setIsSyncing(false)

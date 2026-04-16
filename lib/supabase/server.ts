@@ -57,7 +57,7 @@ export async function verifyOrgMembership(
     .select('org_id')
     .eq('user_id', userId)
     .eq('org_id', orgId)
-    .single()
+    .maybeSingle()
   return !!data
 }
 
@@ -100,7 +100,7 @@ export async function requireOrgRoleForAnalysis(
     .from('swot_analyses')
     .select('org_id')
     .eq('id', analysisId)
-    .single()
+    .maybeSingle()
   if (!analysis) {
     return { ok: false, error: 'Phân tích không tồn tại', status: 404 }
   }
@@ -110,7 +110,7 @@ export async function requireOrgRoleForAnalysis(
     .select('role')
     .eq('user_id', userId)
     .eq('org_id', analysis.org_id)
-    .single()
+    .maybeSingle()
   if (!member) {
     return { ok: false, error: 'Không có quyền truy cập tổ chức này', status: 403 }
   }
@@ -141,7 +141,7 @@ export async function requireOrgRole(
     .select('role')
     .eq('user_id', userId)
     .eq('org_id', orgId)
-    .single()
+    .maybeSingle()
   if (!member) {
     return { ok: false, error: 'Không có quyền truy cập tổ chức này', status: 403 }
   }

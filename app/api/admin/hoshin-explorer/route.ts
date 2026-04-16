@@ -26,11 +26,11 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient()
     const { data: profile } = await admin
-      .from('profiles' as 'organizations')
-      .select('is_super_admin' as 'id')
-      .eq('id' as 'id', user.id)
-      .single()
-    const isSuperAdmin = (profile as unknown as { is_super_admin: boolean } | null)?.is_super_admin === true
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    const isSuperAdmin = profile?.is_super_admin === true
     if (!isSuperAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const bodyParsed = await parseBody(request, hoshinExplorerSchema)

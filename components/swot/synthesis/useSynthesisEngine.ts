@@ -54,7 +54,6 @@ export function useSynthesisEngine(orgContext: OrgContext, analysisId: string, o
       setSynthesis(output)
       setStatus('complete')
     } catch (err) {
-      console.error('[useSynthesisEngine] runSynthesis error:', err)
       setStatus('error')
       if (err instanceof Error && err.name === 'AbortError') {
         toast.error('Tổng hợp SWOT mất quá lâu (>58s). Vui lòng thử lại.')
@@ -158,7 +157,6 @@ export function useSynthesisEngine(orgContext: OrgContext, analysisId: string, o
         router.push('/dashboard/discovery/swot/strategy')
       }
     } catch (err) {
-      console.error('[useSynthesisEngine] handleSaveAndContinue error:', err)
       toast.error('Không thể lưu. Thử lại.')
     } finally {
       setIsSaving(false)

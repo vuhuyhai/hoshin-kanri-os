@@ -16,7 +16,7 @@ export default async function XMatrixIndexPage() {
     .from('org_members')
     .select('org_id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
   if (!membership) redirect('/onboarding/setup-org')
 
   redirect('/dashboard/x-matrix/new')

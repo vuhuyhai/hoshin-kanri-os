@@ -56,7 +56,6 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
       setMessages([...next, res.message])
     } catch (err) {
       const msg = err instanceof FetchJsonError ? err.message : 'Lỗi kết nối AI'
-      console.error('[WorkshopChat] send failed:', msg)
       toast.error(msg)
     } finally {
       setLoading(false)

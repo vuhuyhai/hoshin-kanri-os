@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { XRayReport } from '@/app/x-ray/components/XRayReport'
 import type { XRayResult } from '@/lib/x-ray/types'
+import { fromJson } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -23,7 +24,7 @@ export default async function XRayResultDetailPage({ params }: Props) {
 
   if (!result) return notFound()
 
-  const xrayResult = result.result_json as unknown as XRayResult
+  const xrayResult = fromJson<XRayResult>(result.result_json)
 
   return (
     <>

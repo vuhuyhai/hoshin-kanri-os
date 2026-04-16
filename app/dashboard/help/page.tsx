@@ -17,7 +17,7 @@ export default async function HelpPage() {
       .from('profiles')
       .select('is_super_admin')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
     isSuperAdmin = profile?.is_super_admin ?? false
   }
 

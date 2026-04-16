@@ -21,7 +21,7 @@ export default async function DashboardPage() {
     .from('users')
     .select('full_name')
     .eq('id', user!.id)
-    .single()
+    .maybeSingle()
 
   const displayName = profile?.full_name
     || user?.email?.split('@')[0]
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     .from('org_members')
     .select('org_id')
     .eq('user_id', user!.id)
-    .single()
+    .maybeSingle()
 
   const orgId = membership?.org_id
 

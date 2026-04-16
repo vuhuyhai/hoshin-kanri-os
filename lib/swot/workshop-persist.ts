@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
-import type { TablesInsert, Json } from '@/lib/supabase/types'
+import type { TablesInsert } from '@/lib/supabase/types'
 import { reserveFactorCodes } from './factor-utils'
 import type { SwotIngredient, SwotQuadrant } from './types'
+import { toJson } from '@/lib/utils'
 
 const QUADRANTS: SwotQuadrant[] = ['S', 'W', 'O', 'T']
 
@@ -65,10 +66,10 @@ export async function persistWorkshopSelection(
 
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
-    const data_json = {
+    const data_json = toJson({
       ingredientCount: selected.length,
       completedAt: new Date().toISOString(),
-    } as unknown as Json
+    })
     await supabase
       .from('discovery_sessions')
       .delete()

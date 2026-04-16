@@ -1,41 +1,35 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { PainMapperClient } from './components/PainMapperClient'
 
-import { useState } from 'react'
-import type { HoshinCandidate } from '@/lib/discovery/types'
-import { PainInputForm } from './components/PainInputForm'
-import { HoshinCandidates } from './components/HoshinCandidates'
+export default async function PainMapperPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-export default function PainMapperPage() {
-  const [candidates, setCandidates] = useState<HoshinCandidate[] | null>(null)
+  const { data: membership } = await supabase
+    .from('org_members')
+    .select('org_id, organizations(name, industry, city)')
+    .eq('user_id', user.id)
+    .single()
 
-  // orgContext will be passed from localStorage or fetched
-  // For simplicity, use a default that works without server fetch
-  const orgContext = { industry: '', city: '', orgName: '' }
+  if (!membership) redirect('/onboarding/setup-org')
 
-  if (typeof window !== 'undefined') {
-    // Read org context from a simple approach
-  }
-
-  if (candidates) {
-    return (
-      <div className="mx-auto max-w-2xl py-4">
-        <HoshinCandidates candidates={candidates} />
-      </div>
-    )
+  const org = membership.organizations as {
+    name: string
+    industry: string
+    city: string
   }
 
   return (
-    <div className="mx-auto max-w-2xl py-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Pain → Goal Mapper</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Chuyển đổi vấn đề thực tế thành mục tiêu chiến lược Hoshin Kanri
-        </p>
-      </div>
-      <PainInputForm
-        orgContext={orgContext}
-        onComplete={setCandidates}
-      />
-    </div>
+    <PainMapperClient
+      orgContext={{
+        orgName: org.name ?? '',
+        industry: org.industry ?? '',
+        city: org.city ?? '',
+      }}
+    />
   )
 }

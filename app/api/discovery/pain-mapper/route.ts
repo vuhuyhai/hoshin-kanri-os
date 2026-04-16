@@ -5,7 +5,7 @@ import type {
   HoshinCandidate,
   PainMapperResponse,
 } from '@/lib/discovery/types'
-import type { Json } from '@/lib/supabase/types'
+import { toJson } from '@/lib/utils'
 import { AI_MODELS } from '@/lib/ai/models'
 import { streamClaudeJson } from '@/lib/ai/stream-json'
 import { parseBody, painMapperSchema } from '@/lib/validation'
@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
           org_id: membership.org_id,
           user_id: user.id,
           step_completed: 'pain_mapper',
-          data_json: {
+          data_json: toJson({
             painPoints,
             candidates: parsed.candidates,
-          } as unknown as Json,
+          }),
         })
       }
 

@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         )
       }
-      console.error('[api/auth/register] generateLink error:', error.message)
       return NextResponse.json(
         { error: 'Không thể tạo tài khoản. Vui lòng thử lại.' },
         { status: 500 }
@@ -69,7 +68,6 @@ export async function POST(request: NextRequest) {
     // Rewrite the Supabase-hosted link to our app's callback URL
     const supabaseLink = data.properties?.action_link
     if (!supabaseLink) {
-      console.error('[api/auth/register] No action_link in response')
       return NextResponse.json(
         { error: 'Lỗi hệ thống. Vui lòng thử lại.' },
         { status: 500 }
@@ -81,7 +79,6 @@ export async function POST(request: NextRequest) {
     const type = linkUrl.searchParams.get('type') ?? 'signup'
 
     if (!tokenHash) {
-      console.error('[api/auth/register] No token in action_link:', supabaseLink)
       return NextResponse.json(
         { error: 'Lỗi hệ thống. Vui lòng thử lại.' },
         { status: 500 }
@@ -95,7 +92,6 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendEmail({ to: email, subject, html })
 
     if (emailResult.error) {
-      console.error('[api/auth/register] Email send failed:', emailResult.error)
       // User was created but email failed — still return success
       // They can use "resend" or login directly (auto-confirmed)
       return NextResponse.json({
@@ -111,7 +107,6 @@ export async function POST(request: NextRequest) {
       message: 'Đã gửi email xác nhận',
     })
   } catch (err) {
-    console.error('[api/auth/register] Unexpected error:', err)
     return NextResponse.json(
       { error: 'Lỗi hệ thống. Vui lòng thử lại.' },
       { status: 500 }

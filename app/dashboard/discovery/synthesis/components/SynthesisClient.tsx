@@ -439,7 +439,6 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
         toast.success('Discovery hoàn thành! X-Matrix sẵn sàng.')
       }
     } catch (error) {
-      console.error('Synthesis error:', error)
       // Server may return 400/422 with { missing: { vision, painMapper } }
       // to signal that prerequisite Discovery steps are incomplete.
       // Surface that as the dedicated 'missing' UI branch instead of a

@@ -7,8 +7,8 @@ import {
 } from '@/lib/supabase/server'
 import type { XMatrixData } from '@/lib/x-matrix/types'
 import { validateXMatrix } from '@/lib/x-matrix/utils'
-import type { Json } from '@/lib/supabase/types'
 import { parseBody, xMatrixCreateSchema } from '@/lib/validation'
+import { toJson } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         org_id: orgId,
         year,
         title: `X-Matrix ${year}`,
-        vision_json: data as unknown as Json,
+        vision_json: toJson(data),
         status: 'active',
       })
       .select('id')

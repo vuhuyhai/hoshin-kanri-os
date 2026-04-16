@@ -56,7 +56,6 @@ async function callQualityAI(
   })
 
   if (response.stop_reason === 'max_tokens') {
-    console.error('[quality-check] hit max_tokens before completing tool call')
     throw new Error('max_tokens')
   }
 
@@ -65,10 +64,6 @@ async function callQualityAI(
   )
 
   if (!toolBlock) {
-    console.error(
-      '[quality-check] no tool_use block. stop_reason=',
-      response.stop_reason,
-    )
     throw new Error('no_tool_use')
   }
 
@@ -125,12 +120,10 @@ export async function POST(
       result = await callQualityAI(client, prompt)
     } catch (firstErr) {
       const firstReason = (firstErr as Error).message
-      console.warn('[quality-check] first attempt failed:', firstReason)
       try {
         result = await callQualityAI(client, prompt)
       } catch (secondErr) {
         const secondReason = (secondErr as Error).message
-        console.error('[quality-check] retry also failed:', secondReason)
         return NextResponse.json(
           { error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.` },
           { status: 500 },

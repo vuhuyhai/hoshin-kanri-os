@@ -190,9 +190,17 @@ const coachingMessageSchema = z.object({
 // POST /api/swot/coaching
 // Envelope-only. The route re-derives tracker state from the
 // request and the prompts are built from orgContext + history.
+const orgContextSchema = z.object({
+  orgId: z.string(),
+  orgName: z.string(),
+  industry: z.string(),
+  city: z.string(),
+  headcount: z.string(),
+}).passthrough()
+
 export const swotCoachingSchema = z.object({
   messages: z.array(coachingMessageSchema).min(1, 'Cần ít nhất 1 tin nhắn'),
-  orgContext: z.record(z.string(), z.unknown()),
+  orgContext: orgContextSchema,
   currentFramework: z.enum(['sw', 'ot']).optional(),
   coachingContext: z.record(z.string(), z.unknown()).optional(),
   coachingTracker: z.record(z.string(), z.unknown()).optional(),
@@ -233,14 +241,19 @@ export const swotSuggestMoreSchema = z.object({
 export type SwotSuggestMoreInput = z.infer<typeof swotSuggestMoreSchema>
 
 // POST /api/swot/context-cards
+const frameworkInputSchema = z.object({
+  source: z.string(),
+  content: z.string(),
+}).passthrough()
+
 export const swotContextCardsSchema = z.object({
   summary: z.object({
-    strengths: z.array(z.record(z.string(), z.unknown())).default([]),
-    weaknesses: z.array(z.record(z.string(), z.unknown())).default([]),
-    opportunities: z.array(z.record(z.string(), z.unknown())).default([]),
-    threats: z.array(z.record(z.string(), z.unknown())).default([]),
+    strengths: z.array(frameworkInputSchema).default([]),
+    weaknesses: z.array(frameworkInputSchema).default([]),
+    opportunities: z.array(frameworkInputSchema).default([]),
+    threats: z.array(frameworkInputSchema).default([]),
   }),
-  orgContext: z.record(z.string(), z.unknown()),
+  orgContext: orgContextSchema,
 })
 export type SwotContextCardsInput = z.infer<typeof swotContextCardsSchema>
 

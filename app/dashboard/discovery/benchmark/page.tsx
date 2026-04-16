@@ -13,7 +13,7 @@ export default async function BenchmarkPage() {
     .from('org_members')
     .select('org_id, organizations(industry)')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 

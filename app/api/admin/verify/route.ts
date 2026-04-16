@@ -15,13 +15,10 @@ export async function GET() {
   // Use service role to bypass RLS
   const admin = createAdminClient()
   const { data: profile } = await admin
-    .from('profiles' as 'organizations')
-    .select('is_super_admin' as 'id')
-    .eq('id' as 'id', user.id)
-    .single()
+    .from('profiles')
+    .select('is_super_admin')
+    .eq('id', user.id)
+    .maybeSingle()
 
-  const flag = (profile as unknown as { is_super_admin: boolean } | null)
-    ?.is_super_admin
-
-  return NextResponse.json({ isSuperAdmin: flag === true })
+  return NextResponse.json({ isSuperAdmin: profile?.is_super_admin === true })
 }

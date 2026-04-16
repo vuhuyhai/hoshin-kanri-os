@@ -14,7 +14,7 @@ export default async function NewXMatrixPage() {
     .from('org_members')
     .select('org_id, role')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 

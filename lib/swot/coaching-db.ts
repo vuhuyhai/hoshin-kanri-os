@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Json, TablesInsert } from '@/lib/supabase/types'
+import type { TablesInsert } from '@/lib/supabase/types'
 import type { SwotDraft, QuadrantKey } from './coaching-types'
 import type { SwotQuadrant } from './types'
 import { reserveFactorCodes } from './factor-utils'
+import { toJson } from '@/lib/utils'
 
 const QKEY_TO_QUAD: Record<QuadrantKey, SwotQuadrant> = {
   strengths: 'S',
@@ -99,7 +100,7 @@ export async function persistWizardStep(
       org_id: orgId,
       user_id: userId,
       step_completed: stepKey,
-      data_json: { savedAt: new Date().toISOString() } as unknown as Json,
+      data_json: toJson({ savedAt: new Date().toISOString() }),
     },
     { onConflict: 'org_id,user_id,step_completed' } as never
   )

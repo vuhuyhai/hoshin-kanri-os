@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkOrgPql, formatPqlEmail } from '@/lib/pql/signals'
 import { sendEmail } from '@/lib/email/send'
-import type { Json } from '@/lib/supabase/types'
+import { toJson } from '@/lib/utils'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         user_id: ceoMember?.user_id ?? orgId,
         type: 'in_app',
         status: 'sent',
-        payload: { type: 'pql_alert', signal } as unknown as Json,
+        payload: toJson({ type: 'pql_alert', signal }),
         sent_at: new Date().toISOString(),
       })
 

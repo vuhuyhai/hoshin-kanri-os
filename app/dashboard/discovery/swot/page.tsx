@@ -13,7 +13,7 @@ export default async function SwotPage() {
     .from('org_members')
     .select('org_id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 
@@ -21,7 +21,7 @@ export default async function SwotPage() {
     .from('organizations')
     .select('name, industry, city, headcount')
     .eq('id', membership.org_id)
-    .single()
+    .maybeSingle()
 
   if (!org) redirect('/onboarding/setup-org')
 
@@ -31,7 +31,7 @@ export default async function SwotPage() {
     .eq('org_id', membership.org_id)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   let analysisId = existingAnalysis?.id
 

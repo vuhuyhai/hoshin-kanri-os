@@ -82,9 +82,7 @@ export function streamClaudeJson<TParsed, TFinal = TParsed>(
         let parsed: TParsed
         try {
           parsed = opts.parse(cleaned)
-        } catch (err) {
-          console.error(`[${tag}] parse error:`, err)
-          console.error(`[${tag}] raw text (first 500):`, cleaned.slice(0, 500))
+        } catch {
           send({ type: 'error', error: 'Không parse được kết quả từ AI' })
           controller.close()
           return
@@ -95,8 +93,7 @@ export function streamClaudeJson<TParsed, TFinal = TParsed>(
           final = opts.finalize
             ? await opts.finalize(parsed)
             : (parsed as unknown as TFinal)
-        } catch (err) {
-          console.error(`[${tag}] finalize error:`, err)
+        } catch {
           send({
             type: 'error',
             error: 'Lỗi khi lưu kết quả. Vui lòng thử lại.',
@@ -107,8 +104,7 @@ export function streamClaudeJson<TParsed, TFinal = TParsed>(
 
         send({ type: 'done', data: final })
         controller.close()
-      } catch (err) {
-        console.error(`[${tag}] stream error:`, err)
+      } catch {
         send({ type: 'error', error: 'Lỗi khi gọi AI. Vui lòng thử lại.' })
         controller.close()
       }

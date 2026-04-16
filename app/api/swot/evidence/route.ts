@@ -4,8 +4,8 @@ import { generateQueriesForItem } from '@/lib/swot/query-generator'
 import { searchEvidenceForItem } from '@/lib/swot/evidence-searcher'
 import pLimit from 'p-limit'
 import type { CoachingItem, EvidenceResult, OrgContext } from '@/lib/swot/types'
-import type { Json } from '@/lib/supabase/types'
 import { parseBody, swotEvidenceSchema } from '@/lib/validation'
+import { toJson } from '@/lib/utils'
 
 const limit = pLimit(4)
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       if (evidence.found) {
         const expires = new Date()
         expires.setDate(expires.getDate() + 7)
-        await supabase.from('evidence_cache').upsert({ cache_key: cacheKey, result_json: evidence as unknown as Json, expires_at: expires.toISOString() })
+        await supabase.from('evidence_cache').upsert({ cache_key: cacheKey, result_json: toJson(evidence), expires_at: expires.toISOString() })
       }
 
       return { item, evidence, queries_used: queries.map((q) => q.query) }

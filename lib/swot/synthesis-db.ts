@@ -118,8 +118,7 @@ export async function fetchRecoveredDraft(
       draft.threats.length
 
     return total > 0 ? draft : null
-  } catch (err) {
-    console.error('[fetchRecoveredDraft] error:', err)
+  } catch {
     return null
   }
 }

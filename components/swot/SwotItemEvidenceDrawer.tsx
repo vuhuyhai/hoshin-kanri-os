@@ -51,8 +51,7 @@ export function SwotItemEvidenceDrawer({ ingredientId, onClose }: SwotItemEviden
       setQueryStr(res.query)
       setCandidates(res.results)
       setItemEvidence(ing.id, res.results)
-    } catch (err) {
-      console.error('[EvidenceDrawer] fetch failed:', err instanceof FetchJsonError ? err.message : err)
+    } catch {
       setCandidates([])
       setHasError(true)
     } finally {

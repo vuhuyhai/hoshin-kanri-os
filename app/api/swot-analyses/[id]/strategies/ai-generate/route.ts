@@ -78,9 +78,6 @@ async function callStrategiesAI(
   })
 
   if (response.stop_reason === 'max_tokens') {
-    console.error(
-      '[tows-ai-generate] hit max_tokens before completing tool call',
-    )
     throw new Error('max_tokens')
   }
 
@@ -89,12 +86,6 @@ async function callStrategiesAI(
   )
 
   if (!toolBlock) {
-    console.error(
-      '[tows-ai-generate] no tool_use block. stop_reason=',
-      response.stop_reason,
-      'content:',
-      JSON.stringify(response.content).slice(0, 800),
-    )
     throw new Error('no_tool_use')
   }
 
@@ -209,12 +200,10 @@ export async function POST(
       items = await callStrategiesAI(client, prompt)
     } catch (firstErr) {
       firstReason = (firstErr as Error).message
-      console.warn('[tows-ai-generate] first attempt failed:', firstReason)
       try {
         items = await callStrategiesAI(client, prompt)
       } catch (secondErr) {
         const secondReason = (secondErr as Error).message
-        console.error('[tows-ai-generate] retry also failed:', secondReason)
         return NextResponse.json(
           {
             error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,

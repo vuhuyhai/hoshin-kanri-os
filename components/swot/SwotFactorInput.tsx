@@ -47,7 +47,6 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
         notify(safe)
       })
       .catch((err: unknown) => {
-        console.error('[SwotFactorInput] load factors failed:', err)
         toast.error(err instanceof Error ? err.message : 'Không tải được yếu tố')
       })
       .finally(() => setIsLoading(false))

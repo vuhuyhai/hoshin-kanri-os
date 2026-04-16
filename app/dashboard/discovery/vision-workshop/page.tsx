@@ -13,7 +13,7 @@ export default async function VisionWorkshopPage() {
     .from('org_members')
     .select('org_id, organizations(name, industry, headcount)')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 

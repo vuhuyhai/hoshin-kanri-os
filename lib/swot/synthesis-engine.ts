@@ -174,7 +174,6 @@ Gọi tool submit_swot_synthesis với output có cấu trúc.`,
   )
 
   if (response.stop_reason === 'max_tokens') {
-    console.error('[swot-synthesis] hit max_tokens before completing tool call')
     throw new Error('max_tokens')
   }
 
@@ -183,12 +182,6 @@ Gọi tool submit_swot_synthesis với output có cấu trúc.`,
   )
 
   if (!toolBlock) {
-    console.error(
-      '[swot-synthesis] no tool_use block. stop_reason=',
-      response.stop_reason,
-      'content:',
-      JSON.stringify(response.content).slice(0, 800),
-    )
     throw new Error('no_tool_use')
   }
 
@@ -262,7 +255,6 @@ export async function synthesizeSwot(
         throw new Error('AI synthesis timeout sau 110 giây. Vui lòng thử lại.')
       }
       firstReason = (firstErr as Error).message
-      console.warn('[swot-synthesis] first attempt failed:', firstReason)
       try {
         raw = await callSynthesisAI(client, prompt, controller.signal)
       } catch (secondErr) {
@@ -270,7 +262,6 @@ export async function synthesizeSwot(
           throw new Error('AI synthesis timeout sau 110 giây. Vui lòng thử lại.')
         }
         const secondReason = (secondErr as Error).message
-        console.error('[swot-synthesis] retry also failed:', secondReason)
         throw new Error(
           `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,
         )

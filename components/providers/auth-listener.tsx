@@ -27,7 +27,7 @@ export function AuthListener() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           supabase.from('users').upsert(userData as any, { onConflict: 'id' })
             .then(({ error }) => {
-              if (error) console.error('[auth-listener] user sync error:', error.message)
+              if (error) { /* swallow – fire-and-forget upsert */ }
             })
 
           router.refresh()

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
 import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, calculatePillarScore } from '@/lib/x-ray/questions'
 import type { OpexPillar, PillarScore, ScoreLevel, XRayResult } from '@/lib/x-ray/types'
-import type { Json } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
@@ -11,6 +10,7 @@ import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { parseBody, xRayScoreSchema, type XRayScoreInput } from '@/lib/validation'
+import { toJson } from '@/lib/utils'
 
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_SECONDS = 600
@@ -153,7 +153,6 @@ LƯU Ý:
 
     const validated = parseAndValidateAIResponse(responseText)
     if (!validated) {
-      console.error('X-Ray AI response validation failed. Raw response:', responseText)
       return NextResponse.json(
         { error: 'AI trả về kết quả không hợp lệ. Vui lòng thử lại sau ít phút.' },
         { status: 502 }
@@ -192,12 +191,10 @@ LƯU Ý:
       if (orgId) {
         markDiscoveryComplete(
           orgId, user.id, savedResultId, result
-        ).catch((err) => console.error('Failed to mark discovery:', err))
+        ).catch(() => {})
       }
     } else {
-      saveLead(companyInfo, answers, result).catch((err) =>
-        console.error('Failed to save X-Ray lead:', err)
-      )
+      saveLead(companyInfo, answers, result).catch(() => {})
     }
 
     // Send report email (fire-and-forget, don't block response)
@@ -210,9 +207,7 @@ LƯU Ý:
       pillarScores: result.pillarScores,
       topActions: result.topActions,
     })
-    sendEmail({ to: companyInfo.email, subject, html }).catch((err) =>
-      console.error('Failed to send X-Ray report email:', err)
-    )
+    sendEmail({ to: companyInfo.email, subject, html }).catch(() => {})
 
     return NextResponse.json({
       result,
@@ -243,19 +238,17 @@ async function saveXRayResult(
         user_id: userId,
         overall_score: result.overallScore,
         overall_level: result.overallLevel,
-        result_json: result as unknown as Json,
-        answers_json: answers as unknown as Json,
+        result_json: toJson(result),
+        answers_json: toJson(answers),
       })
       .select('id')
       .single()
 
     if (error) {
-      console.error('Save xray_results error:', error)
       return null
     }
     return data.id
-  } catch (err) {
-    console.error('Save xray_results exception:', err)
+  } catch {
     return null
   }
 }
@@ -274,12 +267,12 @@ async function markDiscoveryComplete(
         org_id: orgId,
         user_id: userId,
         step_completed: 'x-ray',
-        data_json: {
+        data_json: toJson({
           latestResultId: resultId,
           latestScore: result.overallScore,
           latestLevel: result.overallLevel,
           completedAt: new Date().toISOString(),
-        } as unknown as Json,
+        }),
       },
       {
         onConflict: 'org_id,user_id,step_completed',
@@ -300,13 +293,13 @@ async function saveLead(
       company_name: companyInfo.companyName,
       industry: companyInfo.industry,
       headcount: companyInfo.headcount,
-      answers_json: answers as unknown as Json,
-      result_json: result as unknown as Json,
+      answers_json: toJson(answers),
+      result_json: toJson(result),
       overall_score: result.overallScore,
       overall_level: result.overallLevel,
     })
-  } catch (err) {
-    console.error('Supabase lead save error:', err)
+  } catch {
+    // fire-and-forget — outer catch in POST handler covers critical errors
   }
 }
 

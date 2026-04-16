@@ -55,7 +55,6 @@ export function SwotFinalizeList({ analysisId, orgId, onComplete }: SwotFinalize
       // which is the correct behavior; users can edit via "Quay lại".
       onComplete()
     } catch (err) {
-      console.error('[SwotFinalizeList] persist failed:', err)
       toast.error(err instanceof Error ? err.message : 'Lỗi lưu nguyên liệu')
     } finally {
       setLoading(false)

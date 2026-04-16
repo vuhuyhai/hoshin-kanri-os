@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/client'
-import type { Json } from '@/lib/supabase/types'
+import { toJson } from '@/lib/utils'
 import type {
   ChatMessage,
   CoachingTrackerState,
@@ -269,7 +269,7 @@ async function upsertStep(
       org_id: orgId,
       user_id: userId,
       step_completed: step,
-      data_json: data as unknown as Json,
+      data_json: toJson(data),
     })
     .select('id')
     .single()
@@ -286,7 +286,7 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
 function debouncedSave(saveFn: () => Promise<void>) {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    saveFn().catch((err) => console.error('[swot-store] auto-save error:', err))
+    saveFn().catch(() => {})
   }, 2000)
 }
 

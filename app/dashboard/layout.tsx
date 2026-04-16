@@ -28,7 +28,7 @@ export default async function DashboardLayout({
     .from('org_members')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 
@@ -37,12 +37,12 @@ export default async function DashboardLayout({
       .from('organizations')
       .select('*')
       .eq('id', membership.org_id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('users')
       .select('full_name')
       .eq('id', user.id)
-      .single(),
+      .maybeSingle(),
   ])
 
   const orgName = org?.name ?? 'Công ty'

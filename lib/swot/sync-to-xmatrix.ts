@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { XMatrixData, XMatrixHoshin, SwotCellSource } from '@/lib/x-matrix/types'
-import type { Json } from '@/lib/supabase/types'
 import { LIMITS } from '@/lib/x-matrix/types'
+import { toJson, fromJson } from '@/lib/utils'
 
 export interface SyncResult {
   success: boolean
@@ -74,7 +74,7 @@ export async function syncTowsStrategiesToXMatrix(
         org_id: orgId,
         year: new Date().getFullYear(),
         title: `X-Matrix ${new Date().getFullYear()}`,
-        vision_json: { vision: '', yearGoals: [''], hoshins: [] } as unknown as Json,
+        vision_json: toJson({ vision: '', yearGoals: [''], hoshins: [] }),
         status: 'active',
       })
       .select('id, vision_json')
@@ -91,7 +91,7 @@ export async function syncTowsStrategiesToXMatrix(
   }
 
   // 3. Read existing vision_json
-  const existingData = (xMatrix.vision_json as unknown as XMatrixData) ?? {
+  const existingData = fromJson<XMatrixData>(xMatrix.vision_json) ?? {
     vision: '',
     yearGoals: [''],
     hoshins: [],
@@ -128,7 +128,7 @@ export async function syncTowsStrategiesToXMatrix(
 
   const { error: updateErr } = await supabase
     .from('x_matrices')
-    .update({ vision_json: updatedData as unknown as Json })
+    .update({ vision_json: toJson(updatedData) })
     .eq('id', xMatrix.id)
 
   if (updateErr) {

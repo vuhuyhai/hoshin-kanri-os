@@ -3,7 +3,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { getSynthesisPrompt } from '@/lib/discovery/prompts'
 import type { XMatrixPrefill } from '@/lib/discovery/types'
-import type { Json } from '@/lib/supabase/types'
+import { toJson } from '@/lib/utils'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, discoverySynthesisSchema } from '@/lib/validation'
@@ -146,9 +146,6 @@ async function callSynthesisAI(
   })
 
   if (response.stop_reason === 'max_tokens') {
-    console.error(
-      '[discovery-synthesis] hit max_tokens before completing tool call',
-    )
     throw new Error('max_tokens')
   }
 
@@ -157,12 +154,6 @@ async function callSynthesisAI(
   )
 
   if (!toolBlock) {
-    console.error(
-      '[discovery-synthesis] no tool_use block. stop_reason=',
-      response.stop_reason,
-      'content:',
-      JSON.stringify(response.content).slice(0, 800),
-    )
     throw new Error('no_tool_use')
   }
 
@@ -301,12 +292,10 @@ export async function POST(request: NextRequest) {
     prefill = await callSynthesisAI(client, prompt)
   } catch (firstErr) {
     firstReason = (firstErr as Error).message
-    console.warn('[discovery-synthesis] first attempt failed:', firstReason)
     try {
       prefill = await callSynthesisAI(client, prompt)
     } catch (secondErr) {
       const secondReason = (secondErr as Error).message
-      console.error('[discovery-synthesis] retry also failed:', secondReason)
       return NextResponse.json(
         {
           error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,
@@ -337,11 +326,11 @@ export async function POST(request: NextRequest) {
         org_id: orgId,
         user_id: user.id,
         step_completed: 'synthesis',
-        data_json: {
+        data_json: toJson({
           prefill,
           readyForXMatrix: true,
           synthesisAt: new Date().toISOString(),
-        } as unknown as Json,
+        }),
       })
 
     if (insertError) {

@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient, verifyOrgMembership } from '@/lib/supabase/server'
 import { synthesizeSwot } from '@/lib/swot/synthesis-engine'
 import type { CoachingItem, EvidenceItemV2 } from '@/lib/swot/types'
-import type { Json } from '@/lib/supabase/types'
 import { parseBody, swotSynthesisSchema } from '@/lib/validation'
+import { toJson } from '@/lib/utils'
 
 export const maxDuration = 120
 
@@ -51,13 +51,13 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('discovery_sessions').upsert({
       org_id, user_id: user.id, step_completed: 'swot_synthesis',
-      data_json: {
+      data_json: toJson({
         status: 'completed',
         completedAt: new Date().toISOString(),
         items: result.swot_items,
         stats: result.stats,
         merge_log: result.merge_log,
-      } as unknown as Json,
+      }),
     }, { onConflict: 'org_id,user_id,step_completed' })
 
     return Response.json(result)

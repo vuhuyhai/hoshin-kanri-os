@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Plus, X, Sparkles, Loader2, Check } from 'lucide-react'
 import type { SwotQuadrant } from '@/lib/swot/types'
-import type { SwotFactor, TowsQuadrant, TowsStrategyWithFactorsRecord } from '@/lib/swot/tows-types'
+import type { SwotFactor, TowsQuadrant, TowsStrategyWithFactorsRecord, StrategyStatus } from '@/lib/swot/tows-types'
 import { TOWS_CONFIG, BSC_LABELS } from '@/lib/swot/tows-types'
 import { fetchJson, postJson } from '@/lib/http/fetch-json'
 
@@ -52,7 +52,6 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
         notify(safe)
       })
       .catch((err: unknown) => {
-        console.error('[TowsCanvas] load strategies failed:', err)
         toast.error(err instanceof Error ? err.message : 'Không tải được chiến lược')
       })
       .finally(() => setIsLoading(false))
@@ -93,13 +92,13 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
     setIsGenerating(false)
   }
 
-  const handleStatusToggle = async (id: string, current: string) => {
+  const handleStatusToggle = async (id: string, current: StrategyStatus) => {
     // Canvas checkbox toggles `approved` ↔ `draft`. `in_x_matrix` is a
     // terminal state set only by the sync-xmatrix endpoint — don't mint it
     // here. Phase 3 (StrategyReviewTable) also uses `approved`, so the sync
     // button's `filter(s => s.status === 'approved')` sees rows toggled on
     // in either phase.
-    const next = current === 'approved' ? 'draft' : 'approved'
+    const next: StrategyStatus = current === 'approved' ? 'draft' : 'approved'
     const prev = strategies
     const optimistic = strategies.map((st) =>
       st.id === id ? { ...st, status: next } : st,

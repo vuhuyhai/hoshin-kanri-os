@@ -13,7 +13,7 @@ export default async function SwotStrategyPage() {
     .from('org_members')
     .select('org_id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 
@@ -23,7 +23,7 @@ export default async function SwotStrategyPage() {
     .eq('org_id', membership.org_id)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   const analysisId = existingAnalysis?.id
 

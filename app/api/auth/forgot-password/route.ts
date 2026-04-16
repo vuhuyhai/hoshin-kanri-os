@@ -69,13 +69,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       // Don't reveal whether email exists — always return success
-      console.error('[api/auth/forgot-password] generateLink error:', error.message)
       return NextResponse.json({ success: true, message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.' })
     }
 
     const supabaseLink = data.properties?.action_link
     if (!supabaseLink) {
-      console.error('[api/auth/forgot-password] No action_link in response')
       return NextResponse.json({ success: true, message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.' })
     }
 
@@ -85,7 +83,6 @@ export async function POST(request: NextRequest) {
     const type = linkUrl.searchParams.get('type') ?? 'recovery'
 
     if (!tokenHash) {
-      console.error('[api/auth/forgot-password] No token in action_link:', supabaseLink)
       return NextResponse.json({ success: true, message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.' })
     }
 
@@ -96,7 +93,7 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendEmail({ to: email, subject, html })
 
     if (emailResult.error) {
-      console.error('[api/auth/forgot-password] Email send failed:', emailResult.error)
+      // Swallow — don't reveal email existence via side-channels
     }
 
     // Always return success (don't leak user existence)
@@ -105,7 +102,6 @@ export async function POST(request: NextRequest) {
       message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.',
     })
   } catch (err) {
-    console.error('[api/auth/forgot-password] Unexpected error:', err)
     return NextResponse.json(
       { error: 'Lỗi hệ thống. Vui lòng thử lại.' },
       { status: 500 }

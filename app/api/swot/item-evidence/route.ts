@@ -8,7 +8,7 @@ import type {
   TavilyEvidenceResult,
   ItemEvidenceResponse,
 } from '@/lib/swot/types'
-import type { Json } from '@/lib/supabase/types'
+import { toJson, fromJson } from '@/lib/utils'
 
 const CACHE_TTL_DAYS = 7
 
@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
   let query: string
   try {
     query = await generateQuery(statement, quadrant, orgContext)
-  } catch (err) {
-    console.error('[item-evidence] query generation failed:', err)
+  } catch {
     return NextResponse.json({ error: 'query_generation_failed' }, { status: 500 })
   }
 
@@ -94,16 +93,15 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (cached) {
-    const results = (cached as unknown as { result_json: TavilyEvidenceResult[] }).result_json
+    const results = fromJson<TavilyEvidenceResult[]>(cached.result_json)
     return NextResponse.json<ItemEvidenceResponse>({ query, results, cached: true })
   }
 
   let results: TavilyEvidenceResult[]
   try {
     results = await searchTavily(query)
-  } catch (err) {
-    console.error('[item-evidence] tavily search failed:', err)
-    return NextResponse.json({ query, results: [], error: 'search_failed' })
+  } catch {
+    return NextResponse.json<ItemEvidenceResponse>({ query, results: [], cached: false })
   }
 
   if (results.length > 0) {
@@ -111,7 +109,7 @@ export async function POST(request: NextRequest) {
     expires.setDate(expires.getDate() + CACHE_TTL_DAYS)
     await supabase.from('evidence_cache').upsert({
       cache_key: cacheKey,
-      result_json: results as unknown as Json,
+      result_json: toJson(results),
       expires_at: expires.toISOString(),
     })
   }

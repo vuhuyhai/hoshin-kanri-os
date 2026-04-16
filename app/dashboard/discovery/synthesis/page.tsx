@@ -13,7 +13,7 @@ export default async function SynthesisPage() {
     .from('org_members')
     .select('org_id, organizations(name, industry, city, headcount)')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 

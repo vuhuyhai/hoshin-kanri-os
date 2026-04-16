@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import type { OrgContext, CoachingSummary, ContextCardsOutput } from '@/lib/swot/types'
+import type { ContextCardsOutput } from '@/lib/swot/types'
+import type { SwotContextCardsInput } from '@/lib/validation/schemas'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, swotContextCardsSchema } from '@/lib/validation'
@@ -38,7 +39,7 @@ OUTPUT: Chỉ JSON hợp lệ, không markdown.
 `
 
 function buildContextCardsUserPrompt(
-  orgContext: OrgContext,
+  orgContext: SwotContextCardsInput['orgContext'],
   coachingSummary: string
 ): string {
   return `
@@ -79,8 +80,7 @@ export async function POST(request: NextRequest) {
 
     const parsed = await parseBody(request, swotContextCardsSchema)
     if (!parsed.ok) return parsed.response
-    const summary = parsed.data.summary as unknown as CoachingSummary
-    const orgContext = parsed.data.orgContext as unknown as OrgContext
+    const { summary, orgContext } = parsed.data
 
     const coachingSummary = [
       'Điểm mạnh: ' + summary.strengths.map((s) => s.content).join('; '),

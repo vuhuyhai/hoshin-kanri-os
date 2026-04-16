@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { calcCompleteness } from '@/lib/x-matrix/utils'
 import type { XMatrixData } from '@/lib/x-matrix/types'
 import type { HoshinCandidate } from '@/lib/swot/types'
+import { fromJson } from '@/lib/utils'
 
 function inferUnit(name: string): string {
   const l = name.toLowerCase()
@@ -36,7 +37,7 @@ export async function GET() {
       .maybeSingle()
 
     if (activeXMatrix?.vision_json) {
-      const vData = activeXMatrix.vision_json as unknown as XMatrixData
+      const vData = fromJson<XMatrixData>(activeXMatrix.vision_json)
       if (vData.hoshins && vData.hoshins.length > 0) {
         return NextResponse.json({
           hasPrefill: true,
@@ -59,10 +60,10 @@ export async function GET() {
       return NextResponse.json({ hasPrefill: false, data: null })
     }
 
-    const sessionData = strategySession.data_json as unknown as {
+    const sessionData = fromJson<{
       hoshin_candidates?: HoshinCandidate[]
       ai_recommendation?: string
-    } | null
+    } | null>(strategySession.data_json)
 
     const candidates = sessionData?.hoshin_candidates ?? []
     const selected = candidates.filter((c) => c.selected)
@@ -71,10 +72,10 @@ export async function GET() {
       return NextResponse.json({ hasPrefill: false, data: null })
     }
 
-    const visionData = visionSession?.data_json as unknown as {
+    const visionData = fromJson<{
       vision?: string
       year_goals?: string[]
-    } | null
+    } | null>(visionSession?.data_json)
 
     const legacyData: XMatrixData = {
       vision: visionData?.vision ?? '',

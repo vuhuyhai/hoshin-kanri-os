@@ -129,7 +129,6 @@ async function callDraftAI(
   })
 
   if (response.stop_reason === 'max_tokens') {
-    console.error('[coaching-draft] AI hit max_tokens before completing tool call')
     throw new Error('max_tokens')
   }
 
@@ -138,12 +137,6 @@ async function callDraftAI(
   )
 
   if (!toolBlock) {
-    console.error(
-      '[coaching-draft] No tool_use block in response. stop_reason=',
-      response.stop_reason,
-      'content:',
-      JSON.stringify(response.content).slice(0, 800),
-    )
     throw new Error('no_tool_use')
   }
 
@@ -161,11 +154,6 @@ async function callDraftAI(
 
   if (errors.length > 0) {
     const summary = errors.join(', ')
-    console.error(
-      '[coaching-draft] quadrant validation failed:', summary,
-      '\nkeys:', Object.keys(parsed ?? {}),
-      '\npreview:', JSON.stringify(parsed).slice(0, 1500),
-    )
     throw new Error(`invalid_quadrants: ${summary}`)
   }
 
@@ -194,13 +182,11 @@ export async function POST(request: NextRequest) {
       aiResult = await callDraftAI(client, prompt)
     } catch (firstErr) {
       firstReason = (firstErr as Error).message
-      console.warn('[coaching-draft] first attempt failed:', firstReason)
       // Retry once on any parse/validation/truncation failure
       try {
         aiResult = await callDraftAI(client, prompt)
       } catch (secondErr) {
         const secondReason = (secondErr as Error).message
-        console.error('[coaching-draft] retry also failed:', secondReason)
         return NextResponse.json(
           {
             error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,

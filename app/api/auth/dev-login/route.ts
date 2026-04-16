@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// DEV ONLY — auto-login without email verification
-// Remove this file before deploying to production
+// DEV ONLY — auto-login without email verification.
+// Gated by ENABLE_DEV_LOGIN env var (only set in .env.local, never in Vercel).
 export async function GET(request: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.ENABLE_DEV_LOGIN !== 'true') {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
 

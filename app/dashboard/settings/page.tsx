@@ -13,7 +13,7 @@ export default async function SettingsPage() {
     .from('org_members')
     .select('org_id, role')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
 
@@ -21,7 +21,7 @@ export default async function SettingsPage() {
     .from('organizations')
     .select('name, industry, headcount, city')
     .eq('id', membership.org_id)
-    .single()
+    .maybeSingle()
 
   if (!org) redirect('/onboarding/setup-org')
 

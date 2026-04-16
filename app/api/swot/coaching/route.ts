@@ -20,7 +20,6 @@ import {
 import type {
   CoachingResponse,
   CoachingTrackerState,
-  OrgContext,
   CoachingContext,
 } from '@/lib/swot/types'
 import { parseBody, swotCoachingSchema } from '@/lib/validation'
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (!bodyParsed.ok) return bodyParsed.response
     const body = bodyParsed.data
     const messages = body.messages
-    const orgContext = body.orgContext as unknown as OrgContext
+    const orgContext = body.orgContext
     const currentFramework = body.currentFramework
     const coachingTracker = body.coachingTracker as
       | CoachingTrackerState
