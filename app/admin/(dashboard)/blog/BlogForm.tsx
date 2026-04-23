@@ -305,7 +305,7 @@ export function BlogForm({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+          <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
             Tiêu đề
           </label>
           <input
@@ -327,7 +327,7 @@ export function BlogForm({
           )}
         </div>
         <div>
-          <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+          <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
             Trạng thái
           </label>
           <select
@@ -343,7 +343,7 @@ export function BlogForm({
       </div>
 
       <div>
-        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+        <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
           Danh mục
         </label>
         <select
@@ -365,7 +365,7 @@ export function BlogForm({
           </p>
         )}
         {categories.length === 0 && (
-          <p className="mt-1 font-body text-[11px] text-text-3">
+          <p className="mt-1 font-body text-sm text-text-2">
             Chưa có danh mục nào. Tạo danh mục tại{' '}
             <a
               href="/admin/blog/categories"
@@ -379,14 +379,14 @@ export function BlogForm({
       </div>
 
       <div>
-        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+        <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
           Tags (tuỳ chọn, tối đa 10)
         </label>
         {tagIds.map((id) => (
           <input key={id} type="hidden" name="tag_ids" value={id} />
         ))}
         {tags.length === 0 ? (
-          <p className="mt-1 font-body text-[11px] text-text-3">
+          <p className="mt-1 font-body text-sm text-text-2">
             Chưa có tag nào. Tạo tag tại{' '}
             <a
               href="/admin/blog/tags"
@@ -427,7 +427,7 @@ export function BlogForm({
       </div>
 
       <div>
-        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+        <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
           Slug (URL)
         </label>
         <div className="mt-2 flex items-stretch">
@@ -456,7 +456,7 @@ export function BlogForm({
       </div>
 
       <div>
-        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+        <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
           Tóm tắt
         </label>
         <textarea
@@ -469,7 +469,7 @@ export function BlogForm({
           className="mt-2 w-full border-[3px] border-ink bg-bg-warm px-4 py-3 font-body text-[15px] text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
           placeholder="Mô tả ngắn 1-2 câu, hiển thị trên card listing và thẻ meta description."
         />
-        <p className="mt-1 font-body text-[11px] text-text-3">
+        <p className="mt-1 font-body text-sm text-text-2">
           {excerpt.length}/400 ký tự
         </p>
         {fieldErrors.excerpt && (
@@ -480,7 +480,7 @@ export function BlogForm({
       </div>
 
       <div>
-        <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+        <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
           Ảnh bìa (tuỳ chọn)
         </label>
         <div className="mt-2 flex items-stretch gap-0">
@@ -518,7 +518,7 @@ export function BlogForm({
           className="hidden"
           onChange={handleFileChange}
         />
-        <p className="mt-1 font-body text-[11px] text-text-3">
+        <p className="mt-1 font-body text-sm text-text-2">
           PNG, JPG, WEBP hoặc GIF. Tối đa 5 MB.
         </p>
         {coverUrl && (
@@ -538,7 +538,7 @@ export function BlogForm({
 
       <div>
         <div className="flex items-center justify-between">
-          <label className="block font-display text-[11px] font-bold uppercase tracking-wider text-ink">
+          <label className="block font-display text-sm font-bold uppercase tracking-wider text-ink">
             Nội dung
           </label>
           <button
@@ -660,7 +660,7 @@ export function BlogForm({
               className="w-full border-[3px] border-ink bg-bg-warm px-4 py-3 font-mono text-[14px] leading-relaxed text-ink focus:outline-none focus:shadow-[5px_5px_0_#c73937]"
               placeholder={`# Tiêu đề H1\n\nMột đoạn mở đầu...\n\n## Mục lớn\n\n### Mục nhỏ\n\n- Gạch đầu dòng\n- **Đậm**, *nghiêng*, <u>gạch chân</u>\n\n> Trích dẫn\n\nPhím tắt: Ctrl+B đậm • Ctrl+I nghiêng • Ctrl+U gạch chân • Ctrl+K link`}
             />
-            <p className="mt-1 font-body text-[11px] text-text-3">
+            <p className="mt-1 font-body text-sm text-text-2">
               Bôi đen văn bản rồi bấm nút toolbar hoặc dùng phím tắt. Hỗ trợ
               Markdown và thẻ HTML (vd. <code>&lt;u&gt;</code> cho gạch chân).
             </p>

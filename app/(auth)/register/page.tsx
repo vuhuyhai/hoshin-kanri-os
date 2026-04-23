@@ -151,7 +151,7 @@ export default function RegisterPage() {
 function FieldGroup({ label, id, error, children }: { label: string; id: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="font-display text-xs font-semibold uppercase tracking-wider">{label}</Label>
+      <Label htmlFor={id} className="font-display text-sm font-bold uppercase tracking-wider">{label}</Label>
       {children}
       {error && <p className="font-body text-xs text-red-600">{error}</p>}
     </div>

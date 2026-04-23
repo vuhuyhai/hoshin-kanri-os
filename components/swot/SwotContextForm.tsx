@@ -49,9 +49,9 @@ interface SwotContextFormProps {
   onComplete: () => void
 }
 
-const LABEL = 'font-body font-bold uppercase text-xs tracking-wider text-ink mb-1.5 block'
-const INPUT = 'w-full border-2 border-ink bg-white px-3 py-2.5 font-display text-[15px] text-ink placeholder:text-text-3/60 focus:outline-none focus:shadow-[3px_3px_0_#2C2B2B] transition-shadow'
-const HINT = 'font-display text-xs text-text-3 italic'
+const LABEL = 'font-body font-bold uppercase text-sm tracking-wider text-ink mb-1.5 block'
+const INPUT = 'w-full border-2 border-ink bg-white px-3 py-2.5 font-display text-[15px] text-ink placeholder:text-text-3/70 focus:outline-none focus:shadow-[3px_3px_0_#2C2B2B] transition-shadow'
+const HINT = 'font-display text-sm text-text-2 italic'
 
 function GroupHeader({ icon, title }: { icon: string; title: string }) {
   return (

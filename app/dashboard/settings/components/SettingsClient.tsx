@@ -113,7 +113,7 @@ export function SettingsClient({
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider">
+            <label className="text-sm font-bold uppercase tracking-wider">
               Tên công ty
             </label>
             <Input
@@ -123,7 +123,7 @@ export function SettingsClient({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider">
+            <label className="text-sm font-bold uppercase tracking-wider">
               Ngành
             </label>
             <Input
@@ -134,7 +134,7 @@ export function SettingsClient({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider">
+              <label className="text-sm font-bold uppercase tracking-wider">
                 Quy mô
               </label>
               <Input
@@ -146,7 +146,7 @@ export function SettingsClient({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider">
+              <label className="text-sm font-bold uppercase tracking-wider">
                 Thành phố
               </label>
               <Input

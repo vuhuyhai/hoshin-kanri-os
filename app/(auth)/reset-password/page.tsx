@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="font-display text-xs font-semibold uppercase tracking-wider">Email</Label>
+            <Label htmlFor="email" className="font-display text-sm font-bold uppercase tracking-wider">Email</Label>
             <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} autoComplete="email" className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base" />
             {error && <p className="font-body text-xs text-red-600">{error}</p>}
           </div>

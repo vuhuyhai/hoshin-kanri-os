@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
           <div className="space-y-2">
             <Label
               htmlFor="email"
-              className="font-display text-xs font-semibold uppercase tracking-wider"
+              className="font-display text-sm font-bold uppercase tracking-wider"
             >
               Email
             </Label>
@@ -86,7 +86,7 @@ export default function AdminLoginPage() {
           <div className="space-y-2">
             <Label
               htmlFor="password"
-              className="font-display text-xs font-semibold uppercase tracking-wider"
+              className="font-display text-sm font-bold uppercase tracking-wider"
             >
               Mật khẩu
             </Label>

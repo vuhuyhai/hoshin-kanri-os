@@ -130,7 +130,7 @@ export default function LienHePage() {
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               {/* Họ và tên */}
               <div>
-                <label htmlFor="name" className="block font-display text-xs font-bold uppercase tracking-wider text-ink mb-2">
+                <label htmlFor="name" className="block font-display text-sm font-bold uppercase tracking-wider text-ink mb-2">
                   Họ và tên <span className="text-accent-brand">*</span>
                 </label>
                 <input
@@ -144,7 +144,7 @@ export default function LienHePage() {
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block font-display text-xs font-bold uppercase tracking-wider text-ink mb-2">
+                <label htmlFor="email" className="block font-display text-sm font-bold uppercase tracking-wider text-ink mb-2">
                   Email doanh nghiệp <span className="text-accent-brand">*</span>
                 </label>
                 <input
@@ -158,7 +158,7 @@ export default function LienHePage() {
 
               {/* Tên công ty */}
               <div>
-                <label htmlFor="company" className="block font-display text-xs font-bold uppercase tracking-wider text-ink mb-2">
+                <label htmlFor="company" className="block font-display text-sm font-bold uppercase tracking-wider text-ink mb-2">
                   Tên công ty
                 </label>
                 <input
@@ -171,7 +171,7 @@ export default function LienHePage() {
 
               {/* Chủ đề */}
               <div>
-                <label htmlFor="subject" className="block font-display text-xs font-bold uppercase tracking-wider text-ink mb-2">
+                <label htmlFor="subject" className="block font-display text-sm font-bold uppercase tracking-wider text-ink mb-2">
                   Chủ đề
                 </label>
                 <select
@@ -190,7 +190,7 @@ export default function LienHePage() {
 
               {/* Nội dung */}
               <div>
-                <label htmlFor="message" className="block font-display text-xs font-bold uppercase tracking-wider text-ink mb-2">
+                <label htmlFor="message" className="block font-display text-sm font-bold uppercase tracking-wider text-ink mb-2">
                   Nội dung <span className="text-accent-brand">*</span>
                 </label>
                 <textarea

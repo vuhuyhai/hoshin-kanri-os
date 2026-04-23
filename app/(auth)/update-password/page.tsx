@@ -73,7 +73,7 @@ export default function UpdatePasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="font-display text-xs font-semibold uppercase tracking-wider">Mật khẩu mới</Label>
+            <Label htmlFor="password" className="font-display text-sm font-bold uppercase tracking-wider">Mật khẩu mới</Label>
             <div className="relative">
               <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Tối thiểu 8 ký tự" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} autoComplete="new-password" className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base pr-11" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-3 hover:text-ink" tabIndex={-1} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
@@ -84,7 +84,7 @@ export default function UpdatePasswordPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword" className="font-display text-xs font-semibold uppercase tracking-wider">Xác nhận mật khẩu</Label>
+            <Label htmlFor="confirmPassword" className="font-display text-sm font-bold uppercase tracking-wider">Xác nhận mật khẩu</Label>
             <Input id="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Nhập lại mật khẩu mới" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} autoComplete="new-password" className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base" />
             {errors.confirmPassword && <p className="font-body text-xs text-red-600">{errors.confirmPassword}</p>}
           </div>

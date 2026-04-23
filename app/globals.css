@@ -46,7 +46,7 @@
   /* Neo-Brutalism colors */
   --color-ink: #2C2B2B;
   --color-text-2: #5A5757;
-  --color-text-3: #8A8787;
+  --color-text-3: #6B6868;
   --color-accent-brand: #c73937;
   --color-accent-dark: #9e1f1e;
   --color-bg-warm: #F7F5F2;
@@ -124,7 +124,7 @@
      Use var(--brand) in utility classes, var(--primary) in components. */
   --ink: #2C2B2B;
   --text-2: #5A5757;
-  --text-3: #8A8787;
+  --text-3: #6B6868;
   --brand: #c73937;
   --brand-dark: #9e1f1e;
   --bg: #F7F5F2;
@@ -469,6 +469,25 @@ main > * {
   .badge-accent { background: var(--accent);   color: var(--white); }
   .badge-ink    { background: var(--ink);      color: var(--white); }
   .badge-muted  { background: var(--bg-muted); color: var(--ink);   }
+
+  /* Field label — neobrutalism uppercase label, sized ≥ body */
+  .field-label {
+    font-family: var(--font-display);
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.25;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+
+  /* Field hint / description / helper text — AA contrast on warm bg */
+  .field-hint {
+    font-family: var(--font-body);
+    font-size: 0.875rem; /* 14px, matches body at min-size */
+    line-height: 1.45;
+    color: var(--text-2); /* #5A5757 — 6.2:1 on bg-warm, passes WCAG AA */
+  }
 }
 
 /* ============================================================
