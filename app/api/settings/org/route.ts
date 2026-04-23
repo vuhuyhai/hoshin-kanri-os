@@ -29,6 +29,24 @@ export async function POST(request: NextRequest) {
     // Use service role to bypass RLS for atomic org + member creation
     const adminDb = createAdminClient()
 
+    // Ensure public.users row exists before org_members FK check.
+    // Trigger handle_new_user may have missed pre-011 users; callback upsert
+    // is skipped for password logins. Self-heal here.
+    const { error: userUpsertError } = await adminDb
+      .from('users')
+      .upsert(
+        {
+          id: user.id,
+          email: user.email!,
+          full_name: user.user_metadata?.full_name ?? null,
+          phone: user.user_metadata?.phone ?? null,
+        },
+        { onConflict: 'id' },
+      )
+
+    if (userUpsertError)
+      return NextResponse.json({ error: 'Lỗi thiết lập tài khoản' }, { status: 500 })
+
     const { data: org, error: orgError } = await adminDb
       .from('organizations')
       .insert({ name, industry, headcount, city })
