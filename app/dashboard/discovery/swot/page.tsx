@@ -60,7 +60,7 @@ export default async function SwotPage() {
   }
 
   return (
-    <div className="w-full h-full min-h-0">
+    <div className="w-full h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-4rem)] min-h-0 overflow-hidden">
       <SwotWorkshopFlow
         orgData={{
           industry: org.industry,
