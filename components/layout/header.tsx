@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Menu, Bell, Sun, Moon } from 'lucide-react'
+import { Menu, Sun, Moon } from 'lucide-react'
 
 /** Map pathname segments to Vietnamese page titles */
 const PAGE_TITLE_MAP: Record<string, string> = {
@@ -95,17 +95,8 @@ export function Header({
         <PageTitle />
       </div>
 
-      {/* Right side: bell + theme toggle + avatar */}
+      {/* Right side: theme toggle + avatar */}
       <div className="flex items-center gap-3 px-4 lg:px-6">
-        {/* Notification bell */}
-        <button
-          className="relative flex h-9 w-9 items-center justify-center"
-          aria-label="Thông báo"
-        >
-          <Bell className="w-5 h-5 text-text-2" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-accent-brand" />
-        </button>
-
         {/* Dark mode toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -124,8 +115,16 @@ export function Header({
 
         {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-9 w-9 items-center justify-center bg-accent-brand text-white font-display font-bold text-sm">
-            {initials}
+          <DropdownMenuTrigger
+            aria-label={`Mở menu tài khoản của ${userName || userEmail}`}
+            className="flex h-9 items-center gap-2 border-2 border-ink bg-bg-warm pl-1 pr-2 shadow-brutal-sm btn-brutal hover:shadow-brutal-md focus:outline-none"
+          >
+            <span className="flex h-7 w-7 items-center justify-center bg-accent-brand text-white font-display font-bold text-xs">
+              {initials}
+            </span>
+            <span className="hidden font-display text-sm font-semibold text-ink md:inline">
+              {userName || userEmail.split('@')[0]}
+            </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
