@@ -225,6 +225,22 @@
 ::-webkit-scrollbar-track { background: var(--bg-muted); }
 ::-webkit-scrollbar-thumb { background: var(--ink); }
 
+/* Chat panels — chunkier neobrutalist scrollbar */
+.chat-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-muted);
+  border-left: 1px solid var(--ink);
+}
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+}
+.chat-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) var(--bg-muted);
+}
+
 /* ============================================================
    NEO-BRUTALISM UTILITY CLASSES
    ============================================================ */

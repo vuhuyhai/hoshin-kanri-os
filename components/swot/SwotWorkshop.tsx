@@ -145,10 +145,10 @@ export function SwotWorkshop({ orgId, onComplete }: SwotWorkshopProps) {
       </div>
 
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        <div className={`min-h-0 lg:w-[45%] lg:flex lg:border-r-2 lg:border-ink ${tab === 'chat' ? 'flex w-full' : 'hidden'}`}>
+        <div className={`h-full min-h-0 lg:w-[45%] lg:flex lg:border-r-2 lg:border-ink ${tab === 'chat' ? 'flex w-full' : 'hidden'}`}>
           <SwotWorkshopChat orgId={orgId} onAddIngredient={handleChatAdd} />
         </div>
-        <div className={`min-h-0 lg:w-[55%] lg:block overflow-y-auto p-4 ${tab === 'panel' ? 'block w-full' : 'hidden'}`}>
+        <div className={`h-full min-h-0 lg:w-[55%] lg:block overflow-y-auto p-4 ${tab === 'panel' ? 'block w-full' : 'hidden'}`}>
           {isDrafting && (
             <div className="mb-4 border-2 border-ink bg-bg-warm p-3 shadow-[3px_3px_0_#2C2B2B] font-display text-sm text-text-2 animate-pulse">
               AI đang tạo bản nháp SWOT...

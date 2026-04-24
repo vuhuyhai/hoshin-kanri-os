@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
@@ -33,6 +33,11 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
   const [loading, setLoading] = useState(false)
   const [extractText, setExtractText] = useState('')
   const [extractQuadrant, setExtractQuadrant] = useState<SwotQuadrant>('S')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages.length, loading])
 
   const sendMessages = async (msgs: ChatMessage[]) => {
     if (!contextData) return
@@ -79,8 +84,8 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
   }
 
   return (
-    <div className="flex flex-col w-full h-full bg-white">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+    <div className="flex flex-col w-full h-full max-h-full min-h-0 bg-white">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-h-0 chat-scrollbar">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] border-2 border-ink p-3 shadow-[3px_3px_0_#2C2B2B] ${m.role === 'user' ? 'bg-ink text-white' : 'bg-bg-warm text-ink'}`}>
@@ -98,9 +103,10 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t-2 border-ink bg-bg-warm p-3 space-y-2">
+      <div className="flex-shrink-0 border-t-2 border-ink bg-bg-warm p-3 space-y-2">
         <div className="flex items-center gap-2">
           <input
             value={extractText}
