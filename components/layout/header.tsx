@@ -62,10 +62,6 @@ export function Header({
   const { theme, setTheme } = useTheme()
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const initials = (userName || userEmail.split('@')[0])
-    .slice(0, 2)
-    .toUpperCase()
-
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -117,14 +113,9 @@ export function Header({
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={`Mở menu tài khoản của ${userName || userEmail}`}
-            className="flex h-9 items-center gap-2 border-2 border-ink bg-bg-warm pl-1 pr-2 shadow-brutal-sm btn-brutal hover:shadow-brutal-md focus:outline-none"
+            className="flex h-9 items-center justify-center border-2 border-ink bg-accent-brand px-3 font-display text-sm font-bold uppercase tracking-wider text-white shadow-brutal-sm btn-brutal hover:shadow-brutal-md focus:outline-none"
           >
-            <span className="flex h-7 w-7 items-center justify-center bg-accent-brand text-white font-display font-bold text-xs">
-              {initials}
-            </span>
-            <span className="hidden font-display text-sm font-semibold text-ink md:inline">
-              {userName || userEmail.split('@')[0]}
-            </span>
+            {userName || userEmail.split('@')[0]}
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
