@@ -34,16 +34,12 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
   const [extractText, setExtractText] = useState('')
   const [extractQuadrant, setExtractQuadrant] = useState<SwotQuadrant>('S')
 
-  const handleSend = async () => {
-    const text = input.trim()
-    if (!text || loading || !contextData) return
-    const next = [...messages, { role: 'user' as const, content: text }]
-    setMessages(next)
-    setInput('')
+  const sendMessages = async (msgs: ChatMessage[]) => {
+    if (!contextData) return
     setLoading(true)
     try {
       const res = await postJson<CoachingResponse>('/api/swot/coaching', {
-        messages: next,
+        messages: msgs,
         orgContext: {
           orgId,
           orgName: 'Doanh nghiệp',
@@ -53,13 +49,26 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
         },
         currentFramework: 'sw',
       })
-      setMessages([...next, res.message])
+      setMessages([...msgs, res.message])
     } catch (err) {
-      const msg = err instanceof FetchJsonError ? err.message : 'Lỗi kết nối AI'
-      toast.error(msg)
+      const msg = err instanceof FetchJsonError
+        ? err.message
+        : 'Không thể kết nối AI coach. Thử lại.'
+      toast.error(msg, {
+        action: { label: 'Thử lại', onClick: () => { void sendMessages(msgs) } },
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSend = async () => {
+    const text = input.trim()
+    if (!text || loading || !contextData) return
+    const next: ChatMessage[] = [...messages, { role: 'user', content: text }]
+    setMessages(next)
+    setInput('')
+    await sendMessages(next)
   }
 
   const handleExtractAdd = () => {

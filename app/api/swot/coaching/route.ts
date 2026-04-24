@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropicClient } from '@/lib/ai/client'
+import { classifyAIError } from '@/lib/ai/classify-error'
 import {
   getSwCoachingSystemPrompt,
   getOtCoachingSystemPrompt,
@@ -138,11 +139,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Coaching API error:', error)
-    return NextResponse.json(
-      { error: 'Khong the ket noi AI coach. Thu lai.' },
-      { status: 500 }
-    )
+    console.error('[coaching] error:', error)
+    const classified = classifyAIError(error, 'AI coach')
+    return NextResponse.json(classified, { status: classified.status })
   }
 }
 

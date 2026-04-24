@@ -8,7 +8,7 @@ import { useSwotStore } from '@/lib/swot/swot-session-store'
 import { SwotIngredientPanel } from './SwotIngredientPanel'
 import { SwotItemEvidenceDrawer } from './SwotItemEvidenceDrawer'
 import { SwotWorkshopChat } from './SwotWorkshopChat'
-import { postJson } from '@/lib/http/fetch-json'
+import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
 import type { SwotIngredient, SwotQuadrant } from '@/lib/swot/types'
 import type {
   SwotContextInput,
@@ -74,8 +74,14 @@ export function SwotWorkshop({ orgId, onComplete }: SwotWorkshopProps) {
         ...draft.threats.map((i) => toIngredient(i, 'T')),
       ])
       toast.success('AI đã tạo bản nháp SWOT')
-    } catch {
-      toast.error('Không thể tạo bản nháp. Hãy tự thêm nguyên liệu.')
+    } catch (err) {
+      console.error('[swot-workshop] draft error:', err)
+      const msg = err instanceof FetchJsonError
+        ? err.message
+        : 'Không thể tạo bản nháp. Hãy tự thêm nguyên liệu.'
+      toast.error(msg, {
+        action: { label: 'Thử lại', onClick: () => { void generateDraft() } },
+      })
     } finally {
       setIsDrafting(false)
     }

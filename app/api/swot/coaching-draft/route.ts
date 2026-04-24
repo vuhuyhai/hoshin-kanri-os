@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropicClient } from '@/lib/ai/client'
+import { classifyAIError } from '@/lib/ai/classify-error'
 import {
   getDraftSystemPrompt,
   buildDraftUserPrompt,
@@ -177,19 +178,20 @@ export async function POST(request: NextRequest) {
     const prompt = buildDraftUserPrompt(body)
 
     let aiResult: RawDraftOutput
-    let firstReason = ''
     try {
       aiResult = await callDraftAI(client, prompt)
     } catch (firstErr) {
-      firstReason = (firstErr as Error).message
-      // Retry once on any parse/validation/truncation failure
+      if (!isRecoverableDraftError(firstErr)) throw firstErr
+      const firstReason = (firstErr as Error).message
       try {
         aiResult = await callDraftAI(client, prompt)
       } catch (secondErr) {
+        if (!isRecoverableDraftError(secondErr)) throw secondErr
         const secondReason = (secondErr as Error).message
         return NextResponse.json(
           {
-            error: `AI trả về định dạng không hợp lệ (${secondReason}). Thử lại.`,
+            error: 'AI tạo bản nháp chưa đạt định dạng. Thử lại sau ít phút.',
+            code: 'invalid_output',
             debug: { firstReason, secondReason },
           },
           { status: 500 }
@@ -208,11 +210,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(draft)
   } catch (error) {
-    console.error('Coaching draft API error:', error)
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Không thể kết nối AI. Vui lòng thử lại.'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[coaching-draft] error:', error)
+    const classified = classifyAIError(error, 'AI')
+    return NextResponse.json(classified, { status: classified.status })
   }
+}
+
+function isRecoverableDraftError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const msg = err.message
+  return (
+    msg === 'max_tokens' ||
+    msg === 'no_tool_use' ||
+    msg.startsWith('invalid_quadrants:')
+  )
 }
