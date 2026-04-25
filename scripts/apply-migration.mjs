@@ -1,10 +1,18 @@
 #!/usr/bin/env node
-// Apply a single migration file to the linked Supabase project via
-// the Management API. Avoids needing the Supabase CLI or the raw DB
+// Apply a single SQL file to the linked Supabase project via the
+// Management API. Avoids needing the Supabase CLI or the raw DB
 // password — only a Personal Access Token is required.
+//
+// Resolution rules (auto-detected from filename):
+//   - Matches /^[0-9]{3}_/  → supabase/migrations/<file>      (ordered migration)
+//   - Otherwise             → supabase/manual-scripts/<file>  (one-off, NOT tracked)
+//
+// Manual-scripts are intentionally NOT recorded anywhere as "applied"
+// — they're idempotent or one-shot ops, not part of schema history.
 //
 // Usage:
 //   SUPABASE_ACCESS_TOKEN=sbp_xxx node scripts/apply-migration.mjs 022_blog_posts.sql
+//   SUPABASE_ACCESS_TOKEN=sbp_xxx node scripts/apply-migration.mjs reset_agency_marfit.sql
 //
 // Get a token at https://supabase.com/dashboard/account/tokens
 // Project ref is read from NEXT_PUBLIC_SUPABASE_URL in .env.local.
@@ -63,21 +71,25 @@ const projectRef = match[1]
 
 const fileName = process.argv[2]
 if (!fileName) {
-  console.error('ERROR: missing migration filename argument')
-  console.error('Usage: node scripts/apply-migration.mjs 022_blog_posts.sql')
+  console.error('ERROR: missing filename argument')
+  console.error('Usage: node scripts/apply-migration.mjs <NNN_name.sql | manual_name.sql>')
   process.exit(1)
 }
 
-const migrationPath = join(ROOT, 'supabase', 'migrations', fileName)
-if (!existsSync(migrationPath)) {
-  console.error(`ERROR: migration not found at ${migrationPath}`)
+const isOrderedMigration = /^[0-9]{3}_/.test(fileName)
+const subdir = isOrderedMigration ? 'migrations' : 'manual-scripts'
+const filePath = join(ROOT, 'supabase', subdir, fileName)
+if (!existsSync(filePath)) {
+  console.error(`ERROR: file not found at ${filePath}`)
   process.exit(1)
 }
 
-const sql = readFileSync(migrationPath, 'utf8')
+const sql = readFileSync(filePath, 'utf8')
+const kind = isOrderedMigration ? 'migration' : 'manual-script'
 
 console.log(`→ Project:   ${projectRef}`)
-console.log(`→ Migration: ${fileName}`)
+console.log(`→ Kind:      ${kind}`)
+console.log(`→ File:      supabase/${subdir}/${fileName}`)
 console.log(`→ Size:      ${sql.length} bytes`)
 console.log()
 
