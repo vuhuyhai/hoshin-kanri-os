@@ -32,12 +32,22 @@ BEGIN
 
   -- Resolve org_id qua org_members. Yêu cầu duy nhất 1 org để tránh
   -- xoá nhầm dữ liệu của org khác mà user đang là member.
-  SELECT COUNT(*), MAX(org_id) INTO _org_count, _org_id
+  -- UUID không support MAX() → phải đếm trước, lấy org_id sau.
+  SELECT COUNT(*) INTO _org_count
   FROM org_members WHERE user_id = _user_id;
+
   IF _org_count = 0 THEN
-    RAISE EXCEPTION 'User % không thuộc org nào (org_members rỗng)', _user_id;
+    RAISE EXCEPTION 'User % has no organization', _email;
   ELSIF _org_count > 1 THEN
-    RAISE EXCEPTION 'User % thuộc % orgs — script yêu cầu duy nhất 1 org', _user_id, _org_count;
+    RAISE EXCEPTION 'User % belongs to % orgs, refusing to reset (specify org_id manually)', _email, _org_count;
+  END IF;
+
+  -- Sau khi đảm bảo count = 1 → lấy org_id
+  SELECT org_id INTO _org_id
+  FROM org_members WHERE user_id = _user_id LIMIT 1;
+
+  IF _org_id IS NULL THEN
+    RAISE EXCEPTION 'org_id resolved to NULL for user % (defensive guard)', _email;
   END IF;
 
   RAISE NOTICE '[RESOLVE] user_id=%, org_id=%', _user_id, _org_id;
