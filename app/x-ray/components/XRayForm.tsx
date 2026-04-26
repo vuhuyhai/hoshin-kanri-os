@@ -34,7 +34,9 @@ export function XRayForm() {
   const [showTransition, setShowTransition] = useState(false)
   const [savedSuccessfully, setSavedSuccessfully] = useState<boolean | undefined>(undefined)
 
-  // Restore progress from localStorage, or result from sessionStorage
+  // External-system sync: hydrate from sessionStorage/localStorage on mount.
+  // Browser-only APIs unavailable during SSR, so useEffect is required here.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       // If a completed result exists in sessionStorage, restore it
@@ -72,6 +74,7 @@ export function XRayForm() {
       // Ignore parse errors
     }
   }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Save progress to localStorage
   useEffect(() => {

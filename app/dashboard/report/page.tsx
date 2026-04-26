@@ -72,13 +72,24 @@ export default function ReportPage() {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
+  const [prevMonth, setPrevMonth] = useState(selectedMonth)
+
+  // Reset loading state synchronously when month changes — avoids cascading
+  // render from setIsLoading(true) inside the fetch effect (React docs:
+  // "Adjusting state on prop change").
+  if (prevMonth !== selectedMonth) {
+    setPrevMonth(selectedMonth)
+    setIsLoading(true)
+    setReport(null)
+  }
 
   useEffect(() => {
-    setIsLoading(true)
+    let cancelled = false
     fetchJson<{ report: MonthlyReportData }>(`/api/report/monthly?month=${selectedMonth}`)
-      .then(({ report: data }) => setReport(data))
-      .catch(() => toast.error('Không thể tải báo cáo'))
-      .finally(() => setIsLoading(false))
+      .then(({ report: data }) => { if (!cancelled) setReport(data) })
+      .catch(() => { if (!cancelled) toast.error('Không thể tải báo cáo') })
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+    return () => { cancelled = true }
   }, [selectedMonth])
 
   const handlePrint = () => {
