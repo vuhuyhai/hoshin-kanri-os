@@ -255,6 +255,7 @@ export async function synthesizeSwot(
         throw new Error('AI synthesis timeout sau 110 giây. Vui lòng thử lại.')
       }
       firstReason = (firstErr as Error).message
+      console.warn('[synthesis] first attempt failed, retrying:', firstReason)
       try {
         raw = await callSynthesisAI(client, prompt, controller.signal)
       } catch (secondErr) {

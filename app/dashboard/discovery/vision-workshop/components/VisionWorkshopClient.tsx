@@ -13,7 +13,6 @@ interface VisionWorkshopClientProps {
     industry: string
     headcount: string
   }
-  orgId: string
   existingData: {
     answers?: VisionAnswers
     draft?: VisionDraft
@@ -24,7 +23,6 @@ interface VisionWorkshopClientProps {
 
 export function VisionWorkshopClient({
   orgContext,
-  orgId,
   existingData,
 }: VisionWorkshopClientProps) {
   const [stage, setStage] = useState<WorkshopStage>(
@@ -75,8 +73,6 @@ export function VisionWorkshopClient({
 
       {stage === 'editor' && draft && (
         <VisionEditor
-          orgId={orgId}
-          orgContext={orgContext}
           answers={answers}
           draft={draft}
           initialVision={existingData?.finalVision ?? draft.visionStatement}

@@ -124,6 +124,7 @@ export async function POST(
       result = await callQualityAI(client, prompt)
     } catch (firstErr) {
       const firstReason = (firstErr as Error).message
+      console.warn('[quality-check] first attempt failed, retrying:', firstReason)
       try {
         result = await callQualityAI(client, prompt)
       } catch (secondErr) {

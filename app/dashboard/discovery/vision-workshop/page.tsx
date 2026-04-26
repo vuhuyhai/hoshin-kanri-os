@@ -49,7 +49,6 @@ export default async function VisionWorkshopPage() {
           industry: org.industry,
           headcount: org.headcount,
         }}
-        orgId={membership.org_id}
         existingData={existingSession?.data_json as {
           answers?: Record<string, string>
           draft?: { visionStatement: string; yearGoals: string[]; timeframe: string }

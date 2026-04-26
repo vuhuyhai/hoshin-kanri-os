@@ -59,7 +59,8 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
 
   const toggleId = (set: Set<string>, id: string) => {
     const next = new Set(set)
-    next.has(id) ? next.delete(id) : next.add(id)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
     return next
   }
 

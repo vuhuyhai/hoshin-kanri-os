@@ -11,8 +11,6 @@ import type { VisionAnswers, VisionDraft } from '@/lib/discovery/types'
 import { postJson } from '@/lib/http/fetch-json'
 
 interface VisionEditorProps {
-  orgId: string
-  orgContext: { orgName: string; industry: string; headcount: string }
   answers: VisionAnswers
   draft: VisionDraft
   initialVision: string
@@ -21,8 +19,6 @@ interface VisionEditorProps {
 }
 
 export function VisionEditor({
-  orgId,
-  orgContext,
   answers,
   draft,
   initialVision,
