@@ -156,7 +156,7 @@ export function useSynthesisEngine(orgContext: OrgContext, analysisId: string, o
         toast.success('SWOT đã lưu. Chuyển sang Strategy.')
         router.push('/dashboard/discovery/swot/strategy')
       }
-    } catch (err) {
+    } catch {
       toast.error('Không thể lưu. Thử lại.')
     } finally {
       setIsSaving(false)

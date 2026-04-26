@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Search, RefreshCcw, ExternalLink, Globe, Calendar, Plus, Check } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
-import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
+import { postJson } from '@/lib/http/fetch-json'
 import type { TavilyEvidenceResult, ItemEvidenceResponse } from '@/lib/swot/types'
 
 interface SwotItemEvidenceDrawerProps {

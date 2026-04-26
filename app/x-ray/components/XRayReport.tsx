@@ -258,8 +258,6 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
     })
   }
 
-  const scoreColor = getScoreColor(result.overallScore)
-
   return (
     <>
       <style>{`

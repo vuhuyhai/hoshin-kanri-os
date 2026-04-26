@@ -42,7 +42,6 @@ export function streamClaudeJson<TParsed, TFinal = TParsed>(
   opts: StreamJsonOptions<TParsed, TFinal>,
 ): Response {
   const encoder = new TextEncoder()
-  const tag = opts.tag ?? 'streamClaudeJson'
 
   const stream = new ReadableStream({
     async start(controller) {

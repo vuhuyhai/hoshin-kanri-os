@@ -5,7 +5,7 @@ import type {
   CoachingContext,
   ExternalFrameworkChoice,
 } from './types'
-import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS, COACHING_QUESTION_BANK } from './frameworks'
+import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS } from './frameworks'
 import type { XRaySeedContext } from './xray-to-swot-mapper'
 
 // ============================================================

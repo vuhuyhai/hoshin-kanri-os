@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { PILLAR_ORDER, OPEX_PILLARS, getQuestionsForPillar } from '@/lib/x-ray/questions'
+import { PILLAR_ORDER, OPEX_PILLARS } from '@/lib/x-ray/questions'
 import type { XRayFormState, CompanyInfo, XRayResult } from '@/lib/x-ray/types'
 import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
 import { XRayProgress } from './XRayProgress'

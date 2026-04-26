@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       emailSent: true,
       message: 'Đã gửi email xác nhận',
     })
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Lỗi hệ thống. Vui lòng thử lại.' },
       { status: 500 }

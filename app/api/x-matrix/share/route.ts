@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .maybeSingle()
 
-    if (!xMatrix) {
+    if (error || !xMatrix) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 

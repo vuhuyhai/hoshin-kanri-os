@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.',
     })
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Lỗi hệ thống. Vui lòng thử lại.' },
       { status: 500 }
