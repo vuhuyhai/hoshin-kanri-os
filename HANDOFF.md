@@ -733,6 +733,21 @@ Khi Claude mới vào session:
     - Lint baseline: 1 error → 0 errors. 15 warnings còn lại scope P2.1 (mostly `no-unused-vars`)
   - **Plans archive cleanup 2026-04-26**: ✅ shipped (commit `bb9ecd8`). Move `plans/fix-email-verification.md` (đã ship qua `app/api/auth/register/route.ts` + `forgot-password/route.ts`) và `plans/20260411-fix-swot-synthesis-pipeline/` (4 files, đã ship qua commits `e5dd4d1`, `daf38bf`, `557778e`, `71f8860`) vào `plans/_archive/shipped-2026-04-26/`. Tạo [plans/README.md](plans/README.md) với convention.
     - Pattern lesson: Khi plan ship xong, MOVE vào `_archive/shipped-YYYY-MM-DD/` thay vì xóa. Giữ git blame history (git nhận đúng `renamed:`, không phải delete + add). Update `plans/README.md` status.
+  - **AI rate-limit Phase 1 2026-04-26**: ✅ shipped (commit `a8d5e58`). 12 authed AI routes giờ có per-user rate-limit:
+    - Helper mới: `lib/ai/rate-limit-helper.ts` (42 dòng) — wrap `checkRateLimit`, key `ai:${bucket}:${userId}`, 429 + `Retry-After` header
+    - Defaults: 50 calls / 300s / user
+    - Buckets: `swot` (8 routes, 50/5min), `discovery` (3 streaming routes, 50/5min), `admin/hoshin-explorer` (100/5min)
+    - Streaming routes: check XẢY RA TRƯỚC khi mở SSE (tránh waste Anthropic call)
+    - Admin route: check ĐẶT SAU super-admin verify (tiết kiệm DB call cho non-admin)
+    - Pattern lesson: helper return `{ ok: true } | { ok: false; response }` discriminated union → route handler chỉ cần 2 dòng. Pattern này nên reuse cho các cross-cutting concern khác (audit log, feature flag, etc.)
+    - Verify: `npm run typecheck` PASS local, Vercel auto-deploy succeed
+  - **Lint zero baseline 2026-04-26**: ✅ shipped (3 commits: `14f84b9`, `62b2783`, `cbcbc46`). Lint 15 warnings → 0 warnings, 0 errors. Lần đầu tiên dự án có clean lint baseline.
+    - Commit `14f84b9`: 9 unused vars/imports + fix `app/api/x-matrix/share/route.ts` error path (silent fail bug — `if (!xMatrix)` → `if (error || !xMatrix)`)
+    - Commit `62b2783`: 5 warnings — TowsCanvas ternary→if/else, retry logging cho quality-check + synthesis-engine (`console.warn('[<route>] first attempt failed, retrying:', firstReason)`), drill-up xóa dead props `orgId/orgContext` qua VisionEditor → VisionWorkshopClient → page.tsx
+    - Commit `cbcbc46`: XMatrixWizard `react-hooks/exhaustive-deps` — thêm `searchParams` vào deps array. Safe by construction nhờ `started.current` ref guard sẵn có (re-run = no-op). KHÔNG dùng `eslint-disable-next-line` (precedent SynthesisClient `bb9ecd8` thuộc rule khác).
+    - Pattern lesson 1: Lint warning `unused-vars` trên Supabase destructure (`const { data, error }`) thường không phải lint vô hại — báo hiệu **error path không handle**. Đáng audit toàn repo: `Select-String -Path "app/**/*.ts" -Pattern "data:.*error.*=.*await supabase"` (đã chạy 2026-04-26, không match thêm).
+    - Pattern lesson 2: Khi xóa dead props từ component, GREP call site trước — drill-up có thể tạo ripple warning ở parent component (như VisionEditor → VisionWorkshopClient → page.tsx).
+    - Pattern lesson 3: `react-hooks/exhaustive-deps` warning ≠ luôn cần `eslint-disable`. Nếu effect đã có ref guard (`started.current`), thêm dep vào array là cách sạch nhất — re-run = no-op.
 
 ---
 
