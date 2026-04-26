@@ -6,6 +6,7 @@ import type { SwotDraft, ConflictCheckResult, ConflictIssue, QuadrantKey } from 
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, swotConflictCheckSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 const VALID_QUADRANTS: QuadrantKey[] = ['strengths', 'weaknesses', 'opportunities', 'threats']
 
@@ -27,6 +28,9 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    if (!rl.ok) return rl.response
 
     const bodyParsed = await parseBody(request, swotConflictCheckSchema)
     if (!bodyParsed.ok) return bodyParsed.response

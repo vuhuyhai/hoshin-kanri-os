@@ -24,6 +24,7 @@ import type {
   CoachingContext,
 } from '@/lib/swot/types'
 import { parseBody, swotCoachingSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    if (!rl.ok) return rl.response
 
     const bodyParsed = await parseBody(request, swotCoachingSchema)
     if (!bodyParsed.ok) return bodyParsed.response

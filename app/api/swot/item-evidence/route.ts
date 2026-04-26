@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { AI_MODELS } from '@/lib/ai/models'
 import { parseBody, swotItemEvidenceSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 import type {
   TavilyEvidenceResult,
   ItemEvidenceResponse,
@@ -76,6 +77,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+  if (!rl.ok) return rl.response
 
   let query: string
   try {

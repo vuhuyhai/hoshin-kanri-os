@@ -12,6 +12,7 @@ import { buildTowsPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, generateStrategySchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 export const maxDuration = 120
 
@@ -136,6 +137,9 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    if (!rl.ok) return rl.response
 
     const parsed = await parseBody(req, generateStrategySchema)
     if (!parsed.ok) return parsed.response

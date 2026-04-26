@@ -9,6 +9,7 @@ import type { SwotQuadrant } from '@/lib/swot/types'
 import { buildQualityCheckPrompt } from '@/lib/swot/tows-prompts'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 interface QualityAssessment {
   score: number
@@ -98,6 +99,9 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    if (!rl.ok) return rl.response
 
     const { data: factor } = await supabase
       .from('swot_factors')

@@ -9,6 +9,7 @@ import { toJson } from '@/lib/utils'
 import { AI_MODELS } from '@/lib/ai/models'
 import { streamClaudeJson } from '@/lib/ai/stream-json'
 import { parseBody, painMapperSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser()
   if (!user)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const rl = await requireAiRateLimit(user.id, { bucket: 'discovery', limit: 50 })
+  if (!rl.ok) return rl.response
 
   const body = await parseBody(request, painMapperSchema)
   if (!body.ok) return body.response

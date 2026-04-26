@@ -6,6 +6,7 @@ import { findConceptById, HK_SYSTEM_PROMPT } from '@/lib/admin/hoshin-explorer-d
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, hoshinExplorerSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 export interface HKExplorerContent {
   level1: string
@@ -32,6 +33,9 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     const isSuperAdmin = profile?.is_super_admin === true
     if (!isSuperAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const rl = await requireAiRateLimit(user.id, { bucket: 'admin', limit: 100 })
+    if (!rl.ok) return rl.response
 
     const bodyParsed = await parseBody(request, hoshinExplorerSchema)
     if (!bodyParsed.ok) return bodyParsed.response

@@ -13,6 +13,7 @@ import type {
   AnalysisFramework,
 } from '@/lib/swot/coaching-types'
 import { parseBody, swotSuggestMoreSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 interface RawSuggestItem {
   statement: string
@@ -68,6 +69,9 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    if (!rl.ok) return rl.response
 
     const parsed = await parseBody(request, swotSuggestMoreSchema)
     if (!parsed.ok) return parsed.response

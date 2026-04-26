@@ -7,6 +7,7 @@ import { toJson } from '@/lib/utils'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, discoverySynthesisSchema } from '@/lib/validation'
+import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
 export const maxDuration = 120
 
@@ -197,6 +198,9 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser()
   if (!user)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const rl = await requireAiRateLimit(user.id, { bucket: 'discovery', limit: 50 })
+  if (!rl.ok) return rl.response
 
   const bodyParsed = await parseBody(request, discoverySynthesisSchema)
   if (!bodyParsed.ok) return bodyParsed.response
