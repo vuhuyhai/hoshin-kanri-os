@@ -781,6 +781,10 @@ export type Database = {
         Row: {
           ai_generated: boolean
           ai_prompt_used: string | null
+          actions: Json | null
+          kpi_suggestions: Json | null
+          timeframe: string | null
+          rationale: string | null
           bsc_perspective: string
           combined_code: string
           created_at: string
@@ -801,6 +805,10 @@ export type Database = {
         Insert: {
           ai_generated?: boolean
           ai_prompt_used?: string | null
+          actions?: Json | null
+          kpi_suggestions?: Json | null
+          timeframe?: string | null
+          rationale?: string | null
           bsc_perspective?: string
           combined_code: string
           created_at?: string
@@ -821,6 +829,10 @@ export type Database = {
         Update: {
           ai_generated?: boolean
           ai_prompt_used?: string | null
+          actions?: Json | null
+          kpi_suggestions?: Json | null
+          timeframe?: string | null
+          rationale?: string | null
           bsc_perspective?: string
           combined_code?: string
           created_at?: string
