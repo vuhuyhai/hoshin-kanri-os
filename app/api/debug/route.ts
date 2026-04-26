@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
+  if (process.env.ENABLE_DEBUG_ROUTE !== 'true') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -355,42 +355,7 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
   })
   const started = useRef(false)
 
-  // Auto-run on mount
-  useEffect(() => {
-    if (!started.current) {
-      started.current = true
-      runSynthesis()
-    }
-  }, [])
-
-  // Cycle progress messages while running
-  useEffect(() => {
-    if (status !== 'running') return
-    let idx = 0
-    const interval = setInterval(() => {
-      idx = (idx + 1) % PROGRESS_MESSAGES.length
-      setProgressMsg(PROGRESS_MESSAGES[idx])
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [status])
-
-  // Fire synthesis_viewed once when result flips to 'done' with data.
-  // Ref guard prevents double-fire from StrictMode effect replay.
-  const viewedFired = useRef(false)
-  useEffect(() => {
-    if (status !== 'done' || !prefill || viewedFired.current) return
-    viewedFired.current = true
-    const itemsCount =
-      (prefill.hoshinCandidates?.length ?? 0) +
-      (prefill.initiatives?.length ?? 0) +
-      (prefill.kpiSuggestions?.length ?? 0)
-    trackSynthesisViewed({
-      itemsCount,
-      hasWarnings: (prefill.warnings ?? []).length > 0,
-    })
-  }, [status, prefill])
-
-  const runSynthesis = async () => {
+  const runSynthesis = useCallback(async () => {
     setStatus('running')
     setProgressMsg(PROGRESS_MESSAGES[0])
 
@@ -457,7 +422,49 @@ export function SynthesisClient({ orgId, orgContext }: SynthesisClientProps) {
       setStatus('error')
       toast.error(error instanceof Error ? error.message : 'Không thể tổng hợp. Thử lại.')
     }
-  }
+  }, [orgId, orgContext])
+
+  // Auto-run on mount
+  useEffect(() => {
+    // Guard: prevents StrictMode double-effect, and from refiring if runSynthesis
+    // ref changes (e.g. if parent is later refactored to Client Component).
+    // Do NOT remove without replacing with AbortController to prevent duplicate API calls.
+    if (!started.current) {
+      started.current = true
+      // Auto-run pattern: started.current guard prevents double-fire (StrictMode +
+      // runSynthesis ref change). Pre-existing UX intent — synthesis runs immediately
+      // on mount, no manual trigger button. Same precedent: XRayForm.tsx:45 (commit a7363cd).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      runSynthesis()
+    }
+  }, [runSynthesis])
+
+  // Cycle progress messages while running
+  useEffect(() => {
+    if (status !== 'running') return
+    let idx = 0
+    const interval = setInterval(() => {
+      idx = (idx + 1) % PROGRESS_MESSAGES.length
+      setProgressMsg(PROGRESS_MESSAGES[idx])
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [status])
+
+  // Fire synthesis_viewed once when result flips to 'done' with data.
+  // Ref guard prevents double-fire from StrictMode effect replay.
+  const viewedFired = useRef(false)
+  useEffect(() => {
+    if (status !== 'done' || !prefill || viewedFired.current) return
+    viewedFired.current = true
+    const itemsCount =
+      (prefill.hoshinCandidates?.length ?? 0) +
+      (prefill.initiatives?.length ?? 0) +
+      (prefill.kpiSuggestions?.length ?? 0)
+    trackSynthesisViewed({
+      itemsCount,
+      hasWarnings: (prefill.warnings ?? []).length > 0,
+    })
+  }, [status, prefill])
 
   if (status === 'running') {
     return <SynthesisLoading message={progressMsg} />
