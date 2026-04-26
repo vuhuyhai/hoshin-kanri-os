@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, X, Sparkles, Loader2, Check } from 'lucide-react'
+import { Plus, X, Sparkles, Loader2, Check, ChevronDown, ChevronUp, Target, Calendar, Lightbulb } from 'lucide-react'
 import type { SwotQuadrant } from '@/lib/swot/types'
 import type { SwotFactor, TowsQuadrant, TowsStrategyWithFactorsRecord, StrategyStatus } from '@/lib/swot/tows-types'
 import { TOWS_CONFIG, BSC_LABELS } from '@/lib/swot/tows-types'
@@ -27,6 +27,11 @@ const BSC_COLORS: Record<string, { color: string; bg: string }> = {
   process: { color: '#7c3aed', bg: '#ede9fe' },
   learning: { color: '#d97706', bg: '#fef3c7' },
 }
+const TIMEFRAME_LABELS: Record<string, { label: string; color: string }> = {
+  '30d': { label: '30 ngày', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+  '60d': { label: '60 ngày', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  '90d': { label: '90 ngày', color: 'bg-rose-100 text-rose-700 border-rose-300' },
+}
 const LAYOUT: TowsQuadrant[] = ['SO', 'WO', 'ST', 'WT']
 
 export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
@@ -36,6 +41,16 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
   const [selectedOtIds, setSelectedOtIds] = useState<Set<string>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const notify = useCallback((s: TowsStrategyWithFactorsRecord[]) => onStrategiesChange(s), [onStrategiesChange])
 
@@ -180,23 +195,148 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
                 <p className="text-[11px] text-ink/40 text-center py-4">Chưa có chiến lược</p>
               ) : quadStrategies.map((s) => {
                 const bsc = BSC_COLORS[s.bsc_perspective] ?? BSC_COLORS.finance
+                const tf = s.timeframe ? TIMEFRAME_LABELS[s.timeframe] : null
+                const isExpanded = expandedIds.has(s.id)
+                const hasV2Data =
+                  s.timeframe ||
+                  s.rationale ||
+                  (s.actions && s.actions.length > 0) ||
+                  (s.kpi_suggestions && s.kpi_suggestions.length > 0)
+
                 return (
-                  <div key={s.id} className="border-b border-ink/15 px-3 py-2">
-                    <div className="flex items-start gap-2">
-                      <span className="shrink-0 text-[9px] px-1.5 py-0.5 font-bold border" style={{ color: bsc.color, background: bsc.bg, borderColor: bsc.color }}>
-                        {BSC_LABELS[s.bsc_perspective as keyof typeof BSC_LABELS]}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        {s.strategy_title && <p className="text-sm font-bold font-display leading-tight">{s.strategy_title}</p>}
-                        <p className="text-[11px] text-ink/70 font-body">{s.strategy_statement}</p>
+                  <div key={s.id} className="border-b border-ink/15">
+                    <div className="px-3 py-2">
+                      <div className="flex items-start gap-2">
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 border rounded font-display whitespace-nowrap"
+                          style={{ color: bsc.color, background: bsc.bg, borderColor: bsc.color }}
+                        >
+                          {BSC_LABELS[s.bsc_perspective as keyof typeof BSC_LABELS] ?? 'Tài chính'}
+                        </span>
+                        {tf && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 border rounded font-display whitespace-nowrap ${tf.color}`}
+                            title="Hoshin timeframe"
+                          >
+                            <Calendar className="w-2.5 h-2.5 inline mr-0.5" />
+                            {tf.label}
+                          </span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          {s.strategy_title && (
+                            <p className="text-sm font-bold font-display leading-tight">
+                              {s.strategy_title}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-ink/70 font-body">
+                            {s.strategy_statement}
+                          </p>
+                        </div>
+                        {hasV2Data && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(s.id)}
+                            className="p-0.5 hover:bg-ink/10 rounded shrink-0"
+                            title={isExpanded ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5 text-ink/60" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-ink/60" />
+                            )}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleStatusToggle(s.id, s.status)}
+                          className={`w-4 h-4 border-2 border-ink shrink-0 flex items-center justify-center ${
+                            s.status === 'in_x_matrix' || s.status === 'approved'
+                              ? 'bg-blue-400'
+                              : 'bg-white'
+                          }`}
+                          title={
+                            s.status === 'in_x_matrix'
+                              ? 'Đã vào X-Matrix'
+                              : s.status === 'approved'
+                                ? 'Bỏ duyệt'
+                                : 'Duyệt'
+                          }
+                        >
+                          {(s.status === 'in_x_matrix' || s.status === 'approved') && (
+                            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                          )}
+                        </button>
                       </div>
-                      <button onClick={() => handleStatusToggle(s.id, s.status)}
-                        className="shrink-0 size-5 border-2 border-ink flex items-center justify-center"
-                        style={{ background: s.status === 'in_x_matrix' ? '#1d4ed8' : 'white' }}
-                        title="Vào X-Matrix">
-                        {s.status === 'in_x_matrix' && <Check className="size-3 text-white" />}
-                      </button>
                     </div>
+
+                    {isExpanded && hasV2Data && (
+                      <div className="px-3 pb-2 pt-1 bg-ink/5 border-t border-ink/10 space-y-2">
+                        {s.rationale && (
+                          <div className="flex gap-1.5">
+                            <Lightbulb className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold font-display text-ink/80 uppercase tracking-wide">
+                                Vital signal
+                              </p>
+                              <p className="text-[11px] text-ink/70 font-body italic leading-snug">
+                                {s.rationale}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {s.actions && s.actions.length > 0 && (
+                          <div className="flex gap-1.5">
+                            <Target className="w-3 h-3 text-blue-600 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold font-display text-ink/80 uppercase tracking-wide mb-0.5">
+                                Hành động
+                              </p>
+                              <ul className="space-y-1">
+                                {s.actions.map((a, idx) => (
+                                  <li key={idx} className="text-[11px] text-ink/70 font-body leading-snug flex gap-1">
+                                    <span className="text-ink/40 shrink-0">{idx + 1}.</span>
+                                    <span className="flex-1">
+                                      {a.description}
+                                      {a.owner_hint && (
+                                        <span className="ml-1 text-[10px] text-ink/50 font-display">
+                                          — {a.owner_hint}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+
+                        {s.kpi_suggestions && s.kpi_suggestions.length > 0 && (
+                          <div className="flex gap-1.5">
+                            <Sparkles className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold font-display text-ink/80 uppercase tracking-wide mb-0.5">
+                                KPI gợi ý
+                              </p>
+                              <ul className="space-y-1">
+                                {s.kpi_suggestions.map((k, idx) => (
+                                  <li key={idx} className="text-[11px] text-ink/70 font-body leading-snug">
+                                    <span className="font-bold font-display text-ink/80">{k.name}</span>
+                                    <span className="text-ink/50">
+                                      {' — '}{k.target_value} {k.unit} / {
+                                        k.frequency === 'daily' ? 'ngày' :
+                                        k.frequency === 'weekly' ? 'tuần' :
+                                        'tháng'
+                                      }
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
