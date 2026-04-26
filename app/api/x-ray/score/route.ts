@@ -16,6 +16,7 @@ const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_SECONDS = 600
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID()
   try {
     const ip = getClientIp(request.headers)
     const rl = await checkRateLimit({
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: `Bạn đã chạy X-Ray quá nhiều lần. Vui lòng thử lại sau ${Math.ceil(retryAfter / 60)} phút.`,
+          requestId,
         },
         { status: 429, headers: { 'Retry-After': String(retryAfter) } }
       )
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     if (Object.keys(answers).length < X_RAY_QUESTIONS.length) {
       return NextResponse.json(
-        { error: 'Chưa trả lời đủ câu hỏi' },
+        { error: 'Chưa trả lời đủ câu hỏi', requestId },
         { status: 400 }
       )
     }
@@ -142,7 +144,7 @@ LƯU Ý:
 
     const message = await client.messages.create({
       model: AI_MODELS.reasoning,
-      max_tokens: 2500,
+      max_tokens: 8000,
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -153,8 +155,9 @@ LƯU Ý:
 
     const validated = parseAndValidateAIResponse(responseText)
     if (!validated) {
+      console.error(`[X-Ray] [${requestId}] AI response validation returned null`)
       return NextResponse.json(
-        { error: 'AI trả về kết quả không hợp lệ. Vui lòng thử lại sau ít phút.' },
+        { error: 'AI trả về kết quả không hợp lệ. Vui lòng thử lại sau ít phút.', requestId },
         { status: 502 }
       )
     }
@@ -215,9 +218,9 @@ LƯU Ý:
       savedSuccessfully: !!savedResultId,
     })
   } catch (error) {
-    console.error('X-Ray scoring error:', error)
+    console.error(`[X-Ray] [${requestId}] scoring error:`, error)
     return NextResponse.json(
-      { error: 'Không thể phân tích kết quả. Vui lòng thử lại.' },
+      { error: 'Không thể phân tích kết quả. Vui lòng thử lại.', requestId },
       { status: 500 }
     )
   }
@@ -331,36 +334,89 @@ function parseAndValidateAIResponse(responseText: string): {
   pillarScores: PillarScore[]
   topActions: string[]
 } | null {
-  const cleanJson = responseText.replace(/```json|```/g, '').trim()
+  const stripped = responseText.replace(/```json|```/g, '').trim()
+  const firstBrace = stripped.indexOf('{')
+  const lastBrace = stripped.lastIndexOf('}')
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+    console.error('[X-Ray] No JSON object found in AI response')
+    return null
+  }
+  const cleanJson = stripped.slice(firstBrace, lastBrace + 1)
 
   let parsed: unknown
   try {
     parsed = JSON.parse(cleanJson)
-  } catch {
+  } catch (err) {
+    console.error('[X-Ray] JSON parse failed. Raw (first 2000 chars):', responseText.slice(0, 2000))
+    console.error('[X-Ray] JSON parse error:', err)
     return null
   }
 
-  if (!parsed || typeof parsed !== 'object') return null
+  if (!parsed || typeof parsed !== 'object') {
+    console.error('[X-Ray] Parsed JSON is not an object')
+    return null
+  }
   const r = parsed as Record<string, unknown>
 
-  if (typeof r.overallScore !== 'number' || !Number.isFinite(r.overallScore)) return null
+  if (typeof r.overallScore !== 'number' || !Number.isFinite(r.overallScore)) {
+    console.error('[X-Ray] overallScore missing or not a finite number:', r.overallScore)
+    return null
+  }
   const overallScore = Math.max(0, Math.min(100, Math.round(r.overallScore)))
 
-  if (!isScoreLevel(r.overallLevel)) return null
-  if (typeof r.executiveSummary !== 'string' || r.executiveSummary.trim().length === 0) return null
+  if (!isScoreLevel(r.overallLevel)) {
+    console.error('[X-Ray] overallLevel invalid:', r.overallLevel)
+    return null
+  }
+  if (typeof r.executiveSummary !== 'string' || r.executiveSummary.trim().length === 0) {
+    console.error('[X-Ray] executiveSummary missing or empty')
+    return null
+  }
 
-  if (!Array.isArray(r.pillarScores) || r.pillarScores.length !== PILLAR_ORDER.length) return null
+  if (!Array.isArray(r.pillarScores) || r.pillarScores.length !== PILLAR_ORDER.length) {
+    console.error(
+      `[X-Ray] pillarScores length wrong: got ${
+        Array.isArray(r.pillarScores) ? r.pillarScores.length : 'not-array'
+      }, expected ${PILLAR_ORDER.length}`,
+    )
+    return null
+  }
   const pillarScores: PillarScore[] = []
-  for (const p of r.pillarScores) {
-    if (!p || typeof p !== 'object') return null
+  for (let i = 0; i < r.pillarScores.length; i++) {
+    const p = r.pillarScores[i]
+    if (!p || typeof p !== 'object') {
+      console.error(`[X-Ray] pillarScores[${i}] not an object`)
+      return null
+    }
     const pp = p as Record<string, unknown>
-    if (!isOpexPillar(pp.pillar)) return null
-    if (typeof pp.label !== 'string' || pp.label.trim().length === 0) return null
-    if (typeof pp.icon !== 'string') return null
-    if (typeof pp.score !== 'number' || !Number.isFinite(pp.score)) return null
-    if (!isScoreLevel(pp.level)) return null
-    if (typeof pp.summary !== 'string' || pp.summary.trim().length === 0) return null
-    if (typeof pp.topIssue !== 'string' || pp.topIssue.trim().length === 0) return null
+    if (!isOpexPillar(pp.pillar)) {
+      console.error(`[X-Ray] pillarScores[${i}].pillar invalid:`, pp.pillar)
+      return null
+    }
+    if (typeof pp.label !== 'string' || pp.label.trim().length === 0) {
+      console.error(`[X-Ray] pillarScores[${i}].label missing/empty`)
+      return null
+    }
+    if (typeof pp.icon !== 'string') {
+      console.error(`[X-Ray] pillarScores[${i}].icon not a string`)
+      return null
+    }
+    if (typeof pp.score !== 'number' || !Number.isFinite(pp.score)) {
+      console.error(`[X-Ray] pillarScores[${i}].score not a finite number:`, pp.score)
+      return null
+    }
+    if (!isScoreLevel(pp.level)) {
+      console.error(`[X-Ray] pillarScores[${i}].level invalid:`, pp.level)
+      return null
+    }
+    if (typeof pp.summary !== 'string' || pp.summary.trim().length === 0) {
+      console.error(`[X-Ray] pillarScores[${i}].summary missing/empty`)
+      return null
+    }
+    if (typeof pp.topIssue !== 'string' || pp.topIssue.trim().length === 0) {
+      console.error(`[X-Ray] pillarScores[${i}].topIssue missing/empty`)
+      return null
+    }
     pillarScores.push({
       pillar: pp.pillar,
       label: pp.label,
@@ -372,11 +428,17 @@ function parseAndValidateAIResponse(responseText: string): {
     })
   }
 
-  if (!Array.isArray(r.topActions)) return null
+  if (!Array.isArray(r.topActions)) {
+    console.error('[X-Ray] topActions not an array')
+    return null
+  }
   const topActions = r.topActions.filter(
     (a): a is string => typeof a === 'string' && a.trim().length > 0
   )
-  if (topActions.length === 0) return null
+  if (topActions.length === 0) {
+    console.error('[X-Ray] topActions empty after filter')
+    return null
+  }
 
   return {
     overallScore,

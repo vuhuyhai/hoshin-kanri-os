@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { PILLAR_ORDER, OPEX_PILLARS, getQuestionsForPillar } from '@/lib/x-ray/questions'
 import type { XRayFormState, CompanyInfo, XRayResult } from '@/lib/x-ray/types'
-import { postJson } from '@/lib/http/fetch-json'
+import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
 import { XRayProgress } from './XRayProgress'
 import { QuestionStep } from './QuestionStep'
 import { EmailCaptureStep } from './EmailCaptureStep'
@@ -147,10 +147,21 @@ export function XRayForm() {
 
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
-      const message =
+      const baseMsg =
         error instanceof Error ? error.message : 'Có lỗi xảy ra'
+      const requestId =
+        error instanceof FetchJsonError &&
+        error.body &&
+        typeof error.body === 'object' &&
+        'requestId' in error.body &&
+        typeof (error.body as { requestId: unknown }).requestId === 'string'
+          ? (error.body as { requestId: string }).requestId
+          : null
+      const message = requestId
+        ? `${baseMsg} (Mã: ${requestId.slice(0, 8)})`
+        : baseMsg
       setState((prev) => ({ ...prev, isLoading: false, error: message }))
-      toast.error(message)
+      toast.error(message, { duration: 10000 })
     }
   }
 
