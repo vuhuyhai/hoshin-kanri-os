@@ -59,7 +59,7 @@ export function XMatrixWizard({ orgId, members }: XMatrixWizardProps) {
         /* Fail silently — user fills manually */
       })
       .finally(() => setIsLoadingPrefill(false))
-  }, [])
+  }, [searchParams])
 
   const goTo = (s: WizardStep) => {
     setStep(s)
