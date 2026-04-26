@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import type { AnalysisFramework } from '@/lib/swot/coaching-types'
 
@@ -18,7 +18,7 @@ function buildMessages(frameworks: AnalysisFramework[]): string[] {
 }
 
 export function SwotLoadingState({ selectedFrameworks }: SwotLoadingStateProps) {
-  const messages = useRef(buildMessages(selectedFrameworks)).current
+  const [messages] = useState(() => buildMessages(selectedFrameworks))
   const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
