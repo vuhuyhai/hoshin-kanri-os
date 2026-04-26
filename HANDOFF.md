@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-25
+> **Last verified**: 2026-04-26
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -696,7 +696,7 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-25)
+## 16. Current State Snapshot (2026-04-26)
 
 - **Last migration applied**: `028_backfill_public_users.sql`
 - **API routes count**: 39
@@ -707,8 +707,19 @@ Khi Claude mới vào session:
 - **Latest feature work**: blog CMS với preview tokens, categories, tags, RSS, newsletter subscribe
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
+  - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
+    - Bumped `max_tokens` 2500 → 8000
+    - Robust JSON extraction (`indexOf('{')` → `lastIndexOf('}')`) to defend against AI preamble
+    - Added `requestId` (crypto.randomUUID) threaded through ALL error responses (429/400/502/500) for log correlation
+    - Per-failure-reason `console.error` logs in `parseAndValidateAIResponse` (previously silent on validation null)
+    - Frontend: `toast.error` duration 4s → 10s + appended `requestId` to error message for user-reportable error code
+    - Pattern lesson: Vietnamese token density (~1.5 chars/token) means output limits inherited from English-prompt designs are often too tight. When schema expanded (e.g., 5 → 7 pillars), bump output budget proportionally.
   - **Migration gap at 007, 008**: ✅ investigated 2026-04-25 — clean skip, never existed in git history. Schema continuity verified. No action needed.
-  - 6 lint errors trong `app/x-ray/components/XRayForm.tsx` + `app/dashboard/report/components/ReportClient.tsx` (setState-in-effect, React 19 anti-pattern, không block build)
+  - **Lint cleanup 2026-04-26**: ✅ Original "6 errors" claim was incorrect. Actual scope was 2 setState-in-effect errors:
+    - `app/x-ray/components/XRayForm.tsx:45` — fixed via `eslint-disable react-hooks/set-state-in-effect` (false positive: external-system sync from sessionStorage/localStorage, SSR-incompatible APIs)
+    - `app/dashboard/report/page.tsx:77` (note: file is `page.tsx`, NOT `ReportClient.tsx` as previously documented) — fixed via canonical React 19 "Adjusting state on prop change" pattern (useState + setState-during-render). Bonus: added `cancelled` flag for race-condition guard on rapid month switches.
+    - Fix commit: `a7363cd`
+    - 1 unrelated lint error remaining: `SynthesisClient.tsx:362` (`react-hooks/immutability` — runSynthesis accessed before declared, pre-existing)
   - **createAdminClient audit 2026-04-25**: ✅ 3 sites spot-checked (blog/_actions.ts, x-ray/score/route.ts, settings/org/route.ts). All PASS. Patterns: (1) requireSuperAdmin() helper defense-in-depth cho admin actions, (2) server-derived keys + INSERT-only semantics cho public routes, (3) schema không cho client pass orgId cho authed mutations.
   - **AI routes cost risk**: 9 authed AI routes không có per-user rate limit (swot/coaching, swot/coaching-draft, swot/suggest-more, swot/conflict-check, swot/context-cards, swot/item-evidence, swot-analyses/[id]/strategies/ai-generate, discovery/pain-mapper, discovery/vision-draft, discovery/synthesis, admin/hoshin-explorer). Not security issue nhưng financial exposure nếu user spam. Planned future work.
 
