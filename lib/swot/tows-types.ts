@@ -4,6 +4,19 @@ export type TowsQuadrant = 'SO' | 'WO' | 'ST' | 'WT'
 export type BscPerspective = 'finance' | 'customer' | 'process' | 'learning'
 export type StrategyStatus = 'draft' | 'approved' | 'in_x_matrix' | 'rejected'
 export type SourceFramework = 'manual' | '8Ms' | 'porter5' | 'PESTEL' | 'discovery_session'
+export type Timeframe = '30d' | '60d' | '90d'
+
+export interface StrategyAction {
+  description: string
+  owner_hint?: string
+}
+
+export interface KpiSuggestion {
+  name: string
+  unit: string
+  target_value: number
+  frequency: 'daily' | 'weekly' | 'monthly'
+}
 
 export const BSC_LABELS: Record<BscPerspective, string> = {
   finance:  'Tài chính',
@@ -53,6 +66,11 @@ export interface TowsStrategyRecord {
   strategy_statement: string
   strategy_title: string | null
   ai_generated: boolean
+  ai_prompt_used: string | null
+  actions: StrategyAction[] | null
+  kpi_suggestions: KpiSuggestion[] | null
+  timeframe: Timeframe | null
+  rationale: string | null
   status: StrategyStatus
   order_index: number
   reviewed_by: string | null
@@ -100,6 +118,10 @@ export interface AiStrategyItem {
   strategy_statement: string
   strategy_title: string
   bsc_perspective: BscPerspective
+  actions?: StrategyAction[]
+  kpi_suggestions?: KpiSuggestion[]
+  timeframe?: Timeframe
+  rationale?: string
 }
 
 export interface TowsExportRow {

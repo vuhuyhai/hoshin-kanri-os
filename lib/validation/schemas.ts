@@ -328,6 +328,21 @@ export const updateSwotFactorSchema = z
   )
 export type UpdateSwotFactorInput = z.infer<typeof updateSwotFactorSchema>
 
+// Reusable schemas for TOWS Strategy v2 fields
+export const timeframeSchema = z.enum(['30d', '60d', '90d'])
+
+export const strategyActionSchema = z.object({
+  description: z.string().min(1, 'Action không được rỗng'),
+  owner_hint: z.string().optional(),
+})
+
+export const kpiSuggestionSchema = z.object({
+  name: z.string().min(1, 'KPI cần có tên'),
+  unit: z.string().min(1, 'KPI cần có đơn vị'),
+  target_value: z.number(),
+  frequency: z.enum(['daily', 'weekly', 'monthly']),
+})
+
 // POST /api/swot-analyses/[id]/strategies/ai-generate
 export const generateStrategySchema = z.object({
   sw_factor_ids: z
@@ -347,6 +362,11 @@ export type GenerateStrategyInput = z.infer<typeof generateStrategySchema>
 // silently 400'd every PATCH from StrategyReviewTable — blocking status
 // toggles and BSC saves. If you bump the type, update this enum in the same
 // commit.
+//
+// v2 (2026-04): Added strategy_title, strategy_statement, actions,
+// kpi_suggestions, timeframe, rationale to allow user editing of AI output
+// and storage of v2 fields. Refine block updated to include all editable
+// fields — missing one here causes silent 400 (pitfall #8 in AGENTS.md).
 export const updateStrategySchema = z
   .object({
     id: z.string().min(1, 'Thiếu id chiến lược'),
@@ -357,12 +377,24 @@ export const updateStrategySchema = z
     bsc_perspective: z
       .enum(['finance', 'customer', 'process', 'learning'])
       .optional(),
+    strategy_title: z.string().min(1).max(200).optional(),
+    strategy_statement: z.string().min(1).optional(),
+    actions: z.array(strategyActionSchema).max(5).optional(),
+    kpi_suggestions: z.array(kpiSuggestionSchema).max(3).optional(),
+    timeframe: timeframeSchema.optional(),
+    rationale: z.string().optional(),
   })
   .refine(
     (v) =>
       v.status !== undefined ||
       v.order_index !== undefined ||
-      v.bsc_perspective !== undefined,
+      v.bsc_perspective !== undefined ||
+      v.strategy_title !== undefined ||
+      v.strategy_statement !== undefined ||
+      v.actions !== undefined ||
+      v.kpi_suggestions !== undefined ||
+      v.timeframe !== undefined ||
+      v.rationale !== undefined,
     'Không có trường nào để cập nhật',
   )
 export type UpdateStrategyInput = z.infer<typeof updateStrategySchema>
