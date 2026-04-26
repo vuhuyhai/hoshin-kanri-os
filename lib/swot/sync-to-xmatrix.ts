@@ -1,6 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
-import type { XMatrixData, XMatrixHoshin, SwotCellSource } from '@/lib/x-matrix/types'
+import type {
+  XMatrixData,
+  XMatrixHoshin,
+  XMatrixInitiative,
+  XMatrixKpi,
+  SwotCellSource,
+} from '@/lib/x-matrix/types'
 import { LIMITS } from '@/lib/x-matrix/types'
+import type {
+  StrategyAction,
+  KpiSuggestion,
+  Timeframe,
+} from '@/lib/swot/tows-types'
 import { toJson, fromJson } from '@/lib/utils'
 
 export interface SyncResult {
@@ -15,6 +26,73 @@ const TOWS_TO_SOURCE: Record<string, SwotCellSource> = {
   WO: 'WO',
   ST: 'ST',
   WT: 'WT',
+}
+
+/**
+ * Smart truncation theo word boundary cho tiếng Việt.
+ * Tránh cắt giữa từ (vd "chi nh" thay vì "chi nhánh").
+ */
+function smartTruncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text
+  const slice = text.slice(0, maxLen)
+  const lastSpace = slice.lastIndexOf(' ')
+  if (lastSpace > maxLen * 0.6) {
+    return slice.slice(0, lastSpace) + '…'
+  }
+  return slice + '…'
+}
+
+/**
+ * Map TOWS frequency → XMatrixKpi frequency.
+ * XMatrixKpi không hỗ trợ 'daily' → fallback 'weekly'.
+ */
+function mapFrequency(
+  freq: 'daily' | 'weekly' | 'monthly',
+): 'weekly' | 'monthly' {
+  return freq === 'monthly' ? 'monthly' : 'weekly'
+}
+
+/**
+ * Map TOWS StrategyAction[] → XMatrixInitiative[].
+ * Inherit strategy-level timeframe vì XMatrixInitiative yêu cầu timeframe.
+ * Append owner_hint vào title nếu có (XMatrixInitiative không có owner field).
+ */
+function mapActionsToInitiatives(
+  actions: StrategyAction[] | null,
+  strategyTimeframe: Timeframe | null,
+  hoshinId: string,
+): XMatrixInitiative[] {
+  if (!actions || actions.length === 0) return []
+  const tf: Timeframe = strategyTimeframe ?? '60d'
+  return actions.slice(0, LIMITS.MAX_INITIATIVES_PER_HOSHIN).map((a, idx) => ({
+    id: `${hoshinId}-init-${idx}`,
+    title: a.owner_hint
+      ? `${a.description} — ${a.owner_hint}`
+      : a.description,
+    timeframe: tf,
+  }))
+}
+
+/**
+ * Map TOWS KpiSuggestion[] → XMatrixKpi[].
+ * targetValue camelCase, frequency drop 'daily' → 'weekly'.
+ * Owner fields default empty (user fills in X-Matrix Wizard).
+ */
+function mapKpiSuggestionsToKpis(
+  kpis: KpiSuggestion[] | null,
+  hoshinId: string,
+): XMatrixKpi[] {
+  if (!kpis || kpis.length === 0) return []
+  return kpis.slice(0, LIMITS.MAX_KPIS_PER_HOSHIN).map((k, idx) => ({
+    id: `${hoshinId}-kpi-${idx}`,
+    name: k.name,
+    unit: k.unit,
+    targetValue: k.target_value,
+    ownerUserId: null,
+    ownerName: '',
+    frequency: mapFrequency(k.frequency),
+    deptLevel: 'company',
+  }))
 }
 
 /**
@@ -112,15 +190,31 @@ export async function syncTowsStrategiesToXMatrix(
   }
 
   // 6. Transform approved strategies → XMatrixHoshin
-  const newHoshins: XMatrixHoshin[] = strategies.slice(0, availableSlots).map((s) => ({
-    id: s.id,
-    title: s.strategy_title || s.strategy_statement.slice(0, 80),
-    description: s.strategy_statement,
-    initiatives: [],
-    kpis: [],
-    sourceSwotCellType: TOWS_TO_SOURCE[s.quadrant],
-    status: 'ai_suggested' as const,
-  }))
+  const newHoshins: XMatrixHoshin[] = strategies
+    .slice(0, availableSlots)
+    .map((s) => {
+      const description = s.rationale
+        ? `${s.strategy_statement}\n\n💡 Vital signal: ${s.rationale}`
+        : s.strategy_statement
+
+      return {
+        id: s.id,
+        title:
+          s.strategy_title || smartTruncate(s.strategy_statement, 80),
+        description,
+        initiatives: mapActionsToInitiatives(
+          s.actions as StrategyAction[] | null,
+          s.timeframe as Timeframe | null,
+          s.id,
+        ),
+        kpis: mapKpiSuggestionsToKpis(
+          s.kpi_suggestions as KpiSuggestion[] | null,
+          s.id,
+        ),
+        sourceSwotCellType: TOWS_TO_SOURCE[s.quadrant],
+        status: 'ai_suggested' as const,
+      }
+    })
 
   // 7. Merge and save
   const mergedHoshins = [...preservedHoshins, ...newHoshins]
