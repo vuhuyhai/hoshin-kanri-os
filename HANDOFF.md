@@ -559,6 +559,10 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
 
 11. **NB v3.2 radius rule**: cards/buttons/inputs có `border-radius: 4px` (`var(--radius-md)`) tempered — **KHÔNG phải 0**. Avatar/sticker/marquee/checkbox/radio mới dùng radius 0 (NB DNA preserved). Nếu thấy `border-radius: 0px !important` global quay lại trong `globals.css` (`@layer base`) → **đó là regression, đừng re-enable**. Áp radius selective qua tokens (`--radius-sm` 3px tags, `--radius-md` 4px default, `--radius-lg` 6px modals). Decision shipped ở M-Design-1 (commit `b0d2aa4`).
 
+12. **`overflow-hidden` clip sticker overlap**: Khi component dùng pattern "sticker chồm ra ngoài container" (NB v3.2 spec section 3.2 + 3.5), KHÔNG được dùng `overflow: hidden` trên parent — sẽ clip mất phần overlap. Nếu cần containment cho bg-pattern (vd `bg-dot-grid`): dùng `background-clip: padding-box` trên container, hoặc tách bg-pattern thành pseudo-element `::before` với `inset: 0` + `overflow: hidden` riêng cho pseudo. Đã gặp ở CtaBannerNB Task 7 — fix bằng commit `7f674b1` (đổi `overflow-hidden` → `overflow-visible` trên banner container).
+
+13. **AI hallucinate factual numbers in copy**: Khi sinh marketing copy, AI có xu hướng "fabricate impressive numbers" (vd "200+ năm Toyota", "10x faster", "Fortune 100 use this"). Các con số này thường KHÔNG grounded từ source thật. Pattern fix: (1) Vũ Hải review MỌI con số trong copy trước khi commit, (2) khi cần emphasis credibility, ưu tiên qualitative claim ("Fortune 500 áp dụng", "chuẩn industry") thay vì quantitative ("X năm", "Y%"), (3) nếu phải dùng số → web search verify hoặc nguồn từ Vũ Hải. Đã gặp ở M-Design-2 hero subheadline + bullet section, fix qua 2 commits `21ad758` (hero subheadline) + `e738fdb` (additional copy claim) — cả hai chuyển "Toyota 200+ năm" → "Hoshin Kanri Fortune 500".
+
 ---
 
 ## 11. Dev Workflow
@@ -808,7 +812,7 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), blog (8), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, kpi, report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: Design system migration M-Design-1 (NB v3.2 Foundation Tokens)
+- **Latest feature work**: Landing page refactor M-Design-2 (NB v3.2 Component Architecture)
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -889,6 +893,42 @@ Khi Claude mới vào session:
       2. **Token migration thứ tự**: fonts (`layout.tsx`) trước → tokens block (`@theme inline` + `:root` + `.dark`) sau → utility classes cuối. Mỗi step verify visual riêng. **KHÔNG gộp 1 commit** vì không thể bisect được nếu vỡ. 4-commit pattern proven (HANDOFF baseline + fonts + tokens + utility classes).
       3. **shadcn/ui CSS variables convention** (`--background`, `--foreground`, `--primary`, `--border`, `--ring`, `--card`, `--popover`, `--accent`, `--muted`, `--destructive`) PHẢI giữ tên, chỉ đổi value. Đổi tên = vỡ toàn bộ shadcn components. Custom tokens (`--brand`, `--ink`, `--bg`) đặt PARALLEL không thay thế shadcn vars (ghi chú đã có sẵn trong `globals.css` :root về collision với `--accent`).
       4. **Vietnamese subset font verify**: Space Grotesk + Inter + JetBrains Mono đều support tiếng Việt full dấu — verified với "ấ", "ặ", "ợ", "đ" trong hero. Khi pick font Google mới, ALWAYS check Vietnamese coverage trước khi swap (next/font/google `subsets: ['latin', 'vietnamese']`).
+  - **Landing page refactor M-Design-2 (2026-04-27)**: ✅ shipped. Refactor `app/page.tsx` full NB v3.2 — tách 5 components (HeroNB, MarqueeStrip, FeatureCardNB, StepCardNB, CtaBannerNB) + footer cleanup + 2 hotfix copy + 1 hotfix sticker overflow. Audit polish (Task 8A) PASS 100% không cần code fix.
+    - **Scope**: 5 sections refactored (Hero, Marquee mới, How It Works, Features, CTA Banner) + footer cleanup. Header nav GIỮ NGUYÊN.
+    - **Commits** (chronological, oldest first):
+      - `dbff864` — refactor(footer): rename to FooterCopyright + dedupe copyright + fix 3 dead links + scaffold landing folder (Task 2.5)
+      - `6d4c3a9` — feat(landing): refactor Hero to NB v3.2 with mixed sizes + rotated accent + sticker overlap (Task 3 — Hero only, MarqueeStrip ship riêng)
+      - `7fb1036` — feat(landing): add MarqueeStrip + replace static stat bar (Task 4)
+      - `21ad758` — fix(landing): correct hero subheadline copy (Toyota 200y → Hoshin Kanri Fortune 500) (Task 4 hotfix copy)
+      - `e738fdb` — fix(landing): correct copy claim (Toyota 200y → Hoshin Kanri Fortune 500) (additional copy claim hotfix)
+      - `76e3ccc` — feat(landing): refactor Features to 6 pastel NB v3.2 cards with sticker + tilt (Task 5)
+      - `db8ce2b` — feat(landing): refactor How It Works to 3 NB v3.2 step cards with mono numbers + tilt (Task 6)
+      - `c2419bc` — feat(landing): refactor CTA Banner to NB v3.2 with double-shadow + dot pattern + sticker (Task 7)
+      - `7f674b1` — fix(landing): allow CTA banner sticker to overflow container (Task 7 hotfix overflow)
+      - Task 8A polish: no commit (audit pass 100% — typecheck + lint clean, mobile/contrast/routing all PASS, không có code fix nào cần apply)
+    - **Components shipped** (`components/landing/*`):
+
+      | File | Lines | Purpose |
+      |---|---|---|
+      | HeroNB.tsx | 143 | Hero với mixed font sizes (clamp 40-128px) + rotated "90 ngày" red + decorative grid 3x3 + 3 stickers (VISION/GOALS/KPIs) |
+      | MarqueeStrip.tsx | 80 | Reusable scrolling ticker với props items/accentColor/speed/direction. Dùng `.nb-marquee` utility class |
+      | FeatureCardNB.tsx | 47 | 6 pastel variant cards với sticker numbering 01-06 + 2 cards tilt (X-Ray left, X-Matrix right) |
+      | StepCardNB.tsx | 53 | 3 step cards `bg-warm` với big numbers `font-mono` 700 + Step 02 tilt + sticker "BƯỚC NN" |
+      | CtaBannerNB.tsx | 79 | Final banner với `--shadow-double` (yellow + ink) + `bg-dot-grid` + sticker "FREE · 5 PHÚT" |
+
+    - **page.tsx delta**: từ ~366 dòng inline → 268 dòng (5 component imports + usage). Header + Footer 4-col vẫn inline trong page.tsx.
+    - **globals.css delta**: thêm `--shadow-double` token (cả `@theme inline` + `:root`) + `.bg-dot-grid` utility (radial-gradient overlay 24×24px alpha 0.18). Không đụng tokens cũ.
+    - **Audit results (Task 8A)**:
+      - Mobile 375px: 5/5 components PASS (touch target ≥48px, padding ≥16px, sticker overflow OK post-hotfix)
+      - WCAG AAA contrast: 10/13 PASS verified, 3 NEEDS MANUAL VERIFY (text-2 trên pastel bgs, white-on-brand subtitle 5.16:1 fail AAA-normal nhưng pass AAA-large)
+      - Routing: 4 CTA primary `/x-ray` (nav + hero + footer + banner), 0 broken/dead links
+      - Build: typecheck PASS, lint PASS, build PASS (~7s), landing client JS = 263 bytes (≪ 200 KB threshold)
+    - **Pattern lessons**:
+      1. **Cursor có thể tự bundle nhiều task vào 1 commit không báo trước**: Em đã giả định Task 3 chỉ ship Hero, và git xác nhận đúng — nhưng pattern này (Cursor bundling silent) vẫn risk. Mitigation tương lai: sau MỖI commit Cursor báo, hỏi `git show <hash> --stat` để confirm scope thực tế. Hoặc thêm explicit "DO NOT extend scope beyond X" vào prompt task.
+      2. **Sticker overlap pattern cần `overflow: visible`**: Pitfall mới #12. Áp dụng cho mọi component NB chaos DNA tương lai.
+      3. **Marketing copy AI hallucination**: Pitfall mới #13. Vũ Hải BẮT BUỘC review con số/năm/% trong copy trước commit. M-Design-2 hit pitfall này 2 lần — fix qua 2 commits riêng cho cùng 1 root cause.
+      4. **Component-based vs inline trade-off**: page.tsx ban đầu ~366 dòng inline → sau refactor 268 dòng với 5 component imports. Easier maintain, dễ test riêng từng section, nhưng tăng số file. Worth trade-off cho landing vì section structure rõ ràng. KHÔNG áp pattern này cho dashboard/admin (logic phức tạp hơn, nhiều state, tách theo feature thay vì theo section).
+      5. **Spec discipline**: 100% style đi qua tokens (`var(--brand)`, `var(--accent-yellow)`, `var(--shadow-md)`, `var(--ease-nb)`). Không hardcode hex. KHÔNG inline Tailwind arbitrary value (`bg-[#c73937]`). Khi cần style mới → ADD vào globals.css với token-driven values, KHÔNG tự sáng tạo CSS rời rạc.
 
 ---
 
@@ -917,29 +957,47 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - Components mới phải dùng utility classes có sẵn (`.btn-brutal-*`, `.btn-yellow/cyan`, `.card-*`, `.nb-*`, `.tag-*`) thay vì re-implement style.
 - Khi cần style mới không match utility class hiện có, ADD vào `globals.css` với token-driven values, KHÔNG inline Tailwind arbitrary value (`bg-[#c73937]`).
 
+### 2026-04-27 — Landing page refactored to NB v3.2 component-based architecture
+
+**Milestone**: M-Design-2 — Landing Page Refactor.
+
+**Scope**: `app/page.tsx` (replace inline sections với 5 components) + `components/landing/*` (5 new component files: HeroNB, MarqueeStrip, FeatureCardNB, StepCardNB, CtaBannerNB) + minor `app/globals.css` (bổ sung `--shadow-double` token + `.bg-dot-grid` utility cho final CTA banner) + footer cleanup (rename Footer → FooterCopyright, dedupe duplicate copyright, fix 3 dead links).
+
+**Decisions**:
+- **Component-based landing**: Tách HeroNB / MarqueeStrip / FeatureCardNB / StepCardNB / CtaBannerNB ra `components/landing/*` thay vì giữ inline JSX trong page.tsx. Lý do: page.tsx hiện đọc như "table of contents" landing, mỗi component test/iterate riêng được. Reusability không cao (chỉ dùng cho landing) — tách vì separation of concerns + maintainability.
+- **Section pastel alternation**: Features section dùng 6 pastel cards (yellow/cyan/pink/lime/peach/lavender). How It Works section dùng `bg-warm` neutral (3 cards) — alternate giữa pastel-rich và neutral để mắt user có chỗ nghỉ. Spec NB v3.2 cho phép pattern này.
+- **Big numbers font choice**: Step cards big numbers dùng `font-mono` weight 700 (KHÔNG `font-display` weight 900). Audit M-Design-1 báo font-weight 900 lệch spec NB v3.2 (700 max). Fix ở M-Design-2 này, set precedent cho tất cả big numbers tương lai (vd dashboard stats, KPI cards).
+- **Final CTA banner double-shadow**: CTA banner cuối page dùng `--shadow-double` (`6px 6px 0 var(--accent-yellow), 12px 12px 0 var(--ink)`) — spec dành cho moments quan trọng nhất (hero CTA hoặc final banner). Em chọn final banner vì user đã scroll qua toàn bộ value props, đây là moment "now or never". Single-shadow `--shadow-md` dùng cho mọi card khác.
+- **Footer architecture**: Component `FooterCopyright` ở `components/layout/footer-copyright.tsx` chỉ render mini copyright bar (1 dòng warm) — dùng chung cho mọi route (dashboard, blog, x-ray, landing). Full 4-col footer chỉ ở landing, render inline trong `page.tsx`. Không tách footer landing thành component riêng vì non-reusable + page.tsx vẫn đọc OK.
+- **Hero visual approach**: Giữ decorative grid 3x3 (KHÔNG dùng portrait/illustration ảnh thật) để tránh blocker chờ asset. Restyle theo NB v3.2 với asymmetric shadow + 3 stickers overlap (VISION/GOALS/KPIs) — đủ chaos DNA mà không phụ thuộc design asset bên ngoài.
+
+**Constraints cho future AI sessions**:
+- KHÔNG re-add `overflow: hidden` vào parent của bất kỳ component có sticker overlap (Hero decorative grid, Feature cards, Step cards, CTA banner). Pattern này đã clip mất sticker ở Task 7 — fix bằng cách bỏ `overflow-hidden` + dùng `background-clip: padding-box` cho bg-pattern containment.
+- KHÔNG đổi `bg-warm` cho How It Works sang pastel — alternation pastel/neutral giữa Features và How It Works là intentional, đổi sẽ khiến landing rực rỡ quá đều.
+- KHÔNG dùng `font-display` weight 900 cho big numbers (KPI stats, score cards, dashboard metrics) — pattern phải là `font-mono` weight 700 (precedent từ StepCardNB).
+- KHI sinh marketing copy có con số/năm/percentage → phải verify với Vũ Hải hoặc dùng phrasing không-định-lượng. AI có xu hướng fabricate impressive numbers (vd "200+ năm Toyota" đã hallucinate ở M-Design-2). Pattern fix: ưu tiên qualitative claim ("Fortune 500 áp dụng", "chuẩn industry") thay vì quantitative.
+
 ---
 
 ## 18. Next Steps (Roadmap)
 
-### Milestone tiếp theo: M-Design-2 — Landing Page Refactor
+### Milestone tiếp theo: M-Design-3 — Dashboard Refactor
 
-**Mục tiêu**: Refactor `app/page.tsx` full Neo-Brutalism v3.2 — apply tokens và utility classes vừa shipped ở M-Design-1 vào landing page hero, sections, footer.
+**Mục tiêu**: Refactor `app/dashboard/layout.tsx` (Sidebar + Header + auth shell) + `app/dashboard/page.tsx` (Dashboard home) full NB v3.2.
 
 **Tasks dự kiến**:
-1. **Audit landing hiện tại** — list sections, copy, components đang dùng. Identify components nào cần rewrite vs giữ nguyên.
-2. **Refactor hero** — mixed font sizes (clamp 56px → 128px responsive), accent word rotated (`.nb-sticker` overlap), asymmetric shadow (`--shadow-tilt-l/r`). Test scale từ 375px → 1920px.
-3. **Trust-building section** — pastel feature cards (`.card-yellow`, `.card-cyan`, `.card-pink`, `.card-lime`) với `.card-tilt` variants. 4-6 cards, mỗi card 1 value prop.
-4. **Marquee section** — scrolling client logos hoặc social proof (`.nb-marquee` + `.nb-marquee-track` + `.nb-marquee-item`). Source: list 10-20 SME khách hàng pilot (cần Vũ Hải confirm danh sách).
-5. **Mobile responsive 375px** — verify tilted cards không break layout, marquee không cause horizontal scroll, hero typography scale gracefully.
-6. **Contrast WCAG AAA check** — pastel bg (`--accent-yellow #F5E4B8`, `--accent-cyan #C4DEDC`, `--accent-pink #F0DCDD`) với text `--ink #1A1A1A`. Verify ≥7:1 ratio cho body text, ≥4.5:1 cho large text.
+1. **Audit dashboard hiện tại** — Sidebar, Header, dashboard home content. Identify components nào reuse được từ M-Design-2 (vd CtaBannerNB cho upsell), components nào cần new.
+2. **Refactor Sidebar** — NB v3.2 navigation pattern (border 3px ink, active state với accent color, mono font cho menu labels).
+3. **Refactor Header** — User menu dropdown, org switcher, notification bell, logo + breadcrumb pattern NB.
+4. **Refactor Dashboard home** — Big stats numbers (precedent từ StepCardNB `font-mono` 700), recent activity feed, quick actions cards.
+5. **Mobile responsive** — sidebar collapse / drawer pattern cho < 768px.
 
-**Blockers**: none.
+**Blockers**: none. Foundation tokens + utility classes đã đủ từ M-Design-1 + M-Design-2.
 
-**Dependency on M-Design-1**: ✅ shipped (foundation tokens ready, utility classes available).
+**Dependency on M-Design-2**: ✅ shipped (5 components landing có thể reuse `CtaBannerNB` cho dashboard upsell banner).
 
 ### Future milestones (TBD priority)
 
-- **M-Design-3**: Dashboard refactor (sidebar/header/cards) NB v3.2.
 - **M-Design-4**: Discovery flows (X-Ray, SWOT, Pain Mapper, Vision Workshop) NB v3.2.
 - **M-Design-5**: X-Matrix Wizard NB v3.2.
 - **P0.1 Phase 1 (orthogonal)**: Per-user rate-limit cho 12 authed AI routes (đã ship một phần ở 2026-04-26 commit `a8d5e58` — wrapping helper + 12 route wirings done. Verify 100% coverage và monitor 429 rate trên prod).
