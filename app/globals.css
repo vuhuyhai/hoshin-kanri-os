@@ -512,10 +512,25 @@ main > * {
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
+.nb-marquee-item {
+  flex-shrink: 0;
+  padding: 0 24px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 .nb-marquee-item::after {
-  content: ' ✦ ';
-  color: var(--accent-yellow);
-  margin: 0 24px;
+  content: none;
+}
+.nb-marquee-separator {
+  margin-left: 24px;
+  color: var(--brand);
+}
+.nb-marquee:hover .nb-marquee-track {
+  animation-play-state: paused;
 }
 @keyframes scroll-left {
   from { transform: translateX(0); }

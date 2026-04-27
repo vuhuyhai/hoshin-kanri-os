@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import HeroNB from '@/components/landing/HeroNB'
+import MarqueeStrip from '@/components/landing/MarqueeStrip'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -46,26 +47,21 @@ export default async function LandingPage() {
         {/* ─── [1] HERO ─── */}
         <HeroNB />
 
-        {/* ─── [2] SOCIAL PROOF BAR ─── */}
-        <section className="w-full bg-bg-dark">
-          <div className="mx-auto grid max-w-[1440px] grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
-            {[
-              { value: '5 phút', label: 'Chẩn đoán miễn phí' },
-              { value: '7 trụ cột', label: 'OPEX framework' },
-              { value: 'AI-powered', label: 'Phân tích thông minh' },
-              { value: '100%', label: 'Tiếng Việt' },
-            ].map((item) => (
-              <div key={item.label} className="px-6 py-6 text-center">
-                <p className="font-display text-2xl font-black text-white md:text-3xl">
-                  {item.value}
-                </p>
-                <p className="mt-1 font-body text-sm text-white/60">
-                  {item.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* ─── [2] MARQUEE STRIP ─── */}
+        <MarqueeStrip
+          items={[
+            '5 PHÚT CHẨN ĐOÁN MIỄN PHÍ',
+            '7 TRỤ CỘT OPEX',
+            'AI HIỂU SME VIỆT',
+            'X-MATRIX TỰ ĐỘNG',
+            'KPI THEO DÕI HẰNG TUẦN',
+            'BÁO CÁO THÁNG AI',
+            'PHƯƠNG PHÁP TOYOTA 200+ NĂM',
+            '100% TIẾNG VIỆT',
+          ]}
+          accentColor="yellow"
+          speed="normal"
+        />
 
         {/* ─── [3] HOW IT WORKS ─── */}
         <section className="w-full bg-bg-muted-warm">
