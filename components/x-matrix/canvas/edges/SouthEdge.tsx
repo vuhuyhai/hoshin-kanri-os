@@ -1,14 +1,15 @@
 'use client'
 
+import { LIMITS } from '@/lib/x-matrix/types'
+import { useCanvas } from '../state/CanvasContext'
 import { HoshinCard } from '../cards/HoshinCard'
-import type { MockHoshin } from '../XMatrixCanvasPage'
 
-interface SouthEdgeProps {
-  hoshins: MockHoshin[]
-}
-
-export function SouthEdge({ hoshins }: SouthEdgeProps) {
-  const slots = Array.from({ length: 5 }, (_, i) => hoshins[i] ?? null)
+export function SouthEdge() {
+  const { state } = useCanvas()
+  const hoshins = state.data.hoshins
+  const slots = Array.from({ length: LIMITS.MAX_HOSHINS }, (_, i) =>
+    hoshins[i] ?? null
+  )
 
   return (
     <section className="flex h-full flex-col gap-1">

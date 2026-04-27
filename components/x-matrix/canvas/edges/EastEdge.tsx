@@ -1,20 +1,17 @@
 'use client'
 
-import type { MockHoshin } from '../XMatrixCanvasPage'
+import { useCanvas } from '../state/CanvasContext'
 
-interface EastEdgeProps {
-  hoshins: MockHoshin[]
-}
-
-export function EastEdge({ hoshins }: EastEdgeProps) {
-  const allKpis = hoshins.flatMap((h) => h.kpis)
+export function EastEdge() {
+  const { state } = useCanvas()
+  const allKpis = state.data.hoshins.flatMap((h) => h.kpis)
 
   return (
     <section className="flex h-full flex-col gap-1">
       <h2 className="heading-overline text-xs">📊 KPIs</h2>
       <div className="flex-1 overflow-y-auto border-[3px] border-ink bg-[var(--bg)] p-2 shadow-[var(--shadow-md)]">
         {allKpis.length === 0 ? (
-          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
+          <p className="flex h-full items-center justify-center text-center font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
             Chưa có KPI
           </p>
         ) : (

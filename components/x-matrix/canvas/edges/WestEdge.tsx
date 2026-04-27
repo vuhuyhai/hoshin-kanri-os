@@ -1,14 +1,11 @@
 'use client'
 
-import type { MockHoshin } from '../XMatrixCanvasPage'
+import { useCanvas } from '../state/CanvasContext'
 
-interface WestEdgeProps {
-  hoshins: MockHoshin[]
-}
-
-export function WestEdge({ hoshins }: WestEdgeProps) {
+export function WestEdge() {
+  const { state } = useCanvas()
   const ownerCounts = new Map<string, number>()
-  for (const h of hoshins) {
+  for (const h of state.data.hoshins) {
     const name = h.owner_name?.trim()
     if (!name) continue
     ownerCounts.set(name, (ownerCounts.get(name) ?? 0) + 1)
@@ -20,8 +17,8 @@ export function WestEdge({ hoshins }: WestEdgeProps) {
       <h2 className="heading-overline text-xs">👥 Owners</h2>
       <div className="flex-1 overflow-y-auto border-[3px] border-ink bg-[var(--bg)] p-2 shadow-[var(--shadow-md)]">
         {owners.length === 0 ? (
-          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
-            Chưa giao
+          <p className="flex h-full items-center justify-center text-center font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
+            Chưa có owner
           </p>
         ) : (
           <ul className="space-y-1.5">

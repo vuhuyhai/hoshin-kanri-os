@@ -1,14 +1,15 @@
 'use client'
 
+import { LIMITS } from '@/lib/x-matrix/types'
+import { useCanvas } from '../state/CanvasContext'
 import { YearGoalCard } from '../cards/YearGoalCard'
-import type { MockYearGoal } from '../XMatrixCanvasPage'
 
-interface NorthEdgeProps {
-  yearGoals: MockYearGoal[]
-}
-
-export function NorthEdge({ yearGoals }: NorthEdgeProps) {
-  const slots = Array.from({ length: 3 }, (_, i) => yearGoals[i] ?? null)
+export function NorthEdge() {
+  const { state } = useCanvas()
+  const yearGoals = state.data.yearGoals
+  const slots = Array.from({ length: LIMITS.MAX_YEAR_GOALS }, (_, i) =>
+    yearGoals[i] ?? null
+  )
 
   return (
     <section className="flex h-full flex-col gap-1">
