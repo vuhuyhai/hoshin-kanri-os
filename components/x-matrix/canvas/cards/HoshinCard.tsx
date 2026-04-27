@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { useCanvas, type XMatrixHoshinExtended } from '../state/CanvasContext'
+import { HoshinEditModal } from '../modals/HoshinEditModal'
 
 interface HoshinCardProps {
   hoshin: XMatrixHoshinExtended | null
@@ -18,6 +20,7 @@ const PASTEL_CLASSES = [
 export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   const { dispatch } = useCanvas()
   const pastel = PASTEL_CLASSES[slotIndex % PASTEL_CLASSES.length]
+  const [modalOpen, setModalOpen] = useState(false)
 
   const handleEmptyClick = () => {
     dispatch({
@@ -35,7 +38,7 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   }
 
   const handleFilledClick = () => {
-    console.log('HoshinCard clicked, will open modal in T3b', { slotIndex })
+    setModalOpen(true)
   }
 
   if (!hoshin) {
@@ -54,31 +57,43 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
 
   const initCount = hoshin.initiatives.length
   const kpiCount = hoshin.kpis.length
+  const hasTitle = !!hoshin.title?.trim()
 
   return (
-    <button
-      type="button"
-      onClick={handleFilledClick}
-      className={`${pastel} flex h-[110px] w-full cursor-pointer flex-col gap-1 p-2 text-left transition-shadow hover:shadow-[var(--shadow-lg)]`}
-    >
-      <div className="flex items-center justify-between gap-1">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-ink">
-          H{slotIndex + 1}
-        </span>
-        {hoshin.owner_name && (
-          <span className="badge-brutal tag-brand text-[10px]">
-            {hoshin.owner_name}
+    <>
+      <button
+        type="button"
+        onClick={handleFilledClick}
+        className={`${pastel} flex h-[110px] w-full cursor-pointer flex-col gap-1 p-2 text-left transition-shadow hover:shadow-[var(--shadow-lg)]`}
+      >
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-ink">
+            H{slotIndex + 1}
+          </span>
+          {hoshin.owner_name && (
+            <span className="badge-brutal tag-brand text-[10px]">
+              {hoshin.owner_name}
+            </span>
+          )}
+        </div>
+        {hasTitle ? (
+          <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-ink">
+            {hoshin.title}
+          </h3>
+        ) : (
+          <span className="line-clamp-2 text-sm italic text-[var(--text-3)]">
+            (Chưa đặt tên — click để sửa)
           </span>
         )}
-      </div>
-      <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-ink">
-        {hoshin.title || (
-          <span className="text-[var(--text-3)]">(chưa đặt tên)</span>
-        )}
-      </h3>
-      <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-[var(--text-2)]">
-        {initCount} INI · {kpiCount} KPI
-      </div>
-    </button>
+        <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-[var(--text-2)]">
+          {initCount} INI · {kpiCount} KPI
+        </div>
+      </button>
+      <HoshinEditModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        slotIndex={slotIndex}
+      />
+    </>
   )
 }
