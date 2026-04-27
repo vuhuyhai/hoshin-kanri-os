@@ -36,7 +36,7 @@ export default function CtaBannerNB({
   return (
     <section className="px-6 lg:px-12 py-16 lg:py-24">
       <div
-        className={`relative max-w-[1100px] mx-auto border-[3px] border-ink rounded-[6px] p-8 lg:p-12 xl:p-16 text-center overflow-hidden ${bannerBg} ${showDotPattern ? 'bg-dot-grid' : ''}`}
+        className={`relative max-w-[1100px] mx-auto border-[3px] border-ink rounded-[6px] p-8 lg:p-12 xl:p-16 text-center overflow-visible ${bannerBg} ${showDotPattern ? 'bg-dot-grid' : ''}`}
         style={{ boxShadow: 'var(--shadow-double)' }}
       >
         <span
