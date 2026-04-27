@@ -4,20 +4,27 @@ import { PHProvider } from '@/components/providers/posthog-provider'
 import { Toaster } from 'sonner'
 import { AuthListener } from '@/components/providers/auth-listener'
 import { Footer } from '@/components/layout/footer'
-import { Montserrat, Barlow_Condensed } from 'next/font/google'
+import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
-const montserrat = Montserrat({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin', 'vietnamese'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+  weight: ['500', '600', '700'],
   variable: '--font-display',
   display: 'swap',
 })
 
-const barlowCondensed = Barlow_Condensed({
+const inter = Inter({
   subsets: ['latin', 'vietnamese'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-body',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '700'],
+  variable: '--font-mono',
   display: 'swap',
 })
 
@@ -99,7 +106,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi" className={`${montserrat.variable} ${barlowCondensed.variable} light`} suppressHydrationWarning>
+    <html lang="vi" className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} light`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
