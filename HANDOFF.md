@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-26
+> **Last verified**: 2026-04-27
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -58,7 +58,8 @@ Business X-Ray (chẩn đoán 5 phút)
 | Framework | **Next.js** (App Router, Webpack) | 16.2.3 |
 | React | React | 19.2.4 |
 | Language | TypeScript | ^5.8 |
-| Styling | Tailwind CSS v4 + shadcn/ui | v4 / v4.2.0 |
+| Styling | Tailwind CSS v4 + shadcn/ui (Neo-Brutalism v3.2 "Refined Tempered" — radius 4px tempered, không phải 0 force) | v4 / v4.2.0 |
+| Fonts | Space Grotesk (display) + Inter (body) + JetBrains Mono (mono) | next/font/google, Vietnamese subset |
 | State | Zustand | ^5.0.12 |
 | DB + Auth | Supabase (Postgres + RLS) | ^2.103.0 |
 | Auth SSR | @supabase/ssr | ^0.10.2 |
@@ -556,6 +557,8 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
 
 10. **Supabase TS resolver lỗi "X does not exist" cho INSERT có JSONB columns**: Lỗi message hiện ở field đầu tiên (vd `org_id`) gây hiểu lầm là field name issue, nhưng root cause là JSONB shape mismatch (typed array → Json union). Fix: cast `as unknown as Json` (double cast pattern). Đã gặp ở Phase 3B `tows_strategies` insert với `actions: StrategyAction[]`, `kpi_suggestions: KpiSuggestion[]`.
 
+11. **NB v3.2 radius rule**: cards/buttons/inputs có `border-radius: 4px` (`var(--radius-md)`) tempered — **KHÔNG phải 0**. Avatar/sticker/marquee/checkbox/radio mới dùng radius 0 (NB DNA preserved). Nếu thấy `border-radius: 0px !important` global quay lại trong `globals.css` (`@layer base`) → **đó là regression, đừng re-enable**. Áp radius selective qua tokens (`--radius-sm` 3px tags, `--radius-md` 4px default, `--radius-lg` 6px modals). Decision shipped ở M-Design-1 (commit `b0d2aa4`).
+
 ---
 
 ## 11. Dev Workflow
@@ -633,27 +636,124 @@ NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
 
 ## 13. Design System
 
-**Style**: Neobrutalism × Swiss Design hybrid.
+**Style**: Neo-Brutalism v3.2 "Refined Tempered NB" — Vũ Hải Personal Edition, adapted cho Hoshin Kanri OS B2B SaaS.
 
-**Typography**:
-- Display: `Barlow Condensed` (headings, nav, labels) — Vietnamese subset
-- Body: `Montserrat` — Vietnamese subset
+**Migrated from**: Neobrutalism × Swiss generic (Montserrat + Barlow Condensed, radius 0 forced với `!important` global, ink #2C2B2B, bg #F7F5F2) → NB v3.2 (M-Design-1, 2026-04-27, 4 commits).
 
-**Tokens** (from `app/globals.css`):
-- Thick borders: `border-2`, `border-[3px]`, `border-ink`
-- Sharp corners (no border-radius default)
-- Bold shadows: `shadow-brutal-sm`, `shadow-brutal-md`
-- Warm bg: `bg-bg-warm`, `bg-bg-muted-warm`
-- High contrast: `text-ink`
-- Accent: `accent-brand`
+**Reference**: skill `neo-brutalism-design-vuhai` v3.2 (external skill folder).
 
-**Theme**: Force LIGHT mode by default — `layout.tsx` có inline script clearing `dark` / `system` localStorage value và add `light` class trên `<html>`. Storage key: `hoshin-theme-v2`.
+### Typography
 
-**Component patterns**:
-- Sidebar: fixed left 240px, neobrutalist nav với left border indicator
-- Cards: bold borders, no rounded corners
-- Buttons: `btn-brutal` class
-- Mobile: sheet-based sidebar + bottom-nav
+- **Display** (`var(--font-display)`): **Space Grotesk** — weight 500/600/700, tracking tight (-0.01em → -0.03em). Headings, CTA buttons, nav, labels.
+- **Body** (`var(--font-body)`): **Inter** — weight 400-900, line-height 1.6. Paragraph, form fields, descriptions.
+- **Mono** (`var(--font-mono)`): **JetBrains Mono** — labels/metadata, uppercase, letter-spacing 0.08em. Stickers, marquee, code blocks.
+- **Vietnamese subset**: Tất cả 3 fonts support tiếng Việt full dấu (verified với "ấ", "ặ", "ợ", "đ" trong hero). Loaded qua `next/font/google` với `subsets: ['latin', 'vietnamese']`.
+
+### Color tokens (light mode default)
+
+**Brand**:
+- `--brand: #c73937` (Hoshin red, primary CTA — unchanged across migrations)
+- `--brand-dark: #9e1f1e` (hover/active state)
+
+**Text**:
+- `--ink: #1A1A1A` — heading + border (KHÔNG dùng `#000000`, ink mềm hơn)
+- `--text-2: #4A4848` — body
+- `--text-3: #6B6868` — metadata/placeholder
+
+**Background**:
+- `--bg: #FFFEF9` — warm white (page bg)
+- `--bg-paper: #F5F0E8` — paper sections
+- `--bg-muted: #F5F0E8` — muted subtle cards
+- `--bg-dark: #1A1A1A` — dark sections / hero contrast
+
+**6 Pastel Accents** (mới ở v3.2 — không thay thế brand red, dùng cho feature cards & tags):
+- `--accent-yellow: #F5E4B8`
+- `--accent-cyan: #C4DEDC`
+- `--accent-lime: #DDE4C5`
+- `--accent-pink: #F0DCDD`
+- `--accent-peach: #F0DCC0`
+- `--accent-lavender: #DDD3EE`
+
+### Border-radius scale (tempered, không force 0)
+
+- `--radius-sm: 3px` — tags, badges
+- `--radius-md: 4px` — **default** cho cards, buttons, inputs (tempered NB)
+- `--radius-lg: 6px` — modals, sheets
+- `--radius-xl: 8px`, `--radius-2xl: 12px`, `--radius-3xl: 16px`, `--radius-4xl: 20px`
+- **Radius 0** preserved cho: avatar, `.nb-sticker`, `.nb-marquee`, checkbox/radio (NB DNA)
+
+### Shadow tokens (hard-offset, không blur)
+
+- `--shadow-xs: 2px 2px 0 var(--ink)`
+- `--shadow-sm: 2px 2px 0 var(--ink)`
+- `--shadow-md: 6px 6px 0 var(--ink)` (default cards/buttons)
+- `--shadow-lg: 8px 8px 0 var(--ink)`
+- `--shadow-xl: 12px 12px 0 var(--ink)`
+- `--shadow-tilt-l: -6px 6px 0 var(--ink)` — asymmetric chaos (left)
+- `--shadow-tilt-r: 6px 6px 0 var(--ink)` — asymmetric chaos (right)
+- Colored: `--shadow-brand`, `--shadow-yellow`, `--shadow-cyan`, `--shadow-pink`
+
+### Motion
+
+- `--duration-instant: 0ms`
+- `--duration-snap: 100ms` (button/card hover)
+- `--duration-base: 150ms` (default transitions)
+- `--ease-nb: cubic-bezier(0.25, 0, 0, 1)` — **dùng cho mọi hover transitions**, KHÔNG dùng `ease` / `ease-in-out` / `linear`
+
+### Spacing scale (8-step)
+
+`--space-1: 4px` · `--space-2: 8px` · `--space-3: 12px` · `--space-4: 20px` · `--space-5: 32px` · `--space-6: 48px` · `--space-7: 72px` · `--space-8: 96px`
+
+### Component utility classes (in `app/globals.css`)
+
+**Buttons**:
+- `.btn-brutal`, `.btn-brutal-primary`, `.btn-brutal-secondary`
+- `.btn-primary`, `.btn-secondary` (in `@layer components`)
+- `.btn-yellow`, `.btn-cyan` (pastel variants)
+
+**Cards**:
+- `.card-brutal` (default 4px radius + shadow-md)
+- `.card-yellow`, `.card-cyan`, `.card-pink`, `.card-lime`, `.card-dark` (pastel/inverse variants)
+- `.card-tilt` (controlled chaos: rotated odd/even, hover unrotates)
+- `.card-subtle` (tier 2, không brutalist — for tight UI density)
+
+**Tags & badges**:
+- `.badge-brutal` (border + radius-sm)
+- `.tag-yellow`, `.tag-cyan`, `.tag-lime`, `.tag-pink`, `.tag-brand`, `.tag-dark`
+
+**Decorative (NB DNA, radius 0)**:
+- `.nb-sticker` — rotated pastel tag (3deg tilt, mono font, alternating colors via nth-child)
+- `.nb-highlight` — yellow gradient underline (replaces italic emphasis)
+- `.nb-marquee` + `.nb-marquee-track` + `.nb-marquee-item` — scrolling ticker (25s steps(50) infinite, ✦ separator)
+
+**Forms**:
+- `.input-brutal` (border-color brand on focus, shadow brand)
+
+**Text utilities**:
+- `.overline`, `.label-brutal`, `.heading-overline`, `.field-label`, `.field-hint`
+
+### Theme
+
+Force LIGHT mode default — `app/layout.tsx` có inline script clearing `dark` / `system` localStorage value và add `light` class trên `<html>`. Storage key: `hoshin-theme-v2` (unchanged across migrations).
+
+Dark mode tokens defined in `.dark { ... }` block — inverted brutalism (ink `#1A1A1A` bg, warm white `#FFFEF9` fg, brand bumped to `#E84947` cho contrast). Future opt-in.
+
+### File location
+
+- Token block: `app/globals.css` lines 12-198 (`@theme inline`, `:root`, `.dark`)
+- Utility classes: `app/globals.css` lines ~295+ (split before/inside `@layer components`)
+- Font loading: `app/layout.tsx` (next/font/google with Vietnamese subset)
+
+### Coverage status (2026-04-27)
+
+| Layer | NB v3.2 status |
+|---|---|
+| Foundation tokens | ✅ shipped (M-Design-1) |
+| Utility classes | ✅ shipped (M-Design-1) |
+| Landing page | ⏳ M-Design-2 (next) |
+| Dashboard shell | ⏳ M-Design-3 |
+| Discovery flows | ⏳ M-Design-4 |
+| X-Matrix Wizard | ⏳ M-Design-5 |
 
 ---
 
@@ -700,7 +800,7 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-26)
+## 16. Current State Snapshot (2026-04-27)
 
 - **Last migration applied**: `029_tows_strategies_v2_fields.sql`
 - **API routes count**: 39
@@ -708,7 +808,7 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), blog (8), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, kpi, report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: TOWS Strategy v2 (migration 029, Hoshin Kanri prompt, 7-field tool schema, expand/collapse UI, sync v2 to X-Matrix)
+- **Latest feature work**: Design system migration M-Design-1 (NB v3.2 Foundation Tokens)
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -762,6 +862,87 @@ Khi Claude mới vào session:
       - Khi xóa dead props từ component, GREP call site trước — drill-up có thể tạo ripple warning ở parent component (như VisionEditor → VisionWorkshopClient → page.tsx).
       - `react-hooks/exhaustive-deps` warning ≠ luôn cần `eslint-disable`. Nếu effect đã có ref guard (`started.current`), thêm dep vào array là cách sạch nhất — re-run = no-op.
     - **Verify**: `npm run typecheck` PASS, `npm run lint` 0 problems, Vercel auto-deploy succeed
+  - **Design system migration M-Design-1 (2026-04-27)**: ✅ shipped. Migrate design system foundation từ Neobrutalism × Swiss generic sang Neo-Brutalism v3.2 "Refined Tempered NB" (Vũ Hải Personal Edition adapted cho B2B SaaS).
+    - **Scope**: Foundation tokens only — `app/globals.css` + `app/layout.tsx` fonts. Components/pages chưa refactor (M-Design-2 sẽ tackle landing page).
+    - **4 commits**:
+      - `e70250f` — docs: update handoff before NB v3.2 refactor (HANDOFF cleanup, baseline state)
+      - `17360ab` — feat(design): swap fonts to NB v3.2 (Montserrat + Barlow Condensed → Space Grotesk + Inter + JetBrains Mono, layout.tsx)
+      - `b0d2aa4` — feat(design): refactor tokens to NB v3.2 (ink #2C2B2B → #1A1A1A, bg #F7F5F2 → #FFFEF9, +6 pastel accents, +8 spacing scale, +motion ease-nb cubic-bezier, radius 0 FORCED → 4px tempered)
+      - `3397f9d` — feat(design): refactor utility classes + add NB v3.2 sticker/marquee/pastel components (.nb-sticker, .nb-highlight, .nb-marquee, .card-tilt, .card-yellow/cyan/pink/lime/dark, .btn-yellow/cyan, .tag-* variants)
+    - **Token changes summary**:
+
+      | Token | Before (NB Swiss generic) | After (NB v3.2 Refined Tempered) |
+      |---|---|---|
+      | Display font | Barlow Condensed | Space Grotesk |
+      | Body font | Montserrat | Inter |
+      | Mono font | (none) | JetBrains Mono |
+      | `--ink` | `#2C2B2B` | `#1A1A1A` |
+      | `--bg` | `#F7F5F2` | `#FFFEF9` (warm white) |
+      | Border-radius | `0 !important` global force | `4px` tempered selective (`--radius-md`) |
+      | Pastel accents | (none) | 6 (yellow/cyan/lime/pink/peach/lavender) |
+      | Motion easing | (Tailwind default `ease`) | `cubic-bezier(0.25,0,0,1)` (`--ease-nb`) |
+      | Spacing scale | (Tailwind default) | 8-step token (`--space-1` 4px → `--space-8` 96px) |
+
+    - **Tested manually**: `/`, `/login`, `/x-ray`, `/dashboard` — all pass visual + interaction. `npm run typecheck` PASS, `npm run lint` PASS.
+    - **Pattern lessons**:
+      1. **NB v3.2 "Refined Tempered" cho phép radius 4px** ở cards/buttons (không phải 0 force như NB raw). Phải bỏ `border-radius: 0px !important` global trong `@layer base`, áp radius selective qua `--radius-md` token. Khi audit code base sau này, nếu thấy global radius force quay lại → đó là regression, không phải feature.
+      2. **Token migration thứ tự**: fonts (`layout.tsx`) trước → tokens block (`@theme inline` + `:root` + `.dark`) sau → utility classes cuối. Mỗi step verify visual riêng. **KHÔNG gộp 1 commit** vì không thể bisect được nếu vỡ. 4-commit pattern proven (HANDOFF baseline + fonts + tokens + utility classes).
+      3. **shadcn/ui CSS variables convention** (`--background`, `--foreground`, `--primary`, `--border`, `--ring`, `--card`, `--popover`, `--accent`, `--muted`, `--destructive`) PHẢI giữ tên, chỉ đổi value. Đổi tên = vỡ toàn bộ shadcn components. Custom tokens (`--brand`, `--ink`, `--bg`) đặt PARALLEL không thay thế shadcn vars (ghi chú đã có sẵn trong `globals.css` :root về collision với `--accent`).
+      4. **Vietnamese subset font verify**: Space Grotesk + Inter + JetBrains Mono đều support tiếng Việt full dấu — verified với "ấ", "ặ", "ợ", "đ" trong hero. Khi pick font Google mới, ALWAYS check Vietnamese coverage trước khi swap (next/font/google `subsets: ['latin', 'vietnamese']`).
+
+---
+
+## 17. Architecture Decisions
+
+Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
+
+### 2026-04-27 — Design system migrated to NB v3.2 Refined Tempered
+
+**Milestone**: M-Design-1 — Foundation Tokens.
+
+**Scope**: `app/globals.css` (tokens + utility classes) + `app/layout.tsx` (fonts).
+
+**Decisions**:
+- **Brand color `#c73937` unchanged** — đã build brand recognition từ launch, không reset.
+- **Fonts**: Space Grotesk (display) + Inter (body) + JetBrains Mono (mono). Replaces Montserrat + Barlow Condensed. All 3 support Vietnamese full subset.
+- **Border-radius scale 0/3/4/6/8/12/16/20px tempered** (replaces forced 0 với `!important` global). Cards/buttons default 4px (`--radius-md`); radius 0 reserved cho avatar/sticker/marquee/checkbox/radio (NB DNA).
+- **6 muted pastel accents** added (yellow `#F5E4B8` / cyan `#C4DEDC` / lime `#DDE4C5` / pink `#F0DCDD` / peach `#F0DCC0` / lavender `#DDD3EE`) cho feature cards và tags. Không thay thế brand red.
+- **Motion easing standardized** to `--ease-nb: cubic-bezier(0.25, 0, 0, 1)` — KHÔNG dùng `ease` / `ease-in-out` / `linear` cho hover transitions.
+- **Light mode forced** default unchanged (storage key `hoshin-theme-v2` unchanged). Dark mode tokens preserved trong `.dark { ... }` block cho future opt-in.
+
+**Constraints cho future AI sessions**:
+- KHÔNG propose Tailwind default radius (`rounded-lg`) hoặc shadow (`shadow-md`) — phải dùng custom tokens trong `globals.css` (`var(--radius-md)`, `var(--shadow-md)`).
+- KHÔNG `new` font import — wire qua `app/layout.tsx` next/font/google với Vietnamese subset.
+- KHÔNG hardcode hex colors — dùng tokens (`var(--brand)`, `var(--ink)`, `var(--bg)`, `var(--accent-yellow)`, ...).
+- Components mới phải dùng utility classes có sẵn (`.btn-brutal-*`, `.btn-yellow/cyan`, `.card-*`, `.nb-*`, `.tag-*`) thay vì re-implement style.
+- Khi cần style mới không match utility class hiện có, ADD vào `globals.css` với token-driven values, KHÔNG inline Tailwind arbitrary value (`bg-[#c73937]`).
+
+---
+
+## 18. Next Steps (Roadmap)
+
+### Milestone tiếp theo: M-Design-2 — Landing Page Refactor
+
+**Mục tiêu**: Refactor `app/page.tsx` full Neo-Brutalism v3.2 — apply tokens và utility classes vừa shipped ở M-Design-1 vào landing page hero, sections, footer.
+
+**Tasks dự kiến**:
+1. **Audit landing hiện tại** — list sections, copy, components đang dùng. Identify components nào cần rewrite vs giữ nguyên.
+2. **Refactor hero** — mixed font sizes (clamp 56px → 128px responsive), accent word rotated (`.nb-sticker` overlap), asymmetric shadow (`--shadow-tilt-l/r`). Test scale từ 375px → 1920px.
+3. **Trust-building section** — pastel feature cards (`.card-yellow`, `.card-cyan`, `.card-pink`, `.card-lime`) với `.card-tilt` variants. 4-6 cards, mỗi card 1 value prop.
+4. **Marquee section** — scrolling client logos hoặc social proof (`.nb-marquee` + `.nb-marquee-track` + `.nb-marquee-item`). Source: list 10-20 SME khách hàng pilot (cần Vũ Hải confirm danh sách).
+5. **Mobile responsive 375px** — verify tilted cards không break layout, marquee không cause horizontal scroll, hero typography scale gracefully.
+6. **Contrast WCAG AAA check** — pastel bg (`--accent-yellow #F5E4B8`, `--accent-cyan #C4DEDC`, `--accent-pink #F0DCDD`) với text `--ink #1A1A1A`. Verify ≥7:1 ratio cho body text, ≥4.5:1 cho large text.
+
+**Blockers**: none.
+
+**Dependency on M-Design-1**: ✅ shipped (foundation tokens ready, utility classes available).
+
+### Future milestones (TBD priority)
+
+- **M-Design-3**: Dashboard refactor (sidebar/header/cards) NB v3.2.
+- **M-Design-4**: Discovery flows (X-Ray, SWOT, Pain Mapper, Vision Workshop) NB v3.2.
+- **M-Design-5**: X-Matrix Wizard NB v3.2.
+- **P0.1 Phase 1 (orthogonal)**: Per-user rate-limit cho 12 authed AI routes (đã ship một phần ở 2026-04-26 commit `a8d5e58` — wrapping helper + 12 route wirings done. Verify 100% coverage và monitor 429 rate trên prod).
 
 ---
 
