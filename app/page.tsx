@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import HeroNB from '@/components/landing/HeroNB'
 import MarqueeStrip from '@/components/landing/MarqueeStrip'
+import FeatureCardNB from '@/components/landing/FeatureCardNB'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -118,51 +119,53 @@ export default async function LandingPage() {
                 Mọi thứ bạn cần
               </h2>
             </div>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {[
-                {
-                  icon: '🔍',
-                  title: 'Business X-Ray',
-                  desc: 'Chẩn đoán sức khỏe doanh nghiệp theo 7 trụ cột OPEX. Nhận báo cáo chi tiết ngay lập tức.',
-                },
-                {
-                  icon: '🧠',
-                  title: 'AI SWOT Coach',
-                  desc: 'AI Coach hướng dẫn phân tích 8Ms, Porter, PESTEL. Có nghiên cứu thị trường tự động.',
-                },
-                {
-                  icon: '🎯',
-                  title: 'X-Matrix Builder',
-                  desc: 'Tạo kế hoạch chiến lược Hoshin Kanri. AI pre-fill 70% từ Discovery data.',
-                },
-                {
-                  icon: '📈',
-                  title: 'KPI Tracker',
-                  desc: 'Cập nhật số liệu hàng tuần. Dashboard trực quan với sparkline và traffic light.',
-                },
-                {
-                  icon: '📄',
-                  title: 'Báo cáo tháng',
-                  desc: 'AI tổng hợp hiệu suất, wins/risks, xu hướng. Export PDF cho ban lãnh đạo.',
-                },
-                {
-                  icon: '🔭',
-                  title: 'Vision Workshop',
-                  desc: 'AI giúp bạn xây dựng tầm nhìn và mục tiêu năm. Chỉ cần trả lời 5 câu hỏi.',
-                },
-              ].map((f) => (
-                <div key={f.title} className="card-subtle p-6">
-                  <span className="text-4xl" role="img" aria-label={f.title}>
-                    {f.icon}
-                  </span>
-                  <h3 className="mt-4 font-display text-base font-bold uppercase tracking-wider text-ink">
-                    {f.title}
-                  </h3>
-                  <p className="mt-2 font-body text-[18px] leading-[1.75] text-text-2">
-                    {f.desc}
-                  </p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              <FeatureCardNB
+                icon="🔍"
+                title="Business X-Ray"
+                desc="Chẩn đoán sức khỏe doanh nghiệp theo 7 trụ cột OPEX. Nhận báo cáo chi tiết ngay lập tức."
+                variant="yellow"
+                stickerLabel="01"
+                tilt={true}
+                tiltDirection="left"
+              />
+              <FeatureCardNB
+                icon="🧠"
+                title="AI SWOT Coach"
+                desc="AI Coach hướng dẫn phân tích 8Ms, Porter, PESTEL. Có nghiên cứu thị trường tự động."
+                variant="cyan"
+                stickerLabel="02"
+              />
+              <FeatureCardNB
+                icon="🎯"
+                title="X-Matrix Builder"
+                desc="Tạo kế hoạch chiến lược Hoshin Kanri. AI pre-fill 70% từ Discovery data."
+                variant="pink"
+                stickerLabel="03"
+                tilt={true}
+                tiltDirection="right"
+              />
+              <FeatureCardNB
+                icon="📈"
+                title="KPI Tracker"
+                desc="Cập nhật số liệu hàng tuần. Dashboard trực quan với sparkline và traffic light."
+                variant="lime"
+                stickerLabel="04"
+              />
+              <FeatureCardNB
+                icon="📄"
+                title="Báo cáo tháng"
+                desc="AI tổng hợp hiệu suất, wins/risks, xu hướng. Export PDF cho ban lãnh đạo."
+                variant="peach"
+                stickerLabel="05"
+              />
+              <FeatureCardNB
+                icon="🔭"
+                title="Vision Workshop"
+                desc="AI giúp bạn xây dựng tầm nhìn và mục tiêu năm. Chỉ cần trả lời 5 câu hỏi."
+                variant="lavender"
+                stickerLabel="06"
+              />
             </div>
           </div>
         </section>

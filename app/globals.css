@@ -576,6 +576,20 @@ main > * {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
 }
+.card-peach {
+  background: var(--accent-peach);
+  color: var(--ink);
+  border: var(--border-heavy);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.card-lavender {
+  background: var(--accent-lavender);
+  color: var(--ink);
+  border: var(--border-heavy);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
 .card-dark {
   background: var(--ink);
   color: var(--bg);
