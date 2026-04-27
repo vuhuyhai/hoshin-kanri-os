@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import HeroNB from '@/components/landing/HeroNB'
 import MarqueeStrip from '@/components/landing/MarqueeStrip'
 import FeatureCardNB from '@/components/landing/FeatureCardNB'
+import StepCardNB from '@/components/landing/StepCardNB'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -73,39 +74,27 @@ export default async function LandingPage() {
                 3 bước tới chiến lược rõ ràng
               </h2>
             </div>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
-              {[
-                {
-                  num: '01',
-                  title: 'Khám phá',
-                  desc: 'Business X-Ray + SWOT + Pain Mapper. AI giúp bạn hiểu rõ doanh nghiệp trong 30 phút.',
-                },
-                {
-                  num: '02',
-                  title: 'Lập kế hoạch',
-                  desc: 'AI tổng hợp Discovery → tạo X-Matrix với Vision, Hoshins, Initiatives, KPIs.',
-                },
-                {
-                  num: '03',
-                  title: 'Theo dõi',
-                  desc: 'KPI Tracker hàng tuần + Báo cáo tháng tự động. Biết ngay đâu cần can thiệp.',
-                },
-              ].map((step) => (
-                <div key={step.num} className="relative pl-20 md:pl-0 md:text-center">
-                  <span
-                    className="absolute left-0 top-0 font-display font-black text-ink/10 md:static md:block md:mb-4"
-                    style={{ fontSize: 'clamp(60px, 8vw, 80px)' }}
-                  >
-                    {step.num}
-                  </span>
-                  <h3 className="font-display text-lg font-bold uppercase tracking-wider text-ink">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 font-body text-[18px] leading-[1.75] text-text-2">
-                    {step.desc}
-                  </p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              <StepCardNB
+                num="01"
+                title="Khám phá"
+                desc="Business X-Ray + SWOT 3 phase + Pain Mapper. AI đặt câu hỏi đúng để CEO biết doanh nghiệp đang ở đâu thật sự."
+                accent="yellow"
+              />
+              <StepCardNB
+                num="02"
+                title="Lập kế hoạch"
+                desc="Vision Workshop + AI Synthesis + X-Matrix Wizard. Biến chiến lược thành 1 trang theo Hoshin Kanri Toyota."
+                accent="cyan"
+                tilt={true}
+                tiltDirection="left"
+              />
+              <StepCardNB
+                num="03"
+                title="Theo dõi"
+                desc="KPI Tracking hằng tuần + Báo cáo tháng AI. Sparkline đỏ-vàng-xanh tự động, không cần Excel."
+                accent="pink"
+              />
             </div>
           </div>
         </section>
