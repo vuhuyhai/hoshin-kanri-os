@@ -78,6 +78,8 @@ export type CanvasAction =
       type: 'SET_AI_PREFILL'
       payload: { data: XMatrixCanvasData; suggestedFields: FieldPath[] }
     }
+  | { type: 'SET_SAVE_STATUS'; payload: SaveStatus }
+  | { type: 'CLEAR_DRAFT' }
 
 // ============================================================
 // Initial state
@@ -199,6 +201,28 @@ export function canvasReducer(
       // TODO: Task 4 — merge AI prefill into state.data + populate
       // ui.aiSuggestedFields with payload.suggestedFields paths.
       return state
+
+    case 'SET_SAVE_STATUS': {
+      const status = action.payload
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          saveStatus: status,
+          lastSavedAt: status === 'saved' ? new Date() : state.ui.lastSavedAt,
+        },
+      }
+    }
+
+    case 'CLEAR_DRAFT':
+      return {
+        data: initialData,
+        ui: {
+          ...initialUi,
+          aiSuggestedFields: new Set<FieldPath>(),
+          errors: new Map<FieldPath, string>(),
+        },
+      }
 
     default:
       return state

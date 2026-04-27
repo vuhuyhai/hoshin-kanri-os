@@ -1,6 +1,8 @@
 'use client'
 
-import { CanvasProvider } from './state/CanvasContext'
+import { useCallback } from 'react'
+import { CanvasProvider, useCanvas } from './state/CanvasContext'
+import { useLocalStorageSync } from './state/useLocalStorageSync'
 import { CanvasHeader } from './CanvasHeader'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasGrid } from './CanvasGrid'
@@ -12,19 +14,42 @@ interface XMatrixCanvasPageProps {
   members: OrgMember[]
 }
 
-export function XMatrixCanvasPage({ orgId, members }: XMatrixCanvasPageProps) {
+function CanvasContent({ orgId, members }: XMatrixCanvasPageProps) {
+  const { state, dispatch } = useCanvas()
+  const storageKey = `xmatrix-canvas-draft-${orgId}-${new Date().getFullYear()}`
+
+  const handleSaveStatusChange = useCallback(
+    (status: 'saving' | 'saved' | 'error') => {
+      dispatch({ type: 'SET_SAVE_STATUS', payload: status })
+    },
+    [dispatch]
+  )
+
+  useLocalStorageSync({
+    storageKey,
+    data: state.data,
+    dispatch,
+    onSaveStatusChange: handleSaveStatusChange,
+  })
+
+  return (
+    <div
+      className="w-full min-h-full bg-[var(--bg-paper)]"
+      data-org-id={orgId}
+      data-member-count={members.length}
+    >
+      <CanvasHeader storageKey={storageKey} />
+      <CanvasMiniMap />
+      <CanvasGrid members={members} />
+      <SubmitBar />
+    </div>
+  )
+}
+
+export function XMatrixCanvasPage(props: XMatrixCanvasPageProps) {
   return (
     <CanvasProvider>
-      <div
-        className="w-full min-h-full bg-[var(--bg-paper)]"
-        data-org-id={orgId}
-        data-member-count={members.length}
-      >
-        <CanvasHeader />
-        <CanvasMiniMap />
-        <CanvasGrid members={members} />
-        <SubmitBar />
-      </div>
+      <CanvasContent {...props} />
     </CanvasProvider>
   )
 }
