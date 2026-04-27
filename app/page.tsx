@@ -56,7 +56,7 @@ export default async function LandingPage() {
             'X-MATRIX TỰ ĐỘNG',
             'KPI THEO DÕI HẰNG TUẦN',
             'BÁO CÁO THÁNG AI',
-            'PHƯƠNG PHÁP TOYOTA 200+ NĂM',
+            'HOSHIN KANRI · FORTUNE 500',
             '100% TIẾNG VIỆT',
           ]}
           accentColor="yellow"
