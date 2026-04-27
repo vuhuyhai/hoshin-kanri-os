@@ -43,3 +43,6 @@ next-env.d.ts
 cookies.txt
 
 .vercel
+
+diff-handoff.txt
+*.diff.txt
