@@ -80,6 +80,7 @@
   --shadow-brutal-yellow: 6px 6px 0 #F5E4B8;
   --shadow-brutal-cyan: 6px 6px 0 #C4DEDC;
   --shadow-brutal-pink: 6px 6px 0 #F0DCDD;
+  --shadow-brutal-double: 6px 6px 0 #F5E4B8, 12px 12px 0 #1A1A1A;
 
   /* Radii — tempered NB v3.2 */
   --radius-sm: 3px;
@@ -182,6 +183,7 @@
   --shadow-yellow: 6px 6px 0 var(--accent-yellow);
   --shadow-cyan: 6px 6px 0 var(--accent-cyan);
   --shadow-pink: 6px 6px 0 var(--accent-pink);
+  --shadow-double: 6px 6px 0 var(--accent-yellow), 12px 12px 0 var(--ink);
 
   /* Layout */
   --sidebar-width: 240px;
@@ -638,6 +640,13 @@ main > * {
 }
 .btn-cyan:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--ink); }
 .btn-cyan:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+
+/* ── Dot grid background (overlay on any bg color) ── */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(26, 26, 26, 0.18) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+}
 
 /* ── Pastel tag variants (extend .badge-brutal) ── */
 .tag-yellow { background: var(--accent-yellow); color: var(--ink); }

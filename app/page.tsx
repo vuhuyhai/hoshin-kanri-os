@@ -6,6 +6,7 @@ import HeroNB from '@/components/landing/HeroNB'
 import MarqueeStrip from '@/components/landing/MarqueeStrip'
 import FeatureCardNB from '@/components/landing/FeatureCardNB'
 import StepCardNB from '@/components/landing/StepCardNB'
+import CtaBannerNB from '@/components/landing/CtaBannerNB'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -160,24 +161,15 @@ export default async function LandingPage() {
         </section>
 
         {/* ─── [5] CTA BANNER ─── */}
-        <section className="w-full bg-accent-brand">
-          <div className="mx-auto max-w-[1440px] px-6 py-16 text-center lg:px-12 lg:py-20">
-            <h2 className="font-display text-3xl font-black uppercase text-white md:text-4xl">
-              Bắt đầu miễn phí ngay
-            </h2>
-            <p className="mx-auto mt-4 max-w-prose font-body text-lg text-white/80">
-              Business X-Ray chỉ mất 5 phút. Không cần đăng ký, không cần thẻ
-              tín dụng.
-            </p>
-            <div className="mt-8">
-              <Link href="/x-ray">
-                <span className="inline-block bg-white text-ink border-2 border-white font-display text-sm font-bold uppercase tracking-wider px-8 py-3.5 shadow-[5px_5px_0_var(--accent-dark)] btn-brutal">
-                  Chẩn đoán miễn phí →
-                </span>
-              </Link>
-            </div>
-          </div>
-        </section>
+        <CtaBannerNB
+          overline="SẴN SÀNG BẮT ĐẦU?"
+          title="Bắt đầu miễn phí ngay"
+          subtitle="Chẩn đoán doanh nghiệp 5 phút. Nhận báo cáo X-Ray + 3 hành động ưu tiên ngay sau khi hoàn thành. Không yêu cầu thẻ tín dụng."
+          ctaLabel="Chẩn đoán miễn phí"
+          ctaHref="/x-ray"
+          variant="brand"
+          showDotPattern={true}
+        />
       </main>
 
       {/* ─── [6] FOOTER ─── */}
