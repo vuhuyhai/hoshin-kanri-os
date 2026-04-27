@@ -8,7 +8,7 @@ export function EastEdge() {
   const allKpis = state.data.hoshins.flatMap((h) => h.kpis)
 
   return (
-    <section className="flex h-full flex-col gap-1">
+    <section id="canvas-edge-east" className="flex h-full flex-col gap-1">
       <div className="flex items-center gap-1">
         <h2 className="heading-overline text-xs">📊 KPIs</h2>
         <EducationalTooltip
