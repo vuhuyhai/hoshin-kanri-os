@@ -812,7 +812,7 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), blog (8), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, kpi, report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: Landing page refactor M-Design-2 (NB v3.2 Component Architecture)
+- **Latest feature work**: M-Hoshin-1 (X-Matrix Canvas) — Replace 5-step wizard with single-page Density Mode canvas
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -929,6 +929,29 @@ Khi Claude mới vào session:
       3. **Marketing copy AI hallucination**: Pitfall mới #13. Vũ Hải BẮT BUỘC review con số/năm/% trong copy trước commit. M-Design-2 hit pitfall này 2 lần — fix qua 2 commits riêng cho cùng 1 root cause.
       4. **Component-based vs inline trade-off**: page.tsx ban đầu ~366 dòng inline → sau refactor 268 dòng với 5 component imports. Easier maintain, dễ test riêng từng section, nhưng tăng số file. Worth trade-off cho landing vì section structure rõ ràng. KHÔNG áp pattern này cho dashboard/admin (logic phức tạp hơn, nhiều state, tách theo feature thay vì theo section).
       5. **Spec discipline**: 100% style đi qua tokens (`var(--brand)`, `var(--accent-yellow)`, `var(--shadow-md)`, `var(--ease-nb)`). Không hardcode hex. KHÔNG inline Tailwind arbitrary value (`bg-[#c73937]`). Khi cần style mới → ADD vào globals.css với token-driven values, KHÔNG tự sáng tạo CSS rời rạc.
+  - **M-Hoshin-1 X-Matrix Canvas (2026-04-27)**: ✅ shipped. Replace 5-step `XMatrixWizard` bằng single-page Density Mode `XMatrixCanvasPage` (Toyota A3 pattern, orthogonal grid layout). Wizard files KEPT cho rollback safety 2 tuần — `NEXT_PUBLIC_XMATRIX_CANVAS=0` env var triggers wizard render.
+    - **M-Hoshin-1 commits (2026-04-27)** — 9 commits ship qua 1 day session:
+      - `7ae1acd` docs: M-Hoshin-1 canvas design with 5 locked decisions (T1: design audit + 5 Q&A)
+      - `413d276` feat(xmatrix): canvas component skeleton behind feature flag (T2: 12 components skeleton, mock data)
+      - (T2.5 commit no separate hash — bundled với T2 via Cursor scope creep) feat(xmatrix): refactor canvas to Density Mode with correlation matrix
+      - `742b62f` feat(xmatrix): wire canvas state with Context + useReducer (T3a: state foundation, replace mock với empty initial state)
+      - `70a9068` feat(xmatrix): add modal edit forms using @base-ui/react Dialog (T3b: 3 modal files + click handlers, full Hoshin form)
+      - `08b1719` feat(xmatrix): add localStorage auto-save and real-time validation (T3c: useLocalStorageSync + useCanvasValidation hooks, SubmitBar wire)
+      - `561848f` fix(xmatrix): tooltip right-anchor for edge-near elements (T4 hotfix: KPIs tooltip clip)
+      - `37eada6` feat(xmatrix): wire tooltips and mini-map navigation (T4+T5 gộp: 5 educational tooltips + mini-map data-driven)
+      - `c5429b9` feat(xmatrix): canvas as production default with reverse flag rollback (T6: bỏ feature flag)
+    - **M-Hoshin-1 pattern lessons**:
+      1. **Encoding hell trên Windows PowerShell**: Lệnh `echo "..." >> file.local` mặc định dùng UTF-16 LE encoding trên PowerShell, mix với UTF-8 file gốc → NULL bytes interleaved → Next.js không parse được env vars. Khi tạo/edit `.env.local`, LUÔN dùng `Add-Content -Encoding UTF8` hoặc `[System.IO.File]::WriteAllText` với `UTF8Encoding(false)` để đảm bảo UTF-8 không BOM. Verify bằng `[System.IO.File]::ReadAllBytes()` đọc 6 bytes đầu phải là `23 20 53 75 70 61` (= `# Supa`). Đã debug 1.5h ở session này — pattern lesson: NULL bytes invisible nhưng kill env loading.
+      2. **Canvas state Context + useReducer pattern**: Tách state thành `{ data: XMatrixData, ui: CanvasUiState }` với `data` byte-identical với existing API contract. Reducer pure function với 8 actions (HYDRATE, ADD/UPDATE/REMOVE × 2 entities + SET_AI_PREFILL placeholder + SET_SAVE_STATUS + CLEAR_DRAFT). Pattern proven cho large form state — tránh Zustand vì state scope hẹp (chỉ 1 page).
+      3. **localStorage debounce + hydrate 1 lần**: `useEffect` hydrate qua `useRef` guard (tránh React 19 StrictMode double-effect). Skip save khi data hoàn toàn empty (tránh đè lên stored data lúc just-mounted). Debounce 500ms balance UX vs write frequency.
+      4. **Reverse feature flag pattern**: `NEXT_PUBLIC_XMATRIX_CANVAS=0` để rollback (canvas default), thay vì `=1` để enable (wizard default). Pros: production user thấy new feature ngay, emergency rollback chỉ cần update Vercel env var (no redeploy). Pattern phù hợp cho UI replacement features khi confident về quality.
+      5. **Cursor scope creep on bundled tasks**: Cursor có xu hướng "auto-improve" — vd commit T2.5 (Density Mode refactor) Cursor tự xóa debug logs em đã thêm cho debugging .env.local. Tốt khi xóa đúng, nhưng pattern phải track qua `git diff --stat HEAD~1` mỗi commit để verify scope.
+      6. **`@base-ui/react` vs Radix**: Codebase dùng `@base-ui/react/alert-dialog`, KHÔNG phải `@radix-ui`. Khi spec UI components, PHẢI `view components/ui/` trước để confirm library trong use. Không assume shadcn pattern = Radix.
+      7. **Sticky positioning bug Next.js + Tailwind v4 mobile**: Mini-map `sticky top-16` không hoạt động trên mobile dù CSS computed values đúng (position: sticky, top: 64px). Suspect: scroll container ancestor chain. Defer fix M-Hoshin-2.
+      8. **Vibe coding session limit ~8h**: Session này em + Vũ Hải đi qua 9 tasks ~8h work. Encoding debug 1.5h + sticky bug debug 1h = 30% effective time bị consumed bởi bugs. Pattern: planning + design solid (T1) → implementation fast (T2-T6) → ship trong 1 session khả thi nếu bugs không leak. Anti-pattern: nếu gặp bug debug > 30 phút → pause hoặc defer thay vì cố fix tại session.
+  - **M-Hoshin-1 — Canvas mini-map sticky bug 2026-04-27**: ⏸ deferred to M-Hoshin-2 Task 6. Mini-map render OK ở top page nhưng không stick khi scroll trên mobile (650-768px viewport). Đã thử fix qua tăng z-index, đổi top-0 → top-16, move CanvasMiniMap outside wrapper div (commit reverted). Root cause chưa identify chính xác — khả năng là scroll container ancestor không đúng position-relative. Pattern lesson: bug sticky position trên Next.js + Tailwind v4 environment có thể cần investigate sâu DOM tree với DevTools Computed panel + check ancestor `overflow` chain. Functional impact: low — mini-map vẫn render, user vẫn navigate được, chỉ không sticky khi scroll.
+  - **M-Hoshin-1 — AI Prefill flow deferred 2026-04-27**: ⏸ wire `/api/x-matrix/prefill` API + `SET_AI_PREFILL` action với accept/reject từng ô (Q4 design decision). Action signature đã có trong `CanvasContext.tsx` với placeholder body. Defer to M-Hoshin-2 vì scope creep — AI prefill + AI coaching correlation = 1 feature integrated. Pattern lesson: khi feature có 2 layer (data prefill + interactive validation), không tách timing — ship cùng milestone để UX consistent.
+  - **M-Hoshin-1 — Wizard files cleanup pending 2026-05-11**: ⏸ delete `components/x-matrix/XMatrixWizard.tsx` + 4 step files + `WizardProgress.tsx` sau 2 tuần production stable (target 2026-05-11). Currently kept for rollback safety — `NEXT_PUBLIC_XMATRIX_CANVAS=0` env var triggers wizard render. Cleanup task: M-Cleanup-1.
 
 ---
 
@@ -977,30 +1000,64 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHÔNG dùng `font-display` weight 900 cho big numbers (KPI stats, score cards, dashboard metrics) — pattern phải là `font-mono` weight 700 (precedent từ StepCardNB).
 - KHI sinh marketing copy có con số/năm/percentage → phải verify với Vũ Hải hoặc dùng phrasing không-định-lượng. AI có xu hướng fabricate impressive numbers (vd "200+ năm Toyota" đã hallucinate ở M-Design-2). Pattern fix: ưu tiên qualitative claim ("Fortune 500 áp dụng", "chuẩn industry") thay vì quantitative.
 
+### 2026-04-27 — X-Matrix Canvas (Density Mode) replaces 5-step wizard
+
+**Milestone**: M-Hoshin-1 — X-Matrix Canvas Replace Wizard.
+
+**Scope**: Hoàn toàn replace `XMatrixWizard` (5-step linear) bằng `XMatrixCanvasPage` (single-page Density Mode canvas, Toyota A3 pattern). Wizard files KEEP cho rollback safety 2 tuần.
+
+**Driving feedback**: Akao-sensei review (chat earlier) — wizard tuyến tính phá metaphor "X-Matrix là 1 bức tranh", user không thấy 4 cạnh cùng lúc, không enforce vital few rule. Density Mode trả lại essence Hoshin Kanri.
+
+**Decisions**:
+- **Layout**: Orthogonal grid (90px / 320px / 200px rows × 200px / 1fr / 200px cols), NOT Toyota diagonal. Toyota Mode (diagonal SVG) defer M-Hoshin-3+.
+- **Center**: Empty correlation matrix grid 5×3 (Y1-Y3 × H1-H5) skeleton. M-Hoshin-2 wire click logic (●◐○-).
+- **Owner**: 1 owner per Hoshin (free-text `owner_name` in Hoshin card), NOT separate edge. KHÔNG migrate schema kpis.owner_user_id.
+- **State**: React Context + useReducer. State shape `{ data: XMatrixData, ui: CanvasUiState }` — `data` byte-identical với existing API contract (no schema migration).
+- **Auto-save**: localStorage V1, key `xmatrix-canvas-draft-${orgId}-${year}`, debounce 500ms. DB drafts defer V2.
+- **Edit pattern**: Modal (shadcn-style Dialog) using `@base-ui/react/dialog` (NOT Radix — codebase convention). YearGoal modal simple, Hoshin modal full all-in-one (title + owner + max 3 initiatives + max 2 KPIs).
+- **AI Prefill**: Defer to M-Hoshin-2 (lý do: scope creep + correlation engine cần work với AI prefill chung).
+- **Validation**: Real-time qua `validateXMatrix()` từ `lib/x-matrix/utils.ts`. Errors hiện inline trong SubmitBar (compact 1 dòng + click expand).
+- **Education**: 5 tooltips ⓘ với câu hỏi sensei wired vào 4 edge headings + 1 center heading.
+- **Mobile**: Stacked layout < 768px. Mini-map sticky top với 4 quadrants + click smooth-scroll. Mini-map data-driven (filled/empty indicators).
+- **Feature flag**: Reverse flag — canvas default cho mọi user, set `NEXT_PUBLIC_XMATRIX_CANVAS=0` để rollback wizard. Sau 2 tuần stable → bỏ flag + xóa wizard files.
+
+**Constraints cho future AI sessions**:
+- KHÔNG quay lại 5-step wizard pattern. Canvas là source of truth.
+- KHÔNG modify `XMatrixData` shape (preserve API contract `/api/x-matrix/create`). Chỉ extend qua `CanvasUiState` overlay.
+- KHÔNG add Radix UI dependency — dùng `@base-ui/react/dialog` cho consistent modal pattern.
+- KHÔNG hardcode hard limits (3/5/2/3) — import `LIMITS` từ `lib/x-matrix/utils.ts`.
+- Khi modify canvas state, dispatch action qua reducer, KHÔNG mutate state directly.
+- localStorage hydrate 1 lần on mount qua `useRef` guard (tránh React 19 StrictMode double-effect).
+
 ---
 
 ## 18. Next Steps (Roadmap)
 
-### Milestone tiếp theo: M-Design-3 — Dashboard Refactor
+### Milestone tiếp theo: M-Hoshin-2 — Correlation Matrix Engine
 
-**Mục tiêu**: Refactor `app/dashboard/layout.tsx` (Sidebar + Header + auth shell) + `app/dashboard/page.tsx` (Dashboard home) full NB v3.2.
+**Mục tiêu**: Wire correlation matrix center (5×3 grid) thành interactive — user click cell để chọn ●◐○-, validation rules cảnh báo orphan Hoshins, AI Coach đặt câu hỏi tò mò cho mỗi correlation.
 
 **Tasks dự kiến**:
-1. **Audit dashboard hiện tại** — Sidebar, Header, dashboard home content. Identify components nào reuse được từ M-Design-2 (vd CtaBannerNB cho upsell), components nào cần new.
-2. **Refactor Sidebar** — NB v3.2 navigation pattern (border 3px ink, active state với accent color, mono font cho menu labels).
-3. **Refactor Header** — User menu dropdown, org switcher, notification bell, logo + breadcrumb pattern NB.
-4. **Refactor Dashboard home** — Big stats numbers (precedent từ StepCardNB `font-mono` 700), recent activity feed, quick actions cards.
-5. **Mobile responsive** — sidebar collapse / drawer pattern cho < 768px.
+1. **DB migration** — table `xmatrix_correlations` (year_goal_id ↔ hoshin_id ↔ strength enum)
+2. **Correlation matrix UI** — grid 5×3 buttons clickable, dispatch SET_CORRELATION action
+3. **Validation rules** — cảnh báo Hoshin không có ● với bất kỳ Year Goal, Year Goal không có ● với bất kỳ Hoshin
+4. **AI Coach prompts** — "Tại sao H1 đánh ● với Y2?" (3 câu hỏi tò mò per correlation)
+5. **AI Prefill flow** — defer từ M-Hoshin-1, wire SET_AI_PREFILL action với accept/reject từng ô
+6. **Mini-map sticky bug fix** — defer từ M-Hoshin-1 Task 5
 
-**Blockers**: none. Foundation tokens + utility classes đã đủ từ M-Design-1 + M-Design-2.
+**Blockers**:
+- Cần thiết kế UX cho mobile correlation matrix (5×3 grid trên 375px viewport hẹp)
+- AI prefill prompt design — cần đọc lại sensei feedback turn 2-3
 
-**Dependency on M-Design-2**: ✅ shipped (5 components landing có thể reuse `CtaBannerNB` cho dashboard upsell banner).
+**Dependency on M-Hoshin-1**: ✅ shipped (canvas foundation + state + modal + validation + tooltips)
 
 ### Future milestones (TBD priority)
 
-- **M-Design-4**: Discovery flows (X-Ray, SWOT, Pain Mapper, Vision Workshop) NB v3.2.
-- **M-Design-5**: X-Matrix Wizard NB v3.2.
-- **P0.1 Phase 1 (orthogonal)**: Per-user rate-limit cho 12 authed AI routes (đã ship một phần ở 2026-04-26 commit `a8d5e58` — wrapping helper + 12 route wirings done. Verify 100% coverage và monitor 429 rate trên prod).
+- **M-Hoshin-3**: Annual Review Workflow (close PDCA loop — review year-end vs target, learnings, carry-overs)
+- **M-Hoshin-4**: Hansei reflections (auto-prompt khi KPI red 2+ tuần)
+- **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications)
+- **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần production stable)
+- **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu)
 
 ---
 
