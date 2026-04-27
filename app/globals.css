@@ -6,7 +6,7 @@
 
 /* ============================================================
    NEO-BRUTALISM DESIGN SYSTEM — Hoshin Kanri OS
-   Brand: #c73937 · Ink: #2C2B2B · Warm White: #F7F5F2
+   Brand: #c73937 · Ink: #1A1A1A · Warm White: #FFFEF9
    ============================================================ */
 
 @theme inline {
@@ -44,40 +44,63 @@
   --color-card: var(--card);
 
   /* Neo-Brutalism colors */
-  --color-ink: #2C2B2B;
-  --color-text-2: #5A5757;
+  --color-ink: #1A1A1A;
+  --color-text-2: #4A4848;
   --color-text-3: #6B6868;
   --color-accent-brand: #c73937;
   --color-accent-dark: #9e1f1e;
-  --color-bg-warm: #F7F5F2;
-  --color-bg-muted-warm: #ECEAE6;
-  --color-bg-dark: #2C2B2B;
+  --color-bg-warm: #FFFEF9;
+  --color-bg-muted-warm: #F5F0E8;
+  --color-bg-paper: #F5F0E8;
+  --color-bg-dark: #1A1A1A;
+  --color-accent-yellow: #F5E4B8;
+  --color-accent-cyan: #C4DEDC;
+  --color-accent-lime: #DDE4C5;
+  --color-accent-pink: #F0DCDD;
+  --color-accent-peach: #F0DCC0;
+  --color-accent-lavender: #DDD3EE;
 
   /* Fonts */
-  --font-display: "Montserrat", sans-serif;
-  --font-body: "Barlow Condensed", sans-serif;
-  --font-sans: "Barlow Condensed", sans-serif;
-  --font-mono: "Geist Mono", monospace;
-  --font-heading: "Montserrat", sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
+  --font-heading: "Space Grotesk", "Inter", sans-serif;
 
   /* Shadows — Neo-Brutalism hard shadows */
-  --shadow-brutal-sm: 3px 3px 0 #2C2B2B;
-  --shadow-brutal-md: 5px 5px 0 #2C2B2B;
-  --shadow-brutal-lg: 8px 8px 0 #2C2B2B;
-  --shadow-brutal-accent: 5px 5px 0 #c73937;
+  --shadow-brutal-xs: 2px 2px 0 #1A1A1A;
+  --shadow-brutal-sm: 2px 2px 0 #1A1A1A;
+  --shadow-brutal-md: 6px 6px 0 #1A1A1A;
+  --shadow-brutal-lg: 8px 8px 0 #1A1A1A;
+  --shadow-brutal-xl: 12px 12px 0 #1A1A1A;
+  --shadow-brutal-tilt-l: -6px 6px 0 #1A1A1A;
+  --shadow-brutal-tilt-r: 6px 6px 0 #1A1A1A;
+  --shadow-brutal-accent: 6px 6px 0 #c73937;
+  --shadow-brutal-brand: 6px 6px 0 #c73937;
+  --shadow-brutal-yellow: 6px 6px 0 #F5E4B8;
+  --shadow-brutal-cyan: 6px 6px 0 #C4DEDC;
+  --shadow-brutal-pink: 6px 6px 0 #F0DCDD;
 
-  /* Radii — all zero for Neo-Brutalism */
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
-  --radius-4xl: 0px;
+  /* Radii — tempered NB v3.2 */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
+  --radius-4xl: 20px;
 
   /* Spacing — layout tokens */
   --spacing-sidebar: 240px;
   --spacing-header: 64px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 20px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --space-7: 72px;
+  --space-8: 96px;
 }
 
 /* ============================================================
@@ -85,66 +108,80 @@
    ============================================================ */
 :root {
   color-scheme: light;
-  --background: #F7F5F2;
-  --foreground: #2C2B2B;
-  --card: #F7F5F2;
-  --card-foreground: #2C2B2B;
-  --popover: #F7F5F2;
-  --popover-foreground: #2C2B2B;
+  --background: #FFFEF9;
+  --foreground: #1A1A1A;
+  --card: #FFFEF9;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFEF9;
+  --popover-foreground: #1A1A1A;
   --primary: #c73937;
   --primary-foreground: #FFFFFF;
-  --secondary: #ECEAE6;
-  --secondary-foreground: #2C2B2B;
-  --muted: #ECEAE6;
-  --muted-foreground: #5A5757;
-  --accent: #ECEAE6;
-  --accent-foreground: #2C2B2B;
+  --secondary: #F5F0E8;
+  --secondary-foreground: #1A1A1A;
+  --muted: #F5F0E8;
+  --muted-foreground: #4A4848;
+  --accent: #F5F0E8;
+  --accent-foreground: #1A1A1A;
   --destructive: #ef4444;
-  --border: #2C2B2B;
-  --input: #2C2B2B;
+  --border: #1A1A1A;
+  --input: #1A1A1A;
   --ring: #c73937;
   --chart-1: #c73937;
-  --chart-2: #5A5757;
+  --chart-2: #4A4848;
   --chart-3: #9e1f1e;
   --chart-4: #8A8787;
-  --chart-5: #2C2B2B;
-  --radius: 0rem;
-  --sidebar: #F7F5F2;
-  --sidebar-foreground: #2C2B2B;
+  --chart-5: #1A1A1A;
+  --radius: 0.25rem;
+  --sidebar: #FFFEF9;
+  --sidebar-foreground: #1A1A1A;
   --sidebar-primary: #c73937;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #ECEAE6;
-  --sidebar-accent-foreground: #2C2B2B;
-  --sidebar-border: #2C2B2B;
+  --sidebar-accent: #F5F0E8;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: #1A1A1A;
   --sidebar-ring: #c73937;
 
   /* ── Design System Raw Tokens ──
      NOTE: --brand (not --accent) to avoid collision with shadcn's
      --accent:#ECEAE6 used for hover states in menus/sidebar.
      Use var(--brand) in utility classes, var(--primary) in components. */
-  --ink: #2C2B2B;
-  --text-2: #5A5757;
+  --ink: #1A1A1A;
+  --text-2: #4A4848;
   --text-3: #6B6868;
   --brand: #c73937;
   --brand-dark: #9e1f1e;
-  --bg: #F7F5F2;
-  --bg-muted: #ECEAE6;
-  --bg-dark: #2C2B2B;
+  --bg: #FFFEF9;
+  --bg-muted: #F5F0E8;
+  --bg-paper: #F5F0E8;
+  --bg-dark: #1A1A1A;
   --white: #FFFFFF;
   --accent: #c73937;
   --accent-dark: #9e1f1e;
+  --accent-yellow: #F5E4B8;
+  --accent-cyan: #C4DEDC;
+  --accent-lime: #DDE4C5;
+  --accent-pink: #F0DCDD;
+  --accent-peach: #F0DCC0;
+  --accent-lavender: #DDD3EE;
 
   /* Composite borders */
-  --border-heavy: 3px solid #2C2B2B;
+  --border-heavy: 3px solid #1A1A1A;
   --border-accent: 2px solid var(--brand);
   --border-subtle: 1px solid var(--bg-muted);
 
   /* Shadow shorthands */
-  --shadow-sm: 3px 3px 0 var(--ink);
-  --shadow-md: 5px 5px 0 var(--ink);
+  --shadow-xs: 2px 2px 0 var(--ink);
+  --shadow-sm: 2px 2px 0 var(--ink);
+  --shadow-md: 6px 6px 0 var(--ink);
   --shadow-lg: 8px 8px 0 var(--ink);
-  --shadow-accent: 5px 5px 0 var(--accent);
+  --shadow-xl: 12px 12px 0 var(--ink);
+  --shadow-tilt-l: -6px 6px 0 var(--ink);
+  --shadow-tilt-r: 6px 6px 0 var(--ink);
+  --shadow-accent: 6px 6px 0 var(--accent);
   --shadow-hover: 2px 2px 0 var(--ink);
+  --shadow-yellow: 6px 6px 0 var(--accent-yellow);
+  --shadow-cyan: 6px 6px 0 var(--accent-cyan);
+  --shadow-pink: 6px 6px 0 var(--accent-pink);
 
   /* Layout */
   --sidebar-width: 240px;
@@ -152,6 +189,12 @@
   --header-height: 64px;
   --content-max-width: 1440px;
   --content-padding-x: clamp(16px, 4vw, 80px);
+
+  /* Motion */
+  --duration-instant: 0ms;
+  --duration-snap: 100ms;
+  --duration-base: 150ms;
+  --ease-nb: cubic-bezier(0.25, 0, 0, 1);
 }
 
 /* ============================================================
@@ -159,37 +202,37 @@
    ============================================================ */
 .dark {
   color-scheme: dark;
-  --background: #1a1919;
-  --foreground: #F7F5F2;
-  --card: #2C2B2B;
-  --card-foreground: #F7F5F2;
-  --popover: #2C2B2B;
-  --popover-foreground: #F7F5F2;
-  --primary: #DC5553;
-  --primary-foreground: #1a1919;
+  --background: #1A1A1A;
+  --foreground: #FFFEF9;
+  --card: #1A1A1A;
+  --card-foreground: #FFFEF9;
+  --popover: #1A1A1A;
+  --popover-foreground: #FFFEF9;
+  --primary: #E84947;
+  --primary-foreground: #1A1A1A;
   --secondary: #3a3939;
-  --secondary-foreground: #F7F5F2;
+  --secondary-foreground: #FFFEF9;
   --muted: #3a3939;
   --muted-foreground: #8A8787;
   --accent: #3a3939;
-  --accent-foreground: #F7F5F2;
+  --accent-foreground: #FFFEF9;
   --destructive: #f87171;
   --border: #5A5757;
   --input: #5A5757;
-  --ring: #DC5553;
-  --chart-1: #DC5553;
+  --ring: #E84947;
+  --chart-1: #E84947;
   --chart-2: #8A8787;
   --chart-3: #5A5757;
   --chart-4: #3a3939;
-  --chart-5: #2C2B2B;
-  --sidebar: #2C2B2B;
-  --sidebar-foreground: #F7F5F2;
-  --sidebar-primary: #DC5553;
-  --sidebar-primary-foreground: #F7F5F2;
+  --chart-5: #1A1A1A;
+  --sidebar: #1A1A1A;
+  --sidebar-foreground: #FFFEF9;
+  --sidebar-primary: #E84947;
+  --sidebar-primary-foreground: #FFFEF9;
   --sidebar-accent: #3a3939;
-  --sidebar-accent-foreground: #F7F5F2;
+  --sidebar-accent-foreground: #FFFEF9;
   --sidebar-border: #5A5757;
-  --sidebar-ring: #DC5553;
+  --sidebar-ring: #E84947;
 }
 
 /* ============================================================
@@ -199,8 +242,8 @@
   * {
     @apply border-border outline-ring/50;
     font-style: normal !important;
-    border-radius: 0px !important;
     box-sizing: border-box;
+    font-optical-sizing: auto;
   }
   body {
     @apply bg-background text-foreground font-body;
@@ -209,13 +252,17 @@
     @apply font-body;
   }
 
-  /* Headings — Montserrat display font */
+  h1, h2, h3 { text-wrap: balance; }
+  p, li, blockquote { text-wrap: pretty; }
+
+  /* Headings — Space Grotesk display font */
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Montserrat", sans-serif;
+    font-family: "Space Grotesk", "Inter", sans-serif;
   }
-  h1 { font-weight: 900; }
-  h2 { font-weight: 800; }
-  h3, h4, h5, h6 { font-weight: 700; }
+  h1 { font-weight: 700; letter-spacing: -0.03em; }
+  h2 { font-weight: 700; letter-spacing: -0.02em; }
+  h3 { font-weight: 700; letter-spacing: -0.01em; }
+  h4, h5, h6 { font-weight: 700; }
 }
 
 /* ============================================================
