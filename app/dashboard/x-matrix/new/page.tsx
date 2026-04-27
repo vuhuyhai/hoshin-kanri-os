@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { XMatrixWizard } from '@/components/x-matrix/XMatrixWizard'
+import { XMatrixCanvasPage } from '@/components/x-matrix/canvas/XMatrixCanvasPage'
 import type { OrgMember } from '@/lib/x-matrix/types'
 
 export default async function NewXMatrixPage() {
@@ -18,7 +19,6 @@ export default async function NewXMatrixPage() {
 
   if (!membership) redirect('/onboarding/setup-org')
 
-  // Org members for KPI owner select
   const { data: membersData } = await supabase
     .from('org_members')
     .select('user_id, role, users(email, full_name)')
@@ -34,9 +34,14 @@ export default async function NewXMatrixPage() {
     }
   })
 
+  const useCanvas = process.env.NEXT_PUBLIC_XMATRIX_CANVAS === '1'
+
+  if (useCanvas) {
+    return <XMatrixCanvasPage orgId={membership.org_id} members={members} />
+  }
+
   return (
     <div className="w-full min-h-full p-6 lg:p-8">
-      {/* Page header — centered for wizard focus */}
       <div className="max-w-4xl mx-auto mb-8 pb-6 border-b-[3px] border-ink">
         <p className="overline mb-1">Strategy</p>
         <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
