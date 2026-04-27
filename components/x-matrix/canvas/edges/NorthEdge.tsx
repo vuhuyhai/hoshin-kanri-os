@@ -11,9 +11,9 @@ export function NorthEdge({ yearGoals }: NorthEdgeProps) {
   const slots = Array.from({ length: 3 }, (_, i) => yearGoals[i] ?? null)
 
   return (
-    <section className="space-y-3">
-      <h2 className="heading-overline">🎯 MỤC TIÊU NĂM (3-5 NĂM)</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <section className="flex h-full flex-col gap-1">
+      <h2 className="heading-overline text-xs">🎯 Mục tiêu năm</h2>
+      <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
         {slots.map((goal, i) => (
           <YearGoalCard key={i} goal={goal} slotIndex={i} />
         ))}

@@ -112,32 +112,39 @@ Side effects in this order:
 
 ## 3. Canvas Data Model
 
-### 3.1 Layout (locked — see §5 Q1, Q2)
+### 3.1 Layout — Density Mode (locked — see §5 Q1, Q2, Q6)
 
-**4 orthogonal edges, no diagonal Toyota X.** Owner is a single field per Hoshin (not per KPI), rendered inside the Hoshin card; the West edge shows an aggregated Owners summary derived from those cards.
+**Toyota A3 density pattern: 3 fixed-height rows × 3 columns, total canvas ≤ 720px on 1080p viewport.** 4 orthogonal edges share the perimeter; the center holds an empty correlation matrix grid (5 Hoshins × 3 Year Goals) which M-Hoshin-2 will wire to logic. Owner is a single field per Hoshin (not per KPI), rendered inside the Hoshin card; the West edge shows an aggregated Owners summary derived from those cards.
 
 ```
-                ┌──────────────────────────┐
-                │  NORTH — Year Goals       │
-                │  (max 3)                  │
-                └──────────────────────────┘
-                            │
-  ┌─────────┐       ┌───────┴────────┐      ┌───────┐
-  │  WEST   │       │   CENTER       │      │ EAST  │
-  │ Owners  │       │   Hoshins      │      │ KPI   │
-  │ summary │       │   (cards 1-5)  │      │ summ. │
-  │ (aggr.) │       │  + owner_name  │      │ (aggr)│
-  └─────────┘       └───────┬────────┘      └───────┘
-                            │
-                ┌──────────────────────────┐
-                │  SOUTH — 90-day          │
-                │  Initiatives per Hoshin  │
-                └──────────────────────────┘
+┌──────────────────────────────────────────────────────────┐  Header  50px
+├──────────────────────────────────────────────────────────┤
+│                NORTH — Year Goals (3 inline)             │   90px
+├─────────┬──────────────────────────────────┬─────────────┤
+│  WEST   │   CENTER — Correlation Matrix    │    EAST     │
+│ Owners  │   (5×3 empty grid, M-Hoshin-2    │   KPIs      │
+│ list    │    wires logic)                  │   list      │  320px
+│ (aggr)  │                                  │   (aggr)    │
+│ 200px   │              1fr                 │   200px     │
+├─────────┴──────────────────────────────────┴─────────────┤
+│           SOUTH — Hoshins (5 cards inline, scroll)       │  200px
+├──────────────────────────────────────────────────────────┤
+│                       Footer (sticky)                    │   50px
+└──────────────────────────────────────────────────────────┘
+                  Total ≈ 710px on 1080p
 ```
 
-The West (Owners) and East (KPI summary) edges are **derived views** — they read from `data.hoshins[].owner_name` and `data.hoshins[].kpis[]` respectively, no independent state. Edits happen inside the Hoshin card on the center column.
+Grid spec (desktop, `md:` breakpoint and up):
+- `grid-template-rows: 90px 320px 200px` (North / Middle / South)
+- `grid-template-columns: 200px 1fr 200px` (West / Center / East)
+- North and South span all 3 columns (`md:col-span-3`); West/Center/East fill row 2.
+- Gap: `gap-3` (12px).
 
-Toyota diagonal mode (45° tilted labels, corner correlation matrices, SVG render) is deferred to M-Hoshin-3+.
+The West (Owners) and East (KPIs) edges are **derived views** — they read from `data.hoshins[].owner_name` and `data.hoshins[].kpis[]` respectively, no independent state. Edits happen inside the Hoshin card on the South row, opened via modal (locked — §5 Q6).
+
+Center correlation matrix renders an empty 5×3 button grid in V1 — cells are `disabled` placeholders with `aria-label="Hn × Ym correlation (M-Hoshin-2)"`. M-Hoshin-2 will wire correlation logic + visual indicators (●/○/blank).
+
+Toyota diagonal mode (45° tilted labels, corner matrices, SVG render) is deferred to M-Hoshin-3+.
 
 ### 3.2 State requirements
 
@@ -304,6 +311,16 @@ Per [AGENTS.md](AGENTS.md): `npm run typecheck` + `npm run build` before declari
 - State shape thêm: `aiSuggestedFields: Set<FieldPath>` trong `CanvasUiState` (track field path nào đang là AI suggestion). Đã reflect trong §3.3.
 - Implication: prefill flow thay đổi — KHÔNG gọi API direct vào `state.data`, cần intermediate merge step populate cả `state.data` + `aiSuggestedFields` cùng lúc.
 
+### Q6 — Density Mode chosen (Toyota A3 pattern, locked 2026-04-27)
+
+- **Layout target:** total canvas height ≤ 720px on 1080p viewport, comfortable on 1080p / tight-but-OK on 720p. Goal is "everything visible without scroll" so the user can see all 4 edges + center matrix at once (Toyota A3 density).
+- **Row heights (desktop):** Header 50px / North 90px / Middle 320px / South 200px / Footer 50px ≈ **710px total**.
+- **Column widths (desktop):** West 200px / Center 1fr / East 200px. Center is wide because it now holds the correlation matrix grid (5×3 cells), not a motto block.
+- **Card heights:** YearGoalCard 60px (1-line title + 1-line desc), HoshinCard 110px (label row + 2-line title + counts row).
+- **Center change:** drop the "Mục tiêu lớn → Cách năm nay → Đo bằng gì → Ai chịu" motto block. Replace with empty correlation matrix grid (header row Y1/Y2/Y3 + 5 H-rows × 3 cells = 15 disabled placeholder buttons). M-Hoshin-2 wires correlation logic.
+- **Click-card → modal pattern:** every YearGoalCard / HoshinCard is a `<button>` with `onClick`. Task 2.5 stops at `console.log` placeholder; Task 3 (M-Hoshin-1 follow-up) wires the actual modal.
+- Implication: shrinking pads + heading sizes is presentation-only; types, props, and persisted shape are unchanged.
+
 ### Q5 — Mobile fallback (< 768px): Stack + sticky mini-map
 - Layout: 4 cards stacked vertically (Year Goals → Hoshins → KPIs → Owners summary).
 - **Sticky mini-map** ở top, height ~80px, hiển thị 4 quadrants thu nhỏ với:
@@ -333,7 +350,7 @@ Per [AGENTS.md](AGENTS.md): `npm run typecheck` + `npm run build` before declari
   │   ├── <EastEdge> KPI Summary             (aggregate read-only from hoshins[].kpis)       [NEW — derived view, no own state]
   │   ├── <WestEdge> Owners Summary          (aggregate read-only from hoshins[].owner_name) [NEW — derived view, no own state]
   │   ├── <SouthEdge> Initiatives Summary    (aggregate read-only from hoshins[].initiatives, optional in V1) [NEW — may collapse if cards already show inits]
-  │   └── <CenterX>                          (motto: "Mục tiêu lớn → Cách năm nay → Đo bằng gì → Ai chịu")  [NEW — static content]
+  │   └── <CenterX>                          (Empty correlation matrix 5×3 grid — M-Hoshin-2 wires logic)   [NEW — static skeleton]
   ├── <AIPrefillBanner>                      (only when ui.aiSuggestedFields.size > 0; "Reject all AI" button) [ADAPT — extends existing banner from XMatrixWizard.tsx:88-101]
   └── <SubmitBar>                            (sticky bottom: validateXMatrix(data) summary + Submit button)   [ADAPT — handleSave + error block from XMatrixReview.tsx]
 ```

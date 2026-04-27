@@ -18,16 +18,21 @@ const PASTEL_CLASSES = [
 export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   const pastel = PASTEL_CLASSES[slotIndex % PASTEL_CLASSES.length]
 
+  const handleClick = () => {
+    console.log('HoshinCard clicked, will open modal in Task 3', { slotIndex })
+  }
+
   if (!hoshin) {
     return (
-      <div
-        role="presentation"
-        className="flex min-h-[160px] w-full items-center justify-center border-2 border-dashed border-[var(--text-3)] bg-[var(--bg)]/40 p-4"
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex h-[110px] w-full items-center justify-center border-2 border-dashed border-[var(--text-3)] bg-[var(--bg)]/40 p-2 transition-colors hover:bg-[var(--bg)]/70"
       >
-        <span className="font-mono text-xs uppercase tracking-wider text-[var(--text-3)]">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
           + Hoshin #{slotIndex + 1}
         </span>
-      </div>
+      </button>
     )
   }
 
@@ -35,25 +40,27 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   const kpiCount = hoshin.kpis.length
 
   return (
-    <article className={`${pastel} flex min-h-[160px] flex-col gap-3 p-4`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="overline text-ink">H{slotIndex + 1}</span>
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`${pastel} flex h-[110px] w-full cursor-pointer flex-col gap-1 p-2 text-left transition-shadow hover:shadow-[var(--shadow-lg)]`}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-ink">
+          H{slotIndex + 1}
+        </span>
         {hoshin.owner_name && (
-          <span className="badge-brutal tag-brand">{hoshin.owner_name}</span>
+          <span className="badge-brutal tag-brand text-[10px]">
+            {hoshin.owner_name}
+          </span>
         )}
       </div>
-      <h3 className="text-base font-bold leading-tight text-ink">
+      <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-ink">
         {hoshin.title}
       </h3>
-      <div className="mt-auto flex items-center gap-3 font-mono text-xs uppercase tracking-wider text-ink">
-        <span>
-          {initCount} initiative{initCount !== 1 ? 's' : ''}
-        </span>
-        <span aria-hidden>·</span>
-        <span>
-          {kpiCount} KPI{kpiCount !== 1 ? 's' : ''}
-        </span>
+      <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-[var(--text-2)]">
+        {initCount} INI · {kpiCount} KPI
       </div>
-    </article>
+    </button>
   )
 }

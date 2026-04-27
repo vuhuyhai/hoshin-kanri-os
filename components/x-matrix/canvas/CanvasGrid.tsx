@@ -14,26 +14,26 @@ interface CanvasGridProps {
 
 export function CanvasGrid({ yearGoals, hoshins }: CanvasGridProps) {
   return (
-    <div className="bg-dot-grid bg-[var(--bg-paper)] px-4 py-8 lg:px-8">
-      <div className="flex flex-col gap-6 md:hidden">
+    <div className="bg-dot-grid bg-[var(--bg-paper)] px-4 py-4 lg:px-8">
+      <div className="flex flex-col gap-3 md:hidden">
         <NorthEdge yearGoals={yearGoals} />
         <SouthEdge hoshins={hoshins} />
         <EastEdge hoshins={hoshins} />
         <WestEdge hoshins={hoshins} />
       </div>
 
-      <div className="hidden md:grid md:grid-cols-[1fr_2fr_1fr] md:gap-6">
-        <div aria-hidden />
-        <NorthEdge yearGoals={yearGoals} />
-        <div aria-hidden />
+      <div className="hidden md:grid md:grid-cols-[200px_1fr_200px] md:grid-rows-[90px_320px_200px] md:gap-3">
+        <div className="md:col-span-3">
+          <NorthEdge yearGoals={yearGoals} />
+        </div>
 
         <WestEdge hoshins={hoshins} />
         <CenterX />
         <EastEdge hoshins={hoshins} />
 
-        <div aria-hidden />
-        <SouthEdge hoshins={hoshins} />
-        <div aria-hidden />
+        <div className="md:col-span-3">
+          <SouthEdge hoshins={hoshins} />
+        </div>
       </div>
     </div>
   )

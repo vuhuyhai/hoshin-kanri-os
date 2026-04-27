@@ -16,23 +16,26 @@ export function WestEdge({ hoshins }: WestEdgeProps) {
   const owners = Array.from(ownerCounts.entries())
 
   return (
-    <section className="space-y-3">
-      <h2 className="heading-overline">👥 AI CHỊU TRÁCH NHIỆM</h2>
-      <div className="border-[3px] border-ink bg-[var(--bg)] p-4 shadow-[var(--shadow-md)]">
+    <section className="flex h-full flex-col gap-1">
+      <h2 className="heading-overline text-xs">👥 Owners</h2>
+      <div className="flex-1 overflow-y-auto border-[3px] border-ink bg-[var(--bg)] p-2 shadow-[var(--shadow-md)]">
         {owners.length === 0 ? (
-          <p className="font-mono text-xs uppercase tracking-wider text-[var(--text-3)]">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
             Chưa giao
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {owners.map(([name, count]) => (
               <li
                 key={name}
-                className="flex items-center justify-between gap-2 border-b border-[var(--bg-muted)] pb-2 last:border-0 last:pb-0"
+                className="flex items-baseline gap-1 border-b border-[var(--bg-muted)] pb-1.5 last:border-0 last:pb-0"
               >
-                <span className="text-sm font-bold text-ink">{name}</span>
+                <span className="truncate text-sm font-medium text-ink">
+                  {name}
+                </span>
+                <span className="font-mono text-xs text-[var(--text-2)]">·</span>
                 <span className="font-mono text-xs text-[var(--text-2)]">
-                  {count} Hoshin{count > 1 ? 's' : ''}
+                  {count}H
                 </span>
               </li>
             ))}
