@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import HeroNB from '@/components/landing/HeroNB'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -43,75 +44,7 @@ export default async function LandingPage() {
 
       <main>
         {/* ─── [1] HERO ─── */}
-        <section className="w-full bg-bg-warm">
-          <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-8 px-6 py-16 md:py-24 lg:grid-cols-2 lg:gap-16 lg:px-12 lg:py-32">
-            {/* Text */}
-            <div>
-              <p className="heading-overline mb-3">Chiến lược cho SME Việt Nam</p>
-              <h1
-                className="font-display font-black uppercase text-ink leading-[1.05]"
-                style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}
-              >
-                Biến chiến lược thành hành động đo được trong{' '}
-                <span className="text-accent-brand">90 ngày</span>
-              </h1>
-              <p className="mt-6 max-w-prose font-body text-lg text-text-2">
-                Hoshin Kanri OS — Công cụ quản lý chiến lược cho SME Việt Nam.
-                AI hỗ trợ từ phân tích hiện trạng đến triển khai KPI.
-              </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/x-ray" className="w-full sm:w-auto">
-                  <span className="btn-brutal-primary block text-center text-sm px-8 py-3.5 sm:inline-block">
-                    Chẩn đoán miễn phí →
-                  </span>
-                </Link>
-                <Link href="/login" className="w-full sm:w-auto">
-                  <span className="btn-brutal-secondary block text-center text-sm px-8 py-3.5 sm:inline-block">
-                    Đăng nhập
-                  </span>
-                </Link>
-              </div>
-              <p className="mt-4 font-body text-[15px] text-text-3">
-                Business X-Ray — 5 phút, miễn phí, không cần đăng ký
-              </p>
-            </div>
-
-            {/* Visual — strategy matrix illustration */}
-            <div className="hidden lg:flex items-center justify-center" aria-hidden="true">
-              <div className="relative w-full max-w-[400px] aspect-square">
-                {/* Decorative grid representing X-Matrix */}
-                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-3">
-                  {[
-                    'bg-accent-brand',
-                    'bg-ink',
-                    'bg-bg-muted-warm border-2 border-ink',
-                    'bg-ink',
-                    'bg-accent-brand',
-                    'bg-ink',
-                    'bg-bg-muted-warm border-2 border-ink',
-                    'bg-ink',
-                    'bg-accent-brand',
-                  ].map((cls, i) => (
-                    <div
-                      key={i}
-                      className={`${cls} shadow-brutal-sm transition-transform duration-300 hover:-translate-x-0.5 hover:-translate-y-0.5`}
-                    />
-                  ))}
-                </div>
-                {/* Floating labels */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 badge-brutal bg-bg-warm border-ink border-2 text-ink px-3 py-1">
-                  Vision
-                </div>
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 badge-brutal bg-bg-warm border-ink border-2 text-ink px-3 py-1">
-                  KPIs
-                </div>
-                <div className="absolute top-1/2 -left-4 -translate-y-1/2 -rotate-90 badge-brutal bg-bg-warm border-ink border-2 text-ink px-3 py-1">
-                  Hoshins
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <HeroNB />
 
         {/* ─── [2] SOCIAL PROOF BAR ─── */}
         <section className="w-full bg-bg-dark">
