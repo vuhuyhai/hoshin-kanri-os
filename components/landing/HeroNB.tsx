@@ -58,8 +58,8 @@ export default function HeroNB() {
 
             <p className="mt-8 max-w-[560px] font-body text-base leading-relaxed text-text-2 lg:text-lg">
               Biến tầm nhìn của CEO thành KPI cụ thể, theo dõi hằng tuần, và
-              báo cáo tự động — bằng phương pháp Toyota đã dùng 200+ năm và AI
-              hiểu doanh nghiệp Việt.
+              báo cáo tự động — bằng phương pháp Hoshin Kanri đã được Fortune
+              500 áp dụng và AI hiểu doanh nghiệp Việt.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
