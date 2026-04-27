@@ -1,4 +1,4 @@
-export function Footer() {
+export function FooterCopyright() {
   return (
     <footer className="w-full border-t-[2px] border-ink bg-bg-warm py-3 px-6 flex items-center justify-center">
       <p className="font-body text-xs text-text-3 text-center">

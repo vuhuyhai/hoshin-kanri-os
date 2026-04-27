@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 import { PHProvider } from '@/components/providers/posthog-provider'
 import { Toaster } from 'sonner'
 import { AuthListener } from '@/components/providers/auth-listener'
-import { Footer } from '@/components/layout/footer'
+import { FooterCopyright } from '@/components/layout/footer-copyright'
 import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -156,7 +156,7 @@ export default function RootLayout({
           >
             <AuthListener />
             {children}
-            <Footer />
+            <FooterCopyright />
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </PHProvider>

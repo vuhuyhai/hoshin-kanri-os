@@ -304,20 +304,24 @@ export default async function LandingPage() {
                 Tài nguyên
               </p>
               <ul className="space-y-2">
-                {[
-                  { label: 'Hoshin Kanri là gì?', href: '#' },
-                  { label: 'Blog', href: '#' },
-                  { label: 'Case Studies', href: '#' },
-                ].map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="font-body text-sm text-white/60 transition-colors hover:text-white"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                <li>
+                  <span aria-disabled="true" className="font-body text-sm cursor-not-allowed text-text-3 opacity-60">
+                    Hoshin Kanri là gì? <span className="text-xs">(sắp ra mắt)</span>
+                  </span>
+                </li>
+                <li>
+                  <Link
+                    href="/blog"
+                    className="font-body text-sm text-white/60 transition-colors hover:text-white"
+                  >
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <span aria-disabled="true" className="font-body text-sm cursor-not-allowed text-text-3 opacity-60">
+                    Case Studies <span className="text-xs">(sắp ra mắt)</span>
+                  </span>
+                </li>
               </ul>
             </nav>
 
@@ -343,20 +347,6 @@ export default async function LandingPage() {
                 ))}
               </ul>
             </nav>
-          </div>
-
-          <div className="mt-12 border-t border-white/10 pt-6 text-center">
-            <p className="font-body text-sm text-white/40">
-              © 2026 Hoshin Kanri OS. Design by{' '}
-              <a
-                href="https://www.facebook.com/vuhai.fitness"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-white/60 underline underline-offset-2 hover:text-white transition-colors duration-150"
-              >
-                Vũ Hải | Business Consultant
-              </a>
-            </p>
           </div>
         </div>
       </footer>
