@@ -567,6 +567,10 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
 
 13. **AI hallucinate factual numbers in copy**: Khi sinh marketing copy, AI có xu hướng "fabricate impressive numbers" (vd "200+ năm Toyota", "10x faster", "Fortune 100 use this"). Các con số này thường KHÔNG grounded từ source thật. Pattern fix: (1) Vũ Hải review MỌI con số trong copy trước khi commit, (2) khi cần emphasis credibility, ưu tiên qualitative claim ("Fortune 500 áp dụng", "chuẩn industry") thay vì quantitative ("X năm", "Y%"), (3) nếu phải dùng số → web search verify hoặc nguồn từ Vũ Hải. Đã gặp ở M-Design-2 hero subheadline + bullet section, fix qua 2 commits `21ad758` (hero subheadline) + `e738fdb` (additional copy claim) — cả hai chuyển "Toyota 200+ năm" → "Hoshin Kanri Fortune 500".
 
+14. **Tailwind `hidden md:grid` ẩn content mobile silently**: Pattern `hidden md:grid` (hoặc `hidden md:block`, `hidden md:flex`) ẩn HOÀN TOÀN content trên mobile. Khi component có nested data critical (vd correlation matrix center), pattern này nghĩa là toàn bộ feature vô dụng < 768px. Đã gặp ở CenterX M-Hoshin-1 → M-Mobile-1 fix bằng `flex flex-col md:grid md:grid-cols-[...]` responsive pattern. Audit checklist cho component mới: nếu dùng `hidden md:*`, document rõ trong comment lý do mobile không cần content đó. Default: render mobile + responsive layout, không hardcode hide.
+
+15. **Sticky bug Tailwind + Next.js layout shells multi-cause**: `position: sticky` không stick có thể có MULTI-CAUSE combined: ancestor `overflow: hidden | auto`, ancestor flex container thiếu `min-h-0`, ancestor `transform | filter | perspective`, sticky element height = parent height. Static code review (Cursor diagnose) HIGH confidence vẫn có thể miss khi multi-cause. Pattern: nếu fix HIGH confidence không work → DON'T pivot sang MEDIUM/LOW option, defer/kill feature thay vì sunk-cost. Mini-map sticky bug đã defer 2 lần trong Hoshin Kanri OS (M-Hoshin-1 → M-Mobile-1) → killed indefinitely.
+
 ---
 
 ## 11. Dev Workflow
@@ -816,7 +820,7 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), blog (8), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, kpi, report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Hoshin-2 (X-Matrix Correlation Matrix Engine) — Wire correlation matrix center 5×3 thành interactive với accept/reject AI prefill, sensei coach questions, orphan validation
+- **Latest feature work**: M-Mobile-1 (Mobile Layout Redesign — partial scope) — Stacked Vertical pattern shipped, mini-map sticky killed indefinitely
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -990,6 +994,20 @@ Khi Claude mới vào session:
       6. **API existed nhưng không wired**: `/api/x-matrix/create` đã có đầy đủ từ wizard cũ (M-Hoshin-1 không build mới — wizard cũ cũng dùng route này qua XMatrixReview.tsx). M-Hoshin-1 ship canvas chỉ tạo placeholder submit, không wire vào API có sẵn. Pattern: trước khi assume "feature X chưa có API", grep toàn repo cho route patterns liên quan — có thể đã có sẵn từ legacy code.
       7. **Vision input thiếu hoàn toàn ở M-Hoshin-1**: Canvas state có field `vision: string` (line 35 CanvasContext) nhưng KHÔNG có UI input nào để nhập. Validation block save với "Vision statement không được trống". Pattern: khi extend canvas, kiểm tra MỖI field trong state shape có corresponding UI input không. Audit checklist nên include "every state field has UI input" cho future state extensions.
       8. **Mobile layout broken phát hiện gián tiếp**: Khi test Task 6 mini-map sticky bug, screenshot mobile 460x731 chỉ thấy Hoshin cards (SouthEdge), KHÔNG thấy Vision/MụcTiêu/MaTrậnLiênKết/Owners/KPIs. CenterX có `hidden md:grid` → không render mobile. Toàn bộ M-Hoshin-2 correlation feature **vô dụng trên mobile**. Defer M-Mobile-1 — milestone riêng cho mobile redesign (stacked accordion pattern, not flat stack hiện tại). Pattern: defer mobile critical fixes vào milestone riêng nếu desktop-first user (CEO solo dev). Anti-pattern: cố fix mobile trong session feature build → scope creep.
+  - **M-Mobile-1 Mobile Layout Redesign 2026-04-28 (partial scope)**: ✅ shipped Task 2 (Stacked Vertical pattern). ⛔ Mini-map sticky bug killed indefinitely sau 2 lần defer (M-Hoshin-1 → M-Mobile-1).
+    - **M-Mobile-1 commits (2026-04-28)** — 1 commit ship qua session ngắn:
+      - `68d48b9` feat(xmatrix): render canvas mobile with stacked vertical layout (Task 2 — render đầy đủ + correlation đảo trục 3×5 + cell touch ≥48px)
+    - **Mini-map sticky bug DEFERRED INDEFINITELY**:
+      - 2 lần defer (M-Hoshin-1 → M-Mobile-1 → kill)
+      - Total time consumed: ~3h diagnose qua 2 milestones
+      - Decision: kill khỏi roadmap. Re-add chỉ khi user complain hoặc gắn vào feature mới
+      - Last attempt: `min-h-0` fix trong dashboard layout `<main>` + `scrollMainToTop()` helper trong `lib/utils.ts` — reverted, không commit. Multi-cause sticky bug (Tailwind + Next.js nested flex + indeterminate height) không định danh được từ static review HIGH confidence.
+    - **Pattern lessons**:
+      1. **Diagnose-first proven valuable cho bug fix**: Task 2 prompt blind → 2 ambiguity Cursor pause (Vision modal + YearGoals metric scope creep). Task 3 diagnose-first → root cause clear nhưng fix incomplete (multi-cause sticky bug). Pattern: diagnose-first cho bug fix, prompt blind cho feature build straightforward.
+      2. **2-defer = kill rule**: Quality-of-life features đã defer 2 lần → downgrade priority hoặc kill. Tránh sunk-cost (mini-map sticky consume 3h tổng cộng cross 2 milestones, không ship). Re-add chỉ khi có user complaint mới hoặc gắn deeply vào feature kế.
+      3. **HIGH confidence diagnose ≠ 100% fix**: Cursor diagnose Option 1 confidence HIGH (`min-h-0` fix flexbox `min-height: auto` default), ship đúng spec, vẫn không stick. Multi-cause sticky bug (Tailwind + Next.js + nested layout) khó định danh từ static review. Pattern: nếu HIGH confidence fix không work → defer/kill thay vì pivot MEDIUM/LOW option (sunk-cost trap).
+      4. **Refactor không gắn fix = ship sau**: `scrollMainToTop()` helper là refactor (replace `window.scrollTo` cho dashboard pages), không phải fix bug. Khi fix gắn revert → refactor không nên ship riêng. Wait until 1 fix khác cần helper rồi ship cùng commit.
+      5. **Submit bar mobile không broken** — em prompt assumption wrong trong §18 Next Steps cũ ("Submit bar mobile — full-width, persistent footer pattern thay vì inline"). Verified qua test mobile session: inline pattern hiện tại work fine, không cần redesign. Pattern: verify "broken" claim TRƯỚC khi schedule task; tránh fix problems không tồn tại.
 
 ---
 
@@ -1094,29 +1112,55 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHÔNG add granular accept cho AI prefill mà không design UX dedicated (preview pane, diff view, conflict resolution components).
 - KHI extend canvas state, audit checklist: every state field has corresponding UI input + validation message + persistence test.
 
+### 2026-04-28 — Mobile Layout Stacked Vertical (Pattern A)
+
+**Milestone**: M-Mobile-1 — Mobile Layout Redesign (partial scope).
+
+**Scope**: 1 commit (`68d48b9`) — `components/x-matrix/canvas/CanvasGrid.tsx` (reorder source markup mobile flow) + `components/x-matrix/canvas/CenterX.tsx` (responsive flex/grid + correlation matrix đảo trục mobile + cell touch ≥ 48px).
+
+**Driving feedback**: M-Hoshin-2 cuối milestone phát hiện CenterX có `hidden md:grid` → mobile (< 768px) không render Vision/YearGoals/Correlation/Owners/KPIs. Toàn bộ M-Hoshin-2 correlation feature vô dụng trên mobile.
+
+**Decisions**:
+- **Pattern A (Stacked Vertical)** chosen over Pattern B (Horizontal Scroll) hoặc Pattern C (Tabbed Quadrants). Lý do: read-mostly mobile use case + thấp effort/risk + 1 codebase responsive + standard mobile UX (top-down catchball flow).
+- **Mobile order top-to-bottom**: NorthEdge (YearGoals) → CenterX (Correlation) → SouthEdge (Hoshins) → EastEdge (KPIs) → WestEdge (Owners). Match Toyota catchball flow: Vision → YearGoals → catchball matrix → Hoshins → KPIs.
+- **Correlation matrix đảo trục mobile**: Desktop 5 cols × 3 rows (Hoshins × YearGoals). Mobile 3 cols × 5 rows (YearGoals × Hoshins). Lý do: 3 cols trên 375px = ~109px/cell touch target ≥ 48px; 5 cols trên 375px = ~65px/cell KHÔNG đạt 48px.
+- **Data shape NOT changed** — đảo trục là render-direction-only. Cell map vẫn `{year_goal_id, hoshin_id, strength}` từ table `xmatrix_correlations`.
+- **Desktop ≥ 768px GIỮ NGUYÊN** — explicit `md:col-start-* md:row-start-*` cho phép source order khác desktop placement. Visual không đổi cho desktop user.
+- **Vision modal mobile** DEFER — textarea inline 2 rows full-width đã đẹp mobile, modal pattern thêm complexity không cần.
+- **YearGoals metric display** REJECT — type `XMatrixYearGoal` không có metric field, description đã render sẵn. Em prompt sai assumption.
+- **Mini-map sticky** KILLED — 2 lần defer, không cần thiết cho mobile critical path.
+- **Submit bar mobile** verified work without redesign — inline pattern hiện tại OK.
+
+**Constraints cho future AI sessions**:
+- KHÔNG thêm `hidden md:` class cho components canvas — nếu cần ẩn desktop, dùng `md:hidden` (ngược lại) để đảm bảo mobile có content.
+- KHÔNG đổi correlation matrix data shape — trục đảo chỉ là render direction.
+- KHÔNG re-introduce Vision modal mobile mà không có rationale rõ ràng (vd: Vision text quá dài + need to edit thường xuyên).
+- KHÔNG re-investigate mini-map sticky bug mà không có user complaint mới.
+- Khi add component mới vào canvas, default render trên cả mobile và desktop. Nếu cần ẩn 1 viewport → dùng `md:hidden` (ẩn desktop, show mobile) hoặc `hidden md:block` (ẩn mobile, show desktop) thay vì hardcode `hidden md:grid`.
+
 ---
 
 ## 18. Next Steps (Roadmap)
 
-### Milestone tiếp theo: M-Mobile-1 — Mobile Layout Redesign
+### Milestone tiếp theo: M-Hoshin-3 — Annual Review Workflow
 
-**Mục tiêu**: Khắc phục mobile layout broken phát hiện cuối M-Hoshin-2. Hiện tại `CenterX` có `hidden md:grid` → correlation matrix + Vision/MụcTiêu/Owners/KPIs KHÔNG render trên mobile (< 768px). Toàn bộ M-Hoshin-2 correlation feature vô dụng trên mobile. Mini-map sticky bug (defer từ M-Hoshin-1) cũng gộp vào đây.
+**Mục tiêu**: Close PDCA loop. End-of-year review vs target, capture learnings, propagate carry-overs sang năm sau. Có thể bao gồm granular accept cho AI Prefill (defer từ M-Hoshin-2).
 
-**Tasks dự kiến**:
-1. **Stacked accordion pattern** — mobile xếp dọc Vision → Year Goals → Hoshins → Correlation Matrix → Owners/KPIs (NOT flat stack hiện tại)
-2. **CenterX render mobile** — bỏ `hidden md:grid`, design correlation grid touchable (5×3 trên 375px viewport — tile size + tap target ≥ 44px)
-3. **Mini-map sticky bug fix** — investigate scroll container ancestor `overflow` chain, fix sticky không hoạt động mobile (defer từ M-Hoshin-1)
-4. **Submit bar mobile** — full-width, persistent footer pattern thay vì inline
+**Tasks dự kiến** (TBD detail):
+1. **Annual review form** — comparison table target vs actual cho mỗi YearGoal/Hoshin
+2. **Hansei (reflection) capture** — what worked/didn't, why
+3. **Carry-over engine** — auto-suggest year goals/Hoshins từ "didn't complete" sang năm mới
+4. **Year transition flow** — archive cũ + create new year x_matrix với prefill carry-overs
 
 **Blockers**:
-- Cần wireframe mobile cho correlation matrix (CEO solo dev là desktop-first user, mobile critical cho future expansion)
+- Cần wireframe annual review UI
+- Cần verify AI prompt cho hansei generation (Toyota A3 pattern)
 
-**Dependency on M-Hoshin-2**: ✅ shipped
+**Dependency on M-Mobile-1**: ✅ shipped
 
 ### Future milestones (TBD priority)
 
-- **M-Mobile-1**: Mobile layout redesign (stacked accordion pattern). Currently CenterX không render mobile, mini-map sticky bug, toàn bộ canvas above-the-fold cut off ở viewport < 768px. Critical cho mobile users trong tương lai. **Priority: HIGH** (next milestone — see above).
-- **M-Hoshin-3**: Annual Review Workflow (close PDCA loop — review year-end vs target, learnings, carry-overs). Có thể bao gồm granular accept cho AI Prefill (defer từ M-Hoshin-2).
+- **M-Hoshin-3**: Annual Review Workflow (close PDCA loop — review year-end vs target, learnings, carry-overs). Có thể bao gồm granular accept cho AI Prefill (defer từ M-Hoshin-2). **Priority: HIGH** (next milestone — see above).
 - **M-Hoshin-4**: Hansei reflections (auto-prompt khi KPI red 2+ tuần)
 - **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications)
 - **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần production stable)
