@@ -973,6 +973,64 @@ export type Database = {
           },
         ]
       }
+      xmatrix_correlations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          hoshin_id: string
+          id: string
+          org_id: string
+          strength: "strong" | "medium" | "weak" | "none"
+          updated_at: string
+          x_matrix_id: string
+          year_goal_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          hoshin_id: string
+          id?: string
+          org_id: string
+          strength: "strong" | "medium" | "weak" | "none"
+          updated_at?: string
+          x_matrix_id: string
+          year_goal_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          hoshin_id?: string
+          id?: string
+          org_id?: string
+          strength?: "strong" | "medium" | "weak" | "none"
+          updated_at?: string
+          x_matrix_id?: string
+          year_goal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xmatrix_correlations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xmatrix_correlations_x_matrix_id_fkey"
+            columns: ["x_matrix_id"]
+            isOneToOne: false
+            referencedRelation: "x_matrices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xmatrix_correlations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xray_leads: {
         Row: {
           answers_json: Json
