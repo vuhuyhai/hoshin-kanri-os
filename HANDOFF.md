@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-27
+> **Last verified**: 2026-04-28
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -201,7 +201,7 @@ hoshin-kanri-os/
 
 ## 4. Database Schema (Supabase Postgres + RLS)
 
-**Latest migration**: `029_tows_strategies_v2_fields.sql` (27 migration files: 001-006 + 009-029). Gap at 007/008 confirmed clean — never existed in git history (all 126 commits, all branches). Schema continuity verified between 006 → 009. No drift between migrations and types.ts.
+**Latest migration**: `030_xmatrix_correlations.sql` (28 migration files: 001-006 + 009-030). Gap at 007/008 confirmed clean — never existed in git history (all 126 commits, all branches). Schema continuity verified between 006 → 009. No drift between migrations and types.ts.
 
 ### Core Tables
 - **`organizations`** — `id, name, industry, headcount ('1-10'|'10-50'|'50-200'), city, plan_tier ('free'|'pro'), zalo_oa_token`
@@ -214,6 +214,7 @@ hoshin-kanri-os/
 - **`swot_analyses`** — `org_id, quadrant ('S'|'W'|'O'|'T'), framework_source, statement, evidence_json (JSONB[]), implication`
 - **`swot_factors`** — Per-row S/W/O/T với atomic `reserve_factor_codes` RPC (migration 014)
 - **`tows_strategies`** — SO/ST/WO/WT strategies, sync vào x_matrices on-demand. v2 fields (migration 029): actions JSONB nullable, kpi_suggestions JSONB nullable, timeframe varchar(10) nullable CHECK in ('30d','60d','90d'), rationale text nullable.
+- **`xmatrix_correlations`** — `org_id, x_matrix_id (FK x_matrices), year_goal_id (text, JSON-embedded ID), hoshin_id (text, JSON-embedded ID), strength ('strong'|'medium'|'weak'|'none'), created_by`. UNIQUE(x_matrix_id, year_goal_id, hoshin_id) cho idempotent upsert. year_goal_id và hoshin_id là text (không FK) vì đây là JSON-embedded IDs trong `x_matrices.vision_json`. RLS: SELECT all org members, INSERT/UPDATE/DELETE CEO+Manager only (migration 030).
 - **`discovery_sessions`** — `org_id, user_id, step_completed (enum: x-ray, current_state, swot, swot_coaching, swot_evidence, swot_synthesis, pain_mapper, vision, synthesis, xray_history), data_json`
 
 ### Operational Tables
@@ -344,7 +345,7 @@ Dashboard → generate slug → `/x/[slug]` public view.
 
 ---
 
-## 7. API Routes Map (39 routes)
+## 7. API Routes Map (41 routes)
 
 ### Auth
 ```
@@ -393,9 +394,11 @@ POST /api/discovery/synthesis        Streamed
 
 ### X-Matrix
 ```
-POST /api/x-matrix/create            Envelope Zod + validateXMatrix()
-POST /api/x-matrix/prefill           AI wizard prefill (reasoning)
-GET  /api/x-matrix/share?slug=xxx    Public read
+POST    /api/x-matrix/create                 Envelope Zod + validateXMatrix()
+POST    /api/x-matrix/prefill                AI wizard prefill (reasoning)
+GET     /api/x-matrix/share?slug=xxx         Public read
+GET/PUT /api/xmatrix/correlations            List + upsert correlation cells
+POST    /api/xmatrix/coach-correlation       AI sensei questions for strong link (rate-limited)
 ```
 
 ### KPI
@@ -484,6 +487,7 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
 | `/api/discovery/vision-draft` | reasoning | **yes** | |
 | `/api/discovery/synthesis` | reasoning | **yes** | |
 | `/api/x-matrix/prefill` | reasoning | no | |
+| `/api/xmatrix/coach-correlation` | reasoning | no | Sensei challenge questions for ● cells |
 | `/api/report/monthly` | reasoning | no | |
 | `/api/admin/hoshin-explorer` | reasoning | no | |
 
@@ -804,15 +808,15 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-27)
+## 16. Current State Snapshot (2026-04-28)
 
-- **Last migration applied**: `029_tows_strategies_v2_fields.sql`
-- **API routes count**: 39
+- **Last migration applied**: `030_xmatrix_correlations.sql`
+- **API routes count**: 41
 - **Lib modules**: admin, ai, analytics, blog, discovery, email, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
 - **Components**: analytics (2), blog (8), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, kpi, report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Hoshin-1 (X-Matrix Canvas) — Replace 5-step wizard with single-page Density Mode canvas
+- **Latest feature work**: M-Hoshin-2 (X-Matrix Correlation Matrix Engine) — Wire correlation matrix center 5×3 thành interactive với accept/reject AI prefill, sensei coach questions, orphan validation
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -952,6 +956,40 @@ Khi Claude mới vào session:
   - **M-Hoshin-1 — Canvas mini-map sticky bug 2026-04-27**: ⏸ deferred to M-Hoshin-2 Task 6. Mini-map render OK ở top page nhưng không stick khi scroll trên mobile (650-768px viewport). Đã thử fix qua tăng z-index, đổi top-0 → top-16, move CanvasMiniMap outside wrapper div (commit reverted). Root cause chưa identify chính xác — khả năng là scroll container ancestor không đúng position-relative. Pattern lesson: bug sticky position trên Next.js + Tailwind v4 environment có thể cần investigate sâu DOM tree với DevTools Computed panel + check ancestor `overflow` chain. Functional impact: low — mini-map vẫn render, user vẫn navigate được, chỉ không sticky khi scroll.
   - **M-Hoshin-1 — AI Prefill flow deferred 2026-04-27**: ⏸ wire `/api/x-matrix/prefill` API + `SET_AI_PREFILL` action với accept/reject từng ô (Q4 design decision). Action signature đã có trong `CanvasContext.tsx` với placeholder body. Defer to M-Hoshin-2 vì scope creep — AI prefill + AI coaching correlation = 1 feature integrated. Pattern lesson: khi feature có 2 layer (data prefill + interactive validation), không tách timing — ship cùng milestone để UX consistent.
   - **M-Hoshin-1 — Wizard files cleanup pending 2026-05-11**: ⏸ delete `components/x-matrix/XMatrixWizard.tsx` + 4 step files + `WizardProgress.tsx` sau 2 tuần production stable (target 2026-05-11). Currently kept for rollback safety — `NEXT_PUBLIC_XMATRIX_CANVAS=0` env var triggers wizard render. Cleanup task: M-Cleanup-1.
+  - **M-Hoshin-2 Correlation Matrix Engine 2026-04-28**: ✅ shipped (10 commits ship qua 1 day session). Mục tiêu: wire correlation matrix center 5×3 thành interactive — user click cell cycle ●◐○-, AI prefill từ Discovery, AI coach sensei questions, orphan validation warnings.
+    - **DB schema (migration 030)**: thêm table `xmatrix_correlations` với composite unique (x_matrix_id, year_goal_id, hoshin_id) cho idempotent upsert. year_goal_id và hoshin_id là text (không FK) vì đây là JSON-embedded IDs từ x_matrices.vision_json.
+    - **API routes mới**: `/api/xmatrix/correlations` GET (list) + PUT (upsert), `/api/xmatrix/coach-correlation` POST (sensei questions với rate limit 50/5min/user). Dùng AI_MODELS.reasoning cho coach.
+    - **State management**: Extend CanvasContext với 4 new state slices — correlations map, correlationsLoading, coachCache (per-cell question cache), aiSuggestedFields (highlight prefilled fields). 9 reducer actions mới: LOAD_CORRELATIONS_*, SET_CORRELATION, ROLLBACK_CORRELATION, COACH_FETCH_*, SET_AI_PREFILL implementation.
+    - **UI features**:
+      - CenterX correlation matrix grid 5×3 với click cycle (●◐○-)
+      - CoachPopover xuất hiện khi click strong cell, hiển thị 3 câu hỏi sensei tiếng Việt
+      - PrefillModal binary accept-or-cancel cho AI prefill từ Discovery
+      - VisionEditor input cho vision statement (gap M-Hoshin-1)
+      - Orphan warnings panel trong SubmitBar với sensei voice
+      - Smart `/new` route — load existing matrix nếu có, blank nếu không
+    - **M-Hoshin-1 deferred items resolved trong session này** (3/4):
+      - ✅ AI Prefill flow shipped (Task 8)
+      - ✅ Submit API wire shipped (Task 4c FINAL — phát hiện M-Hoshin-1 ship submit placeholder, fix mid-session)
+      - ⏸ Mini-map sticky bug DEFER M-Mobile-1 (mobile layout broken nghiêm trọng hơn — thiếu CenterX render trên mobile, không chỉ sticky bug)
+    - **M-Hoshin-2 commits** (chronological, oldest first):
+      - `5180cff` feat(types): add xmatrix_correlations to Database type
+      - `a35cb1e` feat(api): add xmatrix correlations CRUD endpoint
+      - `3236f13` feat(db): add xmatrix_correlations migration file
+      - `aa2f69e` feat(xmatrix): wire correlations state and API hydration in CanvasContext (Task 4b interactive grid bundled qua Cursor scope creep — không separate hash)
+      - `731116c` feat(xmatrix): canvas polish - vision input + submit wire + smart route (Task 4c FINAL — submit wire phát hiện M-Hoshin-1 ship placeholder)
+      - `4c8a106` feat(xmatrix): orphan correlation warnings with sensei messages (Task 5)
+      - `0deba82` feat(xmatrix): AI coach correlations with sensei questions popover (Task 7)
+      - `[pending]` feat(xmatrix): AI prefill from Discovery with binary accept-or-cancel modal (Task 8 — shipped trong session, commit pending)
+      - `[pending]` docs: update handoff after M-Hoshin-2 (Task 9 — this commit)
+    - **Pattern lessons**:
+      1. **Cursor có thể ship "task xong" với placeholder code không communicate** (M-Hoshin-1 SubmitBar handleSubmit `[T3c] Submit placeholder, will wire API in Task 6` không note vào HANDOFF). Mitigation: sau khi Cursor báo ship milestone, GREP toàn repo cho keyword `placeholder|TODO|will wire|Task N` trước khi update HANDOFF — phát hiện debt sớm hơn là discover lúc ship feature kế.
+      2. **Mid-milestone scope expansion qua phát hiện gap**: M-Hoshin-2 expand scope thêm submit wire fix khi phát hiện M-Hoshin-1 incomplete. Pattern: nếu phát hiện foundation gap tại Task N của milestone X, đánh giá nếu fix được trong cùng milestone (yes nếu < 1-2 tasks) hay defer milestone riêng (no nếu architectural redesign). M-Hoshin-2 chọn yes — gộp Task 4c FINAL với 5 fixes cùng commit. Defer alternative đã được consider nhưng reject vì foundation gap block toàn bộ correlation feature testing.
+      3. **Smart route pattern (`/new` load existing nếu có)**: Avoid scope creep từ tạo route edit riêng `/dashboard/x-matrix/[id]/edit`. 1 route serve cả create + edit modes dựa trên DB state (`x_matrices.status='active'` query). API atomic dedupe handle archive old matrix khi save mới. URL semantics tradeoff acceptable cho beta product.
+      4. **Encoding bug Unicode trong code**: Cursor save STRENGTH_SYMBOLS object với 'strong' và 'medium' cùng bytes ● (U+25CF) thay vì ● (U+25CF) + ◐ (U+25D0). Mitigation: dùng escape sequences `●`, `◐` cho Unicode literals trong code thay vì paste characters trực tiếp. Áp dụng cho tất cả Unicode symbols future (◑◒◓◔◕✓✗ etc.).
+      5. **Disabled state UX cho prerequisite-blocked features**: Correlation cells không clickable khi chưa có xMatrixId (chưa save matrix lần đầu). Chosen approach: disabled cells với hint "Lưu X-Matrix trước để bắt đầu xếp correlation". Alternative considered: local-first batch sync (clickable ngay, sync khi save) — defer M-Hoshin-3 vì cần thêm bulk endpoint + MERGE_DRAFT_CORRELATIONS action + sync logic phức tạp. Pattern: disabled state acceptable cho beta SaaS, granular accept defer.
+      6. **API existed nhưng không wired**: `/api/x-matrix/create` đã có đầy đủ từ wizard cũ (M-Hoshin-1 không build mới — wizard cũ cũng dùng route này qua XMatrixReview.tsx). M-Hoshin-1 ship canvas chỉ tạo placeholder submit, không wire vào API có sẵn. Pattern: trước khi assume "feature X chưa có API", grep toàn repo cho route patterns liên quan — có thể đã có sẵn từ legacy code.
+      7. **Vision input thiếu hoàn toàn ở M-Hoshin-1**: Canvas state có field `vision: string` (line 35 CanvasContext) nhưng KHÔNG có UI input nào để nhập. Validation block save với "Vision statement không được trống". Pattern: khi extend canvas, kiểm tra MỖI field trong state shape có corresponding UI input không. Audit checklist nên include "every state field has UI input" cho future state extensions.
+      8. **Mobile layout broken phát hiện gián tiếp**: Khi test Task 6 mini-map sticky bug, screenshot mobile 460x731 chỉ thấy Hoshin cards (SouthEdge), KHÔNG thấy Vision/MụcTiêu/MaTrậnLiênKết/Owners/KPIs. CenterX có `hidden md:grid` → không render mobile. Toàn bộ M-Hoshin-2 correlation feature **vô dụng trên mobile**. Defer M-Mobile-1 — milestone riêng cho mobile redesign (stacked accordion pattern, not flat stack hiện tại). Pattern: defer mobile critical fixes vào milestone riêng nếu desktop-first user (CEO solo dev). Anti-pattern: cố fix mobile trong session feature build → scope creep.
 
 ---
 
@@ -1029,31 +1067,56 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - Khi modify canvas state, dispatch action qua reducer, KHÔNG mutate state directly.
 - localStorage hydrate 1 lần on mount qua `useRef` guard (tránh React 19 StrictMode double-effect).
 
+### 2026-04-28 — X-Matrix Correlation Matrix Engine (M-Hoshin-2)
+
+**Milestone**: M-Hoshin-2 — Correlation Matrix Engine.
+
+**Scope**: Wire correlation matrix center 5×3 (Y1-Y3 × H1-H5) thành interactive engine với 4 features chính: click cycle correlations (●◐○-), AI prefill từ Discovery (binary accept-or-cancel), AI coach sensei questions per strong cell, orphan validation warnings (Hoshin/YearGoal không link).
+
+**Driving feedback**: M-Hoshin-1 ship canvas foundation nhưng correlation matrix center chỉ là grid skeleton. Toyota Hoshin Kanri principles cần explicit correlation strength + sensei challenge questions để verify quyết định.
+
+**Decisions**:
+- **Strength enum 4 values**: `strong | medium | weak | none`. `none` = explicit "đã review, không liên quan" thay vì ambiguous NULL.
+- **Visual mapping**: ● (Black Circle U+25CF) / ◐ (Circle Half Black U+25D0) / ○ (White Circle U+25CB) / empty.
+- **Click pattern**: Cycle `none → strong → medium → weak → none`. KHÔNG dropdown — cycle là Toyota A3 idiom.
+- **Storage**: Separate table `xmatrix_correlations` (NOT extend x_matrices.vision_json). Lý do: composite unique constraint, FK to x_matrices, RLS policy độc lập.
+- **Orphan rule**: Cần ít nhất 1 ● (strong) link để qualify "thực sự là Hoshin/YearGoal". Medium/weak là contributing không phải driving.
+- **Validation severity**: Warnings (NOT errors). User vẫn save được với orphans — Hoshin philosophy là guideline, không phải hard rule.
+- **AI Coach**: Trigger LẤY ON-DEMAND khi click strong cell (NOT auto-popup mọi click). Cache per-cell trong canvas state. Rate limit 50/5min/user qua bucket dedicated.
+- **AI Prefill UX**: Binary accept-all-or-cancel (NOT granular per-field accept). Defer granular M-Hoshin-3 nếu warrant. Modal preview với source attribution (x_matrices_active vs discovery_sessions legacy).
+- **Smart `/new` route**: 1 URL serves create + edit modes. Page server-side query existing active matrix → load nếu có, blank nếu không. API atomic dedupe handle archive khi save mới.
+- **Mobile**: DEFER. M-Mobile-1 milestone riêng (CenterX không render mobile từ M-Hoshin-1).
+
+**Constraints cho future AI sessions**:
+- KHÔNG modify schema `xmatrix_correlations` (preserve API contract). Chỉ extend qua state overlay nếu cần.
+- KHÔNG hardcode strength values — import enum từ `lib/x-matrix/correlation-types.ts` hoặc CanvasContext export.
+- KHÔNG dùng paste characters trực tiếp cho Unicode symbols — dùng escape sequences (e.g., backslash-u-25CF cho ●, U+25CF reference notation).
+- KHÔNG add granular accept cho AI prefill mà không design UX dedicated (preview pane, diff view, conflict resolution components).
+- KHI extend canvas state, audit checklist: every state field has corresponding UI input + validation message + persistence test.
+
 ---
 
 ## 18. Next Steps (Roadmap)
 
-### Milestone tiếp theo: M-Hoshin-2 — Correlation Matrix Engine
+### Milestone tiếp theo: M-Mobile-1 — Mobile Layout Redesign
 
-**Mục tiêu**: Wire correlation matrix center (5×3 grid) thành interactive — user click cell để chọn ●◐○-, validation rules cảnh báo orphan Hoshins, AI Coach đặt câu hỏi tò mò cho mỗi correlation.
+**Mục tiêu**: Khắc phục mobile layout broken phát hiện cuối M-Hoshin-2. Hiện tại `CenterX` có `hidden md:grid` → correlation matrix + Vision/MụcTiêu/Owners/KPIs KHÔNG render trên mobile (< 768px). Toàn bộ M-Hoshin-2 correlation feature vô dụng trên mobile. Mini-map sticky bug (defer từ M-Hoshin-1) cũng gộp vào đây.
 
 **Tasks dự kiến**:
-1. **DB migration** — table `xmatrix_correlations` (year_goal_id ↔ hoshin_id ↔ strength enum)
-2. **Correlation matrix UI** — grid 5×3 buttons clickable, dispatch SET_CORRELATION action
-3. **Validation rules** — cảnh báo Hoshin không có ● với bất kỳ Year Goal, Year Goal không có ● với bất kỳ Hoshin
-4. **AI Coach prompts** — "Tại sao H1 đánh ● với Y2?" (3 câu hỏi tò mò per correlation)
-5. **AI Prefill flow** — defer từ M-Hoshin-1, wire SET_AI_PREFILL action với accept/reject từng ô
-6. **Mini-map sticky bug fix** — defer từ M-Hoshin-1 Task 5
+1. **Stacked accordion pattern** — mobile xếp dọc Vision → Year Goals → Hoshins → Correlation Matrix → Owners/KPIs (NOT flat stack hiện tại)
+2. **CenterX render mobile** — bỏ `hidden md:grid`, design correlation grid touchable (5×3 trên 375px viewport — tile size + tap target ≥ 44px)
+3. **Mini-map sticky bug fix** — investigate scroll container ancestor `overflow` chain, fix sticky không hoạt động mobile (defer từ M-Hoshin-1)
+4. **Submit bar mobile** — full-width, persistent footer pattern thay vì inline
 
 **Blockers**:
-- Cần thiết kế UX cho mobile correlation matrix (5×3 grid trên 375px viewport hẹp)
-- AI prefill prompt design — cần đọc lại sensei feedback turn 2-3
+- Cần wireframe mobile cho correlation matrix (CEO solo dev là desktop-first user, mobile critical cho future expansion)
 
-**Dependency on M-Hoshin-1**: ✅ shipped (canvas foundation + state + modal + validation + tooltips)
+**Dependency on M-Hoshin-2**: ✅ shipped
 
 ### Future milestones (TBD priority)
 
-- **M-Hoshin-3**: Annual Review Workflow (close PDCA loop — review year-end vs target, learnings, carry-overs)
+- **M-Mobile-1**: Mobile layout redesign (stacked accordion pattern). Currently CenterX không render mobile, mini-map sticky bug, toàn bộ canvas above-the-fold cut off ở viewport < 768px. Critical cho mobile users trong tương lai. **Priority: HIGH** (next milestone — see above).
+- **M-Hoshin-3**: Annual Review Workflow (close PDCA loop — review year-end vs target, learnings, carry-overs). Có thể bao gồm granular accept cho AI Prefill (defer từ M-Hoshin-2).
 - **M-Hoshin-4**: Hansei reflections (auto-prompt khi KPI red 2+ tuần)
 - **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications)
 - **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần production stable)
