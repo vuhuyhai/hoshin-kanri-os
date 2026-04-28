@@ -3,11 +3,15 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useReducer,
+  useRef,
   type Dispatch,
   type ReactNode,
 } from 'react'
 import { LIMITS, type XMatrixHoshin } from '@/lib/x-matrix/types'
+import type { Database } from '@/lib/supabase/types'
+import { fetchJson } from '@/lib/http/fetch-json'
 import { genHoshinId } from '@/lib/x-matrix/utils'
 
 // ============================================================
@@ -33,6 +37,28 @@ export interface XMatrixCanvasData {
   hoshins: XMatrixHoshinExtended[]
 }
 
+export type CorrelationStrength =
+  Database['public']['Tables']['xmatrix_correlations']['Row']['strength']
+
+export type CorrelationKey = string
+
+export type CorrelationsMap = Record<CorrelationKey, CorrelationStrength>
+
+export function makeCorrelationKey(
+  yearGoalId: string,
+  hoshinId: string,
+): CorrelationKey {
+  return `${yearGoalId}:${hoshinId}`
+}
+
+export function getCorrelation(
+  map: CorrelationsMap,
+  yearGoalId: string,
+  hoshinId: string,
+): CorrelationStrength {
+  return map[makeCorrelationKey(yearGoalId, hoshinId)] ?? 'none'
+}
+
 // Dot-notation address for a single field within state.data.
 // e.g. "vision", "yearGoals.0.title", "hoshins.2.kpis.0.targetValue"
 export type FieldPath = string
@@ -44,6 +70,9 @@ export interface CanvasUiState {
   lastSavedAt: Date | null
   aiSuggestedFields: Set<FieldPath>
   errors: Map<FieldPath, string>
+  correlations: CorrelationsMap
+  correlationsLoading: boolean
+  correlationsError: string | null
 }
 
 export interface CanvasState {
@@ -80,6 +109,25 @@ export type CanvasAction =
     }
   | { type: 'SET_SAVE_STATUS'; payload: SaveStatus }
   | { type: 'CLEAR_DRAFT' }
+  | { type: 'LOAD_CORRELATIONS_START' }
+  | { type: 'LOAD_CORRELATIONS_SUCCESS'; payload: CorrelationsMap }
+  | { type: 'LOAD_CORRELATIONS_ERROR'; payload: string }
+  | {
+      type: 'SET_CORRELATION'
+      payload: {
+        yearGoalId: string
+        hoshinId: string
+        strength: CorrelationStrength
+      }
+    }
+  | {
+      type: 'ROLLBACK_CORRELATION'
+      payload: {
+        yearGoalId: string
+        hoshinId: string
+        previousStrength: CorrelationStrength
+      }
+    }
 
 // ============================================================
 // Initial state
@@ -95,6 +143,9 @@ const initialUi: CanvasUiState = {
   lastSavedAt: null,
   aiSuggestedFields: new Set<FieldPath>(),
   errors: new Map<FieldPath, string>(),
+  correlations: {},
+  correlationsLoading: false,
+  correlationsError: null,
 }
 
 const initialState: CanvasState = {
@@ -224,6 +275,64 @@ export function canvasReducer(
         },
       }
 
+    case 'LOAD_CORRELATIONS_START':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          correlationsLoading: true,
+          correlationsError: null,
+        },
+      }
+
+    case 'LOAD_CORRELATIONS_SUCCESS':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          correlations: action.payload,
+          correlationsLoading: false,
+          correlationsError: null,
+        },
+      }
+
+    case 'LOAD_CORRELATIONS_ERROR':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          correlationsLoading: false,
+          correlationsError: action.payload,
+        },
+      }
+
+    case 'SET_CORRELATION': {
+      const { yearGoalId, hoshinId, strength } = action.payload
+      const key = makeCorrelationKey(yearGoalId, hoshinId)
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          correlations: { ...state.ui.correlations, [key]: strength },
+        },
+      }
+    }
+
+    case 'ROLLBACK_CORRELATION': {
+      const { yearGoalId, hoshinId, previousStrength } = action.payload
+      const key = makeCorrelationKey(yearGoalId, hoshinId)
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          correlations: {
+            ...state.ui.correlations,
+            [key]: previousStrength,
+          },
+        },
+      }
+    }
+
     default:
       return state
   }
@@ -239,8 +348,43 @@ interface CanvasContextValue {
 
 const CanvasContext = createContext<CanvasContextValue | null>(null)
 
-export function CanvasProvider({ children }: { children: ReactNode }) {
+export function CanvasProvider({
+  children,
+  xMatrixId,
+}: {
+  children: ReactNode
+  xMatrixId?: string
+}) {
   const [state, dispatch] = useReducer(canvasReducer, initialState)
+
+  const hasFetchedCorrelations = useRef(false)
+  useEffect(() => {
+    if (!xMatrixId) return
+    if (hasFetchedCorrelations.current) return
+    hasFetchedCorrelations.current = true
+
+    dispatch({ type: 'LOAD_CORRELATIONS_START' })
+    fetchJson<{
+      correlations: Array<{
+        yearGoalId: string
+        hoshinId: string
+        strength: CorrelationStrength
+      }>
+    }>(`/api/xmatrix/correlations?xMatrixId=${encodeURIComponent(xMatrixId)}`)
+      .then((res) => {
+        const map: CorrelationsMap = {}
+        for (const c of res.correlations) {
+          map[makeCorrelationKey(c.yearGoalId, c.hoshinId)] = c.strength
+        }
+        dispatch({ type: 'LOAD_CORRELATIONS_SUCCESS', payload: map })
+      })
+      .catch((err) => {
+        const message =
+          err instanceof Error ? err.message : 'Không thể tải correlations'
+        dispatch({ type: 'LOAD_CORRELATIONS_ERROR', payload: message })
+      })
+  }, [xMatrixId])
+
   return (
     <CanvasContext.Provider value={{ state, dispatch }}>
       {children}
@@ -254,4 +398,44 @@ export function useCanvas(): CanvasContextValue {
     throw new Error('useCanvas must be used within CanvasProvider')
   }
   return ctx
+}
+
+export async function setCorrelationOptimistic(
+  dispatch: Dispatch<CanvasAction>,
+  state: { correlations: CorrelationsMap },
+  params: {
+    xMatrixId: string
+    yearGoalId: string
+    hoshinId: string
+    strength: CorrelationStrength
+  },
+): Promise<{ ok: boolean; error?: string }> {
+  const { xMatrixId, yearGoalId, hoshinId, strength } = params
+  const previousStrength = getCorrelation(
+    state.correlations,
+    yearGoalId,
+    hoshinId,
+  )
+
+  dispatch({
+    type: 'SET_CORRELATION',
+    payload: { yearGoalId, hoshinId, strength },
+  })
+
+  try {
+    await fetchJson('/api/xmatrix/correlations', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ xMatrixId, yearGoalId, hoshinId, strength }),
+    })
+    return { ok: true }
+  } catch (err) {
+    dispatch({
+      type: 'ROLLBACK_CORRELATION',
+      payload: { yearGoalId, hoshinId, previousStrength },
+    })
+    const message =
+      err instanceof Error ? err.message : 'Không thể lưu correlation'
+    return { ok: false, error: message }
+  }
 }
