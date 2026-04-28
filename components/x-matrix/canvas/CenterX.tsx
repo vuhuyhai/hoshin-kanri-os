@@ -206,7 +206,7 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
                       aria-label={`Year Goal ${y.title}, Hoshin ${hoshinLabel}, hiện tại ${STRENGTH_LABELS[strength]}`}
                       onClick={() => handleCellClick(y.id, h.id)}
                       className={cn(
-                        'flex h-full min-h-[44px] w-full min-w-[44px] items-center justify-center',
+                        'flex h-full min-h-[48px] w-full min-w-[48px] items-center justify-center',
                         'rounded-[var(--radius-md)] border-2 border-ink bg-[var(--bg)]',
                         'font-display text-[28px] font-bold leading-none',
                         'transition-all duration-100 ease-[var(--ease-nb)]',
