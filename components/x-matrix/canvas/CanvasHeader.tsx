@@ -30,7 +30,7 @@ function formatTime(date: Date): string {
 }
 
 export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
-  const { state, dispatch, xMatrixId } = useCanvas()
+  const { state, dispatch } = useCanvas()
   const { saveStatus, lastSavedAt } = state.ui
 
   const [prefillModalOpen, setPrefillModalOpen] = useState(false)

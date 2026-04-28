@@ -33,8 +33,8 @@ export function VisionEditor() {
             <p>
               Vision phải breakthrough — mô tả TƯƠNG LAI muốn trở thành, KHÔNG
               phải mô tả việc đang làm. VD tốt:{' '}
-              <em>"Phòng tập số 1 cho phụ nữ Việt Nam đến 2030"</em>. VD xấu:{' '}
-              <em>"Tiếp tục phát triển và cải thiện dịch vụ"</em> (mơ hồ).
+              <em>&ldquo;Phòng tập số 1 cho phụ nữ Việt Nam đến 2030&rdquo;</em>. VD xấu:{' '}
+              <em>&ldquo;Tiếp tục phát triển và cải thiện dịch vụ&rdquo;</em> (mơ hồ).
             </p>
           }
         />
