@@ -4,17 +4,27 @@ import { useCallback } from 'react'
 import { CanvasProvider, useCanvas } from './state/CanvasContext'
 import { useLocalStorageSync } from './state/useLocalStorageSync'
 import { CanvasHeader } from './CanvasHeader'
+import { VisionEditor } from './VisionEditor'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasGrid } from './CanvasGrid'
 import { SubmitBar } from './SubmitBar'
-import type { OrgMember } from '@/lib/x-matrix/types'
+import type { OrgMember, XMatrixData } from '@/lib/x-matrix/types'
 
 interface XMatrixCanvasPageProps {
   orgId: string
   members: OrgMember[]
+  xMatrixId?: string
+  canEdit?: boolean
+  initialData?: XMatrixData
 }
 
-function CanvasContent({ orgId, members }: XMatrixCanvasPageProps) {
+function CanvasContent({
+  orgId,
+  members,
+  xMatrixId,
+  canEdit,
+  initialData,
+}: XMatrixCanvasPageProps) {
   const { state, dispatch } = useCanvas()
   const storageKey = `xmatrix-canvas-draft-${orgId}-${new Date().getFullYear()}`
 
@@ -30,6 +40,7 @@ function CanvasContent({ orgId, members }: XMatrixCanvasPageProps) {
     data: state.data,
     dispatch,
     onSaveStatusChange: handleSaveStatusChange,
+    skipHydrate: !!initialData,
   })
 
   return (
@@ -39,16 +50,20 @@ function CanvasContent({ orgId, members }: XMatrixCanvasPageProps) {
       data-member-count={members.length}
     >
       <CanvasHeader storageKey={storageKey} />
+      <VisionEditor />
       <CanvasMiniMap />
-      <CanvasGrid members={members} />
-      <SubmitBar />
+      <CanvasGrid members={members} xMatrixId={xMatrixId} canEdit={canEdit} />
+      <SubmitBar orgId={orgId} />
     </div>
   )
 }
 
 export function XMatrixCanvasPage(props: XMatrixCanvasPageProps) {
   return (
-    <CanvasProvider>
+    <CanvasProvider
+      xMatrixId={props.xMatrixId}
+      initialData={props.initialData}
+    >
       <CanvasContent {...props} />
     </CanvasProvider>
   )

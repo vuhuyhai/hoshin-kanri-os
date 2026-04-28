@@ -1,20 +1,70 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { AlertCircle, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCanvas } from './state/CanvasContext'
 import { useCanvasValidation } from './state/useCanvasValidation'
+import { postJson } from '@/lib/http/fetch-json'
+import { trackXMatrixCompleted } from '@/lib/analytics/events'
+import type { XMatrixData } from '@/lib/x-matrix/types'
 
-export function SubmitBar() {
+interface SubmitBarProps {
+  orgId: string
+}
+
+export function SubmitBar({ orgId }: SubmitBarProps) {
   const { state } = useCanvas()
+  const router = useRouter()
   const { errors, completeness, canSubmit } = useCanvasValidation(state.data)
   const [errorsExpanded, setErrorsExpanded] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const hasErrors = errors.length > 0
   const showPanel = errorsExpanded && hasErrors
 
-  const handleSubmit = () => {
-    console.log('[T3c] Submit placeholder, will wire API in Task 6', state.data)
+  const handleSubmit = async () => {
+    if (errors.length > 0) {
+      toast.error(errors[0])
+      return
+    }
+    setIsSaving(true)
+    try {
+      // XMatrixCanvasData.yearGoals are objects; the API/validateXMatrix
+      // contract still uses string[]. Map titles before POST.
+      const payload: XMatrixData = {
+        vision: state.data.vision,
+        yearGoals: state.data.yearGoals.map((g) => g.title),
+        hoshins: state.data.hoshins,
+      }
+
+      const json = await postJson<{ kpisCreated: number; xMatrixId: string }>(
+        '/api/x-matrix/create',
+        {
+          data: payload,
+          year: new Date().getFullYear(),
+          orgId,
+        },
+      )
+
+      trackXMatrixCompleted({
+        hoshinCount: state.data.hoshins.length,
+        kpisCreated: json.kpisCreated,
+        initiativesCount: state.data.hoshins.reduce(
+          (sum, h) => sum + (h.initiatives?.length ?? 0),
+          0,
+        ),
+        hasPrefill: false,
+      })
+
+      toast.success(`X-Matrix đã lưu! ${json.kpisCreated} KPIs tự động tạo.`)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi không xác định')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -71,10 +121,10 @@ export function SubmitBar() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!canSubmit}
+              disabled={!canSubmit || isSaving}
               className="btn-brutal-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Lưu X-Matrix
+              {isSaving ? 'Đang lưu...' : 'Lưu X-Matrix'}
             </button>
           </div>
         </div>

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { XMatrixWizard } from '@/components/x-matrix/XMatrixWizard'
 import { XMatrixCanvasPage } from '@/components/x-matrix/canvas/XMatrixCanvasPage'
-import type { OrgMember } from '@/lib/x-matrix/types'
+import type { OrgMember, XMatrixData } from '@/lib/x-matrix/types'
 
 export default async function NewXMatrixPage() {
   const supabase = await createClient()
@@ -18,6 +18,18 @@ export default async function NewXMatrixPage() {
     .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
+
+  const canEdit = membership.role === 'CEO' || membership.role === 'Manager'
+
+  const { data: existingMatrix } = await supabase
+    .from('x_matrices')
+    .select('id, vision_json')
+    .eq('org_id', membership.org_id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  const initialData =
+    (existingMatrix?.vision_json as XMatrixData | null) ?? undefined
 
   const { data: membersData } = await supabase
     .from('org_members')
@@ -56,5 +68,13 @@ export default async function NewXMatrixPage() {
     )
   }
 
-  return <XMatrixCanvasPage orgId={membership.org_id} members={members} />
+  return (
+    <XMatrixCanvasPage
+      orgId={membership.org_id}
+      members={members}
+      canEdit={canEdit}
+      xMatrixId={existingMatrix?.id}
+      initialData={initialData}
+    />
+  )
 }

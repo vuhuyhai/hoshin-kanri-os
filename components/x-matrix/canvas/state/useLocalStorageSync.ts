@@ -9,6 +9,10 @@ interface UseLocalStorageSyncProps {
   data: XMatrixCanvasData
   dispatch: Dispatch<CanvasAction>
   onSaveStatusChange: (status: 'saving' | 'saved' | 'error') => void
+  // When CanvasProvider seeds state from a saved DB matrix, skip the
+  // localStorage hydrate so an old draft can't overwrite the source-of-
+  // truth row — and skip the autosave on the seeded snapshot.
+  skipHydrate?: boolean
 }
 
 export function useLocalStorageSync({
@@ -16,6 +20,7 @@ export function useLocalStorageSync({
   data,
   dispatch,
   onSaveStatusChange,
+  skipHydrate = false,
 }: UseLocalStorageSyncProps) {
   const hasHydrated = useRef(false)
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -23,6 +28,8 @@ export function useLocalStorageSync({
   useEffect(() => {
     if (hasHydrated.current) return
     hasHydrated.current = true
+
+    if (skipHydrate) return
 
     try {
       const stored = localStorage.getItem(storageKey)
@@ -42,7 +49,7 @@ export function useLocalStorageSync({
     } catch (err) {
       console.warn('[Canvas] Failed to hydrate from localStorage:', err)
     }
-  }, [storageKey, dispatch])
+  }, [storageKey, dispatch, skipHydrate])
 
   useEffect(() => {
     if (!hasHydrated.current) return

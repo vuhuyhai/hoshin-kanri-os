@@ -9,7 +9,11 @@ import {
   type Dispatch,
   type ReactNode,
 } from 'react'
-import { LIMITS, type XMatrixHoshin } from '@/lib/x-matrix/types'
+import {
+  LIMITS,
+  type XMatrixData,
+  type XMatrixHoshin,
+} from '@/lib/x-matrix/types'
 import type { Database } from '@/lib/supabase/types'
 import { fetchJson } from '@/lib/http/fetch-json'
 import { genHoshinId } from '@/lib/x-matrix/utils'
@@ -108,6 +112,7 @@ export type CanvasAction =
       payload: { data: XMatrixCanvasData; suggestedFields: FieldPath[] }
     }
   | { type: 'SET_SAVE_STATUS'; payload: SaveStatus }
+  | { type: 'SET_VISION'; payload: string }
   | { type: 'CLEAR_DRAFT' }
   | { type: 'LOAD_CORRELATIONS_START' }
   | { type: 'LOAD_CORRELATIONS_SUCCESS'; payload: CorrelationsMap }
@@ -151,6 +156,17 @@ const initialUi: CanvasUiState = {
 const initialState: CanvasState = {
   data: initialData,
   ui: initialUi,
+}
+
+// DB stores XMatrixData (yearGoals: string[]); canvas state uses
+// XMatrixYearGoal[] (object with title/description). Inflate strings
+// into objects at hydrate time so the canvas editors stay typed.
+function dbToCanvas(data: XMatrixData): XMatrixCanvasData {
+  return {
+    vision: data.vision,
+    yearGoals: data.yearGoals.map((title) => ({ title, description: '' })),
+    hoshins: data.hoshins,
+  }
 }
 
 // ============================================================
@@ -265,6 +281,12 @@ export function canvasReducer(
       }
     }
 
+    case 'SET_VISION':
+      return {
+        ...state,
+        data: { ...state.data, vision: action.payload },
+      }
+
     case 'CLEAR_DRAFT':
       return {
         data: initialData,
@@ -351,11 +373,24 @@ const CanvasContext = createContext<CanvasContextValue | null>(null)
 export function CanvasProvider({
   children,
   xMatrixId,
+  initialData,
 }: {
   children: ReactNode
   xMatrixId?: string
+  initialData?: XMatrixData
 }) {
-  const [state, dispatch] = useReducer(canvasReducer, initialState)
+  // Seed reducer state from DB initialData (server-fetched matrix) when
+  // present. Saved-matrix wins over localStorage draft because the user
+  // has already committed it — see useLocalStorageSync, which checks
+  // `dbHydrated` via context to skip its own hydrate path.
+  const [state, dispatch] = useReducer(
+    canvasReducer,
+    initialState,
+    (seed) =>
+      initialData
+        ? { ...seed, data: dbToCanvas(initialData) }
+        : seed,
+  )
 
   const hasFetchedCorrelations = useRef(false)
   useEffect(() => {

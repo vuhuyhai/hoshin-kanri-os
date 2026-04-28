@@ -9,9 +9,11 @@ import type { OrgMember } from '@/lib/x-matrix/types'
 
 interface CanvasGridProps {
   members: OrgMember[]
+  xMatrixId?: string
+  canEdit?: boolean
 }
 
-export function CanvasGrid({ members }: CanvasGridProps) {
+export function CanvasGrid({ members, xMatrixId, canEdit }: CanvasGridProps) {
   return (
     <div
       className="bg-dot-grid bg-[var(--bg-paper)] px-4 py-4 lg:px-8"
@@ -30,7 +32,7 @@ export function CanvasGrid({ members }: CanvasGridProps) {
         </div>
 
         <WestEdge />
-        <CenterX />
+        <CenterX xMatrixId={xMatrixId} canEdit={canEdit} />
         <EastEdge />
 
         <div className="md:col-span-3">
