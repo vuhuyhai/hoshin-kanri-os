@@ -80,7 +80,7 @@ export type CoachCacheMap = Record<string, CoachCacheEntry>
 export interface CanvasUiState {
   saveStatus: SaveStatus
   lastSavedAt: Date | null
-  aiSuggestedFields: Set<FieldPath>
+  aiSuggestedFields: FieldPath[]
   errors: Map<FieldPath, string>
   correlations: CorrelationsMap
   correlationsLoading: boolean
@@ -161,7 +161,7 @@ const initialData: XMatrixCanvasData = {
 const initialUi: CanvasUiState = {
   saveStatus: 'idle',
   lastSavedAt: null,
-  aiSuggestedFields: new Set<FieldPath>(),
+  aiSuggestedFields: [],
   errors: new Map<FieldPath, string>(),
   correlations: {},
   correlationsLoading: false,
@@ -281,9 +281,14 @@ export function canvasReducer(
     }
 
     case 'SET_AI_PREFILL':
-      // TODO: Task 4 — merge AI prefill into state.data + populate
-      // ui.aiSuggestedFields with payload.suggestedFields paths.
-      return state
+      return {
+        ...state,
+        data: action.payload.data,
+        ui: {
+          ...state.ui,
+          aiSuggestedFields: action.payload.suggestedFields,
+        },
+      }
 
     case 'SET_SAVE_STATUS': {
       const status = action.payload
@@ -308,7 +313,7 @@ export function canvasReducer(
         data: initialData,
         ui: {
           ...initialUi,
-          aiSuggestedFields: new Set<FieldPath>(),
+          aiSuggestedFields: [],
           errors: new Map<FieldPath, string>(),
         },
       }
@@ -424,6 +429,7 @@ export function canvasReducer(
 interface CanvasContextValue {
   state: CanvasState
   dispatch: Dispatch<CanvasAction>
+  xMatrixId?: string
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null)
@@ -479,7 +485,7 @@ export function CanvasProvider({
   }, [xMatrixId])
 
   return (
-    <CanvasContext.Provider value={{ state, dispatch }}>
+    <CanvasContext.Provider value={{ state, dispatch, xMatrixId }}>
       {children}
     </CanvasContext.Provider>
   )
@@ -529,6 +535,59 @@ export async function setCorrelationOptimistic(
     })
     const message =
       err instanceof Error ? err.message : 'Không thể lưu correlation'
+    return { ok: false, error: message }
+  }
+}
+
+export function collectSuggestedFields(data: XMatrixCanvasData): FieldPath[] {
+  const fields: FieldPath[] = []
+  if (data.vision.trim() !== '') fields.push('vision')
+  data.yearGoals.forEach((g, i) => {
+    if (g.title.trim() !== '') fields.push(`yearGoals.${i}.title`)
+    if (g.description.trim() !== '') fields.push(`yearGoals.${i}.description`)
+  })
+  data.hoshins.forEach((h, i) => {
+    if (h.title.trim() !== '') fields.push(`hoshins.${i}.title`)
+    if (h.owner_name && h.owner_name.trim() !== '')
+      fields.push(`hoshins.${i}.owner_name`)
+    h.initiatives.forEach((init, j) => {
+      if (init.title.trim() !== '')
+        fields.push(`hoshins.${i}.initiatives.${j}.title`)
+    })
+    h.kpis.forEach((kpi, k) => {
+      if (kpi.name.trim() !== '') fields.push(`hoshins.${i}.kpis.${k}.name`)
+    })
+  })
+  return fields
+}
+
+export async function fetchAiPrefill(): Promise<{
+  ok: boolean
+  hasPrefill?: boolean
+  data?: XMatrixCanvasData
+  source?: string
+  error?: string
+}> {
+  try {
+    const json = await fetchJson<{
+      hasPrefill: boolean
+      data: XMatrixData | null
+      source?: string
+    }>('/api/x-matrix/prefill')
+
+    if (!json.hasPrefill || !json.data) {
+      return { ok: true, hasPrefill: false }
+    }
+
+    return {
+      ok: true,
+      hasPrefill: true,
+      data: dbToCanvas(json.data),
+      source: json.source,
+    }
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Không thể tải gợi ý AI'
     return { ok: false, error: message }
   }
 }

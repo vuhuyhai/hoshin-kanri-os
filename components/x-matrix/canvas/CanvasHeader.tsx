@@ -1,7 +1,22 @@
 'use client'
 
-import { AlertTriangle, Check, Circle, Loader2, Trash2 } from 'lucide-react'
-import { useCanvas } from './state/CanvasContext'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import {
+  AlertTriangle,
+  Check,
+  Circle,
+  Loader2,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
+import {
+  collectSuggestedFields,
+  fetchAiPrefill,
+  useCanvas,
+  type XMatrixCanvasData,
+} from './state/CanvasContext'
+import { PrefillModal } from './PrefillModal'
 
 interface CanvasHeaderProps {
   storageKey: string
@@ -15,8 +30,22 @@ function formatTime(date: Date): string {
 }
 
 export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
-  const { state, dispatch } = useCanvas()
+  const { state, dispatch, xMatrixId } = useCanvas()
   const { saveStatus, lastSavedAt } = state.ui
+
+  const [prefillModalOpen, setPrefillModalOpen] = useState(false)
+  const [prefillData, setPrefillData] = useState<XMatrixCanvasData | null>(null)
+  const [prefillSource, setPrefillSource] = useState<string | undefined>(
+    undefined
+  )
+  const [prefillLoading, setPrefillLoading] = useState(false)
+  const [prefillError, setPrefillError] = useState<string | null>(null)
+
+  const isBlank =
+    state.data.vision === '' &&
+    state.data.yearGoals.length === 0 &&
+    state.data.hoshins.length === 0
+  const canShowPrefillButton = isBlank
 
   const indicator = (() => {
     switch (saveStatus) {
@@ -53,6 +82,54 @@ export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
     }
   })()
 
+  const runPrefill = async () => {
+    setPrefillLoading(true)
+    setPrefillError(null)
+    setPrefillData(null)
+    setPrefillSource(undefined)
+
+    const result = await fetchAiPrefill()
+
+    if (!result.ok) {
+      setPrefillError(result.error ?? 'Không thể tải gợi ý AI')
+      setPrefillLoading(false)
+      return
+    }
+
+    if (!result.hasPrefill || !result.data) {
+      setPrefillModalOpen(false)
+      setPrefillLoading(false)
+      toast.warning(
+        'Chưa có data Discovery để AI gợi ý. Hoàn thành SWOT + Vision Workshop trước.'
+      )
+      return
+    }
+
+    setPrefillData(result.data)
+    setPrefillSource(result.source)
+    setPrefillLoading(false)
+  }
+
+  const handlePrefillClick = () => {
+    setPrefillModalOpen(true)
+    void runPrefill()
+  }
+
+  const handleApplyPrefill = () => {
+    if (!prefillData) return
+    dispatch({
+      type: 'SET_AI_PREFILL',
+      payload: {
+        data: prefillData,
+        suggestedFields: collectSuggestedFields(prefillData),
+      },
+    })
+    setPrefillModalOpen(false)
+    setPrefillData(null)
+    setPrefillSource(undefined)
+    toast.success('AI gợi ý đã áp dụng. Bạn có thể edit từng phần.')
+  }
+
   const handleClearDraft = () => {
     if (typeof window === 'undefined') return
     const confirmed = window.confirm(
@@ -86,6 +163,17 @@ export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
               {indicator.text}
             </span>
           </div>
+          {canShowPrefillButton && (
+            <button
+              type="button"
+              onClick={handlePrefillClick}
+              disabled={prefillLoading}
+              className="btn-yellow flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              AI gợi ý từ Discovery
+            </button>
+          )}
           <button
             type="button"
             onClick={handleClearDraft}
@@ -96,6 +184,24 @@ export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
           </button>
         </div>
       </div>
+
+      <PrefillModal
+        open={prefillModalOpen}
+        onOpenChange={(open) => {
+          setPrefillModalOpen(open)
+          if (!open) {
+            setPrefillData(null)
+            setPrefillError(null)
+            setPrefillSource(undefined)
+          }
+        }}
+        loading={prefillLoading}
+        error={prefillError}
+        data={prefillData}
+        source={prefillSource}
+        onApply={handleApplyPrefill}
+        onRetry={runPrefill}
+      />
     </header>
   )
 }
