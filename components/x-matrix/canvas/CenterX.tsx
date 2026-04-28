@@ -9,6 +9,7 @@ import {
   setCorrelationOptimistic,
   type CorrelationStrength,
 } from './state/CanvasContext'
+import { useCanvasValidation } from './state/useCanvasValidation'
 import { cn } from '@/lib/utils'
 
 const CYCLE_ORDER: CorrelationStrength[] = ['none', 'strong', 'medium', 'weak']
@@ -41,8 +42,18 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
   const { state, dispatch } = useCanvas()
   const { yearGoals, hoshins } = state.data
   const { correlations, correlationsLoading } = state.ui
+  const { warnings } = useCanvasValidation(state.data, correlations)
 
   const editable = canEdit && !!xMatrixId && !correlationsLoading
+
+  const orphanYearGoalIds = new Set(
+    warnings
+      .filter((w) => w.type === 'orphan_year_goal')
+      .map((w) => w.targetId),
+  )
+  const orphanHoshinIds = new Set(
+    warnings.filter((w) => w.type === 'orphan_hoshin').map((w) => w.targetId),
+  )
 
   // year_goal_id is synthesized from index until XMatrixYearGoal carries
   // a stable id of its own. Reordering year goals will desync existing
@@ -51,6 +62,7 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
   const yearGoalsWithId = yearGoals.map((g, i) => ({
     id: `y${i}`,
     title: g.title || `Y${i + 1}`,
+    isOrphan: orphanYearGoalIds.has(`y${i}`),
   }))
 
   async function handleCellClick(yearGoalId: string, hoshinId: string) {
@@ -126,27 +138,46 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
         }}
       >
         <div />
-        {yearGoalsWithId.map((y) => (
-          <div
-            key={y.id}
-            role="columnheader"
-            className="truncate py-1 text-center font-mono text-xs"
-            title={y.title}
-          >
-            {y.title.length > 8 ? `${y.title.slice(0, 8)}…` : y.title}
-          </div>
-        ))}
+        {yearGoalsWithId.map((y) => {
+          const label =
+            y.title.length > 8 ? `${y.title.slice(0, 8)}…` : y.title
+          return (
+            <div
+              key={y.id}
+              role="columnheader"
+              className={cn(
+                'truncate py-1 text-center font-mono text-xs',
+                y.isOrphan && 'text-amber-600',
+              )}
+              title={
+                y.isOrphan
+                  ? 'Orphan — chưa có liên kết ● với Hoshin nào'
+                  : y.title
+              }
+            >
+              {y.isOrphan ? `• ${label}` : label}
+            </div>
+          )
+        })}
 
         {hoshins.map((h, hIdx) => {
           const hoshinLabel = h.title || `H${hIdx + 1}`
+          const isOrphan = orphanHoshinIds.has(h.id)
           return (
             <Fragment key={h.id}>
               <div
                 role="rowheader"
-                className="self-center truncate text-center font-mono text-xs"
-                title={hoshinLabel}
+                className={cn(
+                  'self-center truncate text-center font-mono text-xs',
+                  isOrphan && 'text-amber-600',
+                )}
+                title={
+                  isOrphan
+                    ? 'Orphan — chưa có liên kết ● với Year Goal nào'
+                    : hoshinLabel
+                }
               >
-                H{hIdx + 1}
+                {isOrphan ? `• H${hIdx + 1}` : `H${hIdx + 1}`}
               </div>
               {yearGoalsWithId.map((y) => {
                 const strength = getCorrelation(correlations, y.id, h.id)

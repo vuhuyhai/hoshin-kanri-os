@@ -3,7 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { AlertCircle, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
 import { useCanvas } from './state/CanvasContext'
 import { useCanvasValidation } from './state/useCanvasValidation'
 import { postJson } from '@/lib/http/fetch-json'
@@ -17,12 +23,18 @@ interface SubmitBarProps {
 export function SubmitBar({ orgId }: SubmitBarProps) {
   const { state } = useCanvas()
   const router = useRouter()
-  const { errors, completeness, canSubmit } = useCanvasValidation(state.data)
+  const { errors, warnings, completeness, canSubmit } = useCanvasValidation(
+    state.data,
+    state.ui.correlations,
+  )
   const [errorsExpanded, setErrorsExpanded] = useState(false)
+  const [warningsExpanded, setWarningsExpanded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   const hasErrors = errors.length > 0
-  const showPanel = errorsExpanded && hasErrors
+  const hasWarnings = warnings.length > 0
+  const showErrorsPanel = errorsExpanded && hasErrors
+  const showWarningsPanel = warningsExpanded && hasWarnings
 
   const handleSubmit = async () => {
     if (errors.length > 0) {
@@ -69,7 +81,23 @@ export function SubmitBar({ orgId }: SubmitBarProps) {
 
   return (
     <div className="sticky bottom-0 z-20 border-t-[3px] border-ink bg-[var(--bg)]">
-      {showPanel && (
+      {showWarningsPanel && (
+        <div className="border-b-2 border-ink bg-[var(--accent-yellow)] px-4 py-3 lg:px-8">
+          <ul className="max-h-40 space-y-2 overflow-y-auto font-mono text-xs">
+            {warnings.map((w, idx) => (
+              <li key={idx} className="flex items-start gap-2">
+                <span aria-hidden>⚠</span>
+                <div>
+                  <p className="font-bold">{w.targetLabel}</p>
+                  <p className="mt-0.5 italic text-text-2">{w.message}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showErrorsPanel && (
         <div className="border-b-2 border-ink bg-[var(--bg-paper)] px-4 py-3 lg:px-8">
           <ul className="max-h-40 space-y-1 overflow-y-auto font-mono text-xs text-[var(--destructive)]">
             {errors.map((err, idx) => (
@@ -117,6 +145,22 @@ export function SubmitBar({ orgId }: SubmitBarProps) {
                 <Check className="h-4 w-4" aria-hidden />
                 Đủ điều kiện submit
               </span>
+            )}
+            {hasWarnings && (
+              <button
+                type="button"
+                onClick={() => setWarningsExpanded((v) => !v)}
+                className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-amber-600 hover:underline"
+                aria-expanded={warningsExpanded}
+              >
+                <AlertTriangle className="h-4 w-4" aria-hidden />
+                {warnings.length} cảnh báo
+                {warningsExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                ) : (
+                  <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                )}
+              </button>
             )}
             <button
               type="button"
