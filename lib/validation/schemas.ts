@@ -113,6 +113,21 @@ export const xMatrixCreateSchema = z.object({
 })
 export type XMatrixCreateInput = z.infer<typeof xMatrixCreateSchema>
 
+// GET /api/x-matrix/correlations — list correlations for a matrix
+export const listCorrelationsQuerySchema = z.object({
+  xMatrixId: z.string().uuid('xMatrixId phải là UUID'),
+})
+export type ListCorrelationsQueryInput = z.infer<typeof listCorrelationsQuerySchema>
+
+// POST /api/x-matrix/correlations — upsert one correlation cell
+export const upsertCorrelationSchema = z.object({
+  xMatrixId: z.string().uuid('xMatrixId phải là UUID'),
+  yearGoalId: z.string().min(1, 'Thiếu yearGoalId').max(100),
+  hoshinId: z.string().min(1, 'Thiếu hoshinId').max(100),
+  strength: z.enum(['strong', 'medium', 'weak', 'none']),
+})
+export type UpsertCorrelationInput = z.infer<typeof upsertCorrelationSchema>
+
 // ============================================================
 // X-Ray
 // ============================================================
