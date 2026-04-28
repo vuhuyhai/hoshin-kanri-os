@@ -15,7 +15,7 @@ import {
   type XMatrixHoshin,
 } from '@/lib/x-matrix/types'
 import type { Database } from '@/lib/supabase/types'
-import { fetchJson } from '@/lib/http/fetch-json'
+import { fetchJson, postJson } from '@/lib/http/fetch-json'
 import { genHoshinId } from '@/lib/x-matrix/utils'
 
 // ============================================================
@@ -69,6 +69,14 @@ export type FieldPath = string
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+export interface CoachCacheEntry {
+  questions: string[]
+  loading: boolean
+  error: string | null
+}
+
+export type CoachCacheMap = Record<string, CoachCacheEntry>
+
 export interface CanvasUiState {
   saveStatus: SaveStatus
   lastSavedAt: Date | null
@@ -77,6 +85,7 @@ export interface CanvasUiState {
   correlations: CorrelationsMap
   correlationsLoading: boolean
   correlationsError: string | null
+  coachCache: CoachCacheMap
 }
 
 export interface CanvasState {
@@ -133,6 +142,12 @@ export type CanvasAction =
         previousStrength: CorrelationStrength
       }
     }
+  | { type: 'COACH_FETCH_START'; payload: { key: string } }
+  | {
+      type: 'COACH_FETCH_SUCCESS'
+      payload: { key: string; questions: string[] }
+    }
+  | { type: 'COACH_FETCH_ERROR'; payload: { key: string; error: string } }
 
 // ============================================================
 // Initial state
@@ -151,6 +166,7 @@ const initialUi: CanvasUiState = {
   correlations: {},
   correlationsLoading: false,
   correlationsError: null,
+  coachCache: {},
 }
 
 const initialState: CanvasState = {
@@ -355,6 +371,48 @@ export function canvasReducer(
       }
     }
 
+    case 'COACH_FETCH_START': {
+      const { key } = action.payload
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          coachCache: {
+            ...state.ui.coachCache,
+            [key]: { questions: [], loading: true, error: null },
+          },
+        },
+      }
+    }
+
+    case 'COACH_FETCH_SUCCESS': {
+      const { key, questions } = action.payload
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          coachCache: {
+            ...state.ui.coachCache,
+            [key]: { questions, loading: false, error: null },
+          },
+        },
+      }
+    }
+
+    case 'COACH_FETCH_ERROR': {
+      const { key, error } = action.payload
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          coachCache: {
+            ...state.ui.coachCache,
+            [key]: { questions: [], loading: false, error },
+          },
+        },
+      }
+    }
+
     default:
       return state
   }
@@ -471,6 +529,56 @@ export async function setCorrelationOptimistic(
     })
     const message =
       err instanceof Error ? err.message : 'Không thể lưu correlation'
+    return { ok: false, error: message }
+  }
+}
+
+export async function fetchCoachQuestions(
+  dispatch: Dispatch<CanvasAction>,
+  cache: CoachCacheMap,
+  params: {
+    yearGoalId: string
+    hoshinId: string
+    yearGoalTitle: string
+    hoshinTitle: string
+    visionContext?: string
+  },
+): Promise<{ ok: boolean; questions?: string[]; error?: string }> {
+  const {
+    yearGoalId,
+    hoshinId,
+    yearGoalTitle,
+    hoshinTitle,
+    visionContext,
+  } = params
+  const key = makeCorrelationKey(yearGoalId, hoshinId)
+
+  const existing = cache[key]
+  if (existing?.loading) {
+    return { ok: false, error: 'Đang tải' }
+  }
+  if (existing && existing.questions.length > 0) {
+    return { ok: true, questions: existing.questions }
+  }
+
+  dispatch({ type: 'COACH_FETCH_START', payload: { key } })
+
+  try {
+    const res = await postJson<{ questions: string[] }>(
+      '/api/xmatrix/coach-correlation',
+      { yearGoalTitle, hoshinTitle, visionContext },
+    )
+    dispatch({
+      type: 'COACH_FETCH_SUCCESS',
+      payload: { key, questions: res.questions },
+    })
+    return { ok: true, questions: res.questions }
+  } catch (err) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'Sensei đang nghỉ. Thử lại sau nhé.'
+    dispatch({ type: 'COACH_FETCH_ERROR', payload: { key, error: message } })
     return { ok: false, error: message }
   }
 }

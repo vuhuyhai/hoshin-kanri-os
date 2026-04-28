@@ -35,7 +35,7 @@ export function CanvasMiniMap() {
   return (
     <nav
       aria-label="X-Matrix mini-map"
-      className="sticky top-16 z-20 border-b-[3px] border-ink bg-[var(--bg)] px-4 py-2 md:hidden"
+      className="sticky top-0 z-20 border-b-[3px] border-ink bg-[var(--bg)] px-4 py-2 md:hidden"
     >
       <div className="grid grid-cols-2 gap-1.5">
         {quadrants.map((q) => (

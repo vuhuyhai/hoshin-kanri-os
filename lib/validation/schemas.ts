@@ -128,6 +128,14 @@ export const upsertCorrelationSchema = z.object({
 })
 export type UpsertCorrelationInput = z.infer<typeof upsertCorrelationSchema>
 
+// POST /api/xmatrix/coach-correlation
+export const coachCorrelationSchema = z.object({
+  yearGoalTitle: z.string().min(1).max(500),
+  hoshinTitle: z.string().min(1).max(500),
+  visionContext: z.string().max(1000).optional(),
+})
+export type CoachCorrelationInput = z.infer<typeof coachCorrelationSchema>
+
 // ============================================================
 // X-Ray
 // ============================================================

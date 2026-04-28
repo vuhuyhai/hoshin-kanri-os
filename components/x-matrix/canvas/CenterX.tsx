@@ -1,11 +1,13 @@
 'use client'
 
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import { toast } from 'sonner'
 import { EducationalTooltip } from './EducationalTooltip'
+import { CoachPopover } from './CoachPopover'
 import {
   useCanvas,
   getCorrelation,
+  makeCorrelationKey,
   setCorrelationOptimistic,
   type CorrelationStrength,
 } from './state/CanvasContext'
@@ -43,6 +45,7 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
   const { yearGoals, hoshins } = state.data
   const { correlations, correlationsLoading } = state.ui
   const { warnings } = useCanvasValidation(state.data, correlations)
+  const [activeCoachKey, setActiveCoachKey] = useState<string | null>(null)
 
   const editable = canEdit && !!xMatrixId && !correlationsLoading
 
@@ -77,6 +80,13 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
     })
     if (!result.ok) {
       toast.error(result.error ?? 'Không lưu được correlation. Thử lại nhé.')
+      return
+    }
+    const cellKey = makeCorrelationKey(yearGoalId, hoshinId)
+    if (next === 'strong') {
+      setActiveCoachKey(cellKey)
+    } else if (activeCoachKey === cellKey) {
+      setActiveCoachKey(null)
     }
   }
 
@@ -179,35 +189,55 @@ export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
               >
                 {isOrphan ? `• H${hIdx + 1}` : `H${hIdx + 1}`}
               </div>
-              {yearGoalsWithId.map((y) => {
+              {yearGoalsWithId.map((y, yIdx) => {
+                const cellKey = makeCorrelationKey(y.id, h.id)
                 const strength = getCorrelation(correlations, y.id, h.id)
                 const symbol = STRENGTH_SYMBOLS[strength]
                 const isWeak = strength === 'weak'
+                const showCoach =
+                  activeCoachKey === cellKey && strength === 'strong'
+                const isLastColumn = yIdx === yearGoalsWithId.length - 1
                 return (
-                  <button
-                    key={`${y.id}:${h.id}`}
-                    type="button"
-                    role="gridcell"
-                    disabled={!editable}
-                    aria-label={`Year Goal ${y.title}, Hoshin ${hoshinLabel}, hiện tại ${STRENGTH_LABELS[strength]}`}
-                    onClick={() => handleCellClick(y.id, h.id)}
-                    className={cn(
-                      'flex min-h-[44px] min-w-[44px] items-center justify-center',
-                      'rounded-[var(--radius-md)] border-2 border-ink bg-[var(--bg)]',
-                      'font-display text-[28px] font-bold leading-none',
-                      'transition-all duration-100 ease-[var(--ease-nb)]',
-                      isWeak ? 'text-text-2' : 'text-ink',
-                      editable && [
-                        'cursor-pointer',
-                        'hover:-translate-x-px hover:-translate-y-px hover:bg-accent-yellow hover:shadow-[var(--shadow-sm)]',
-                        'active:translate-x-0 active:translate-y-0 active:shadow-none',
-                      ],
-                      correlationsLoading && 'cursor-wait opacity-40',
-                      !editable && !correlationsLoading && 'cursor-default opacity-90'
+                  <div key={cellKey} className="relative">
+                    <button
+                      type="button"
+                      role="gridcell"
+                      disabled={!editable}
+                      aria-label={`Year Goal ${y.title}, Hoshin ${hoshinLabel}, hiện tại ${STRENGTH_LABELS[strength]}`}
+                      onClick={() => handleCellClick(y.id, h.id)}
+                      className={cn(
+                        'flex h-full min-h-[44px] w-full min-w-[44px] items-center justify-center',
+                        'rounded-[var(--radius-md)] border-2 border-ink bg-[var(--bg)]',
+                        'font-display text-[28px] font-bold leading-none',
+                        'transition-all duration-100 ease-[var(--ease-nb)]',
+                        isWeak ? 'text-text-2' : 'text-ink',
+                        editable && [
+                          'cursor-pointer',
+                          'hover:-translate-x-px hover:-translate-y-px hover:bg-accent-yellow hover:shadow-[var(--shadow-sm)]',
+                          'active:translate-x-0 active:translate-y-0 active:shadow-none',
+                        ],
+                        correlationsLoading && 'cursor-wait opacity-40',
+                        !editable &&
+                          !correlationsLoading &&
+                          'cursor-default opacity-90',
+                      )}
+                    >
+                      {symbol}
+                    </button>
+                    {showCoach && (
+                      <CoachPopover
+                        yearGoalId={y.id}
+                        hoshinId={h.id}
+                        yearGoalTitle={y.title}
+                        hoshinTitle={hoshinLabel}
+                        visionContext={
+                          state.data.vision.trim() || undefined
+                        }
+                        placement={isLastColumn ? 'below' : 'right'}
+                        onClose={() => setActiveCoachKey(null)}
+                      />
                     )}
-                  >
-                    {symbol}
-                  </button>
+                  </div>
                 )
               })}
             </Fragment>
