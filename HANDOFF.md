@@ -971,16 +971,16 @@ Khi Claude mới vào session:
       - ✅ AI Prefill flow shipped (Task 8)
       - ✅ Submit API wire shipped (Task 4c FINAL — phát hiện M-Hoshin-1 ship submit placeholder, fix mid-session)
       - ⏸ Mini-map sticky bug DEFER M-Mobile-1 (mobile layout broken nghiêm trọng hơn — thiếu CenterX render trên mobile, không chỉ sticky bug)
-    - **M-Hoshin-2 commits** (chronological, oldest first):
+    - **M-Hoshin-2 commits** (chronological per git log, 9 commits total):
       - `5180cff` feat(types): add xmatrix_correlations to Database type
       - `a35cb1e` feat(api): add xmatrix correlations CRUD endpoint
       - `3236f13` feat(db): add xmatrix_correlations migration file
-      - `aa2f69e` feat(xmatrix): wire correlations state and API hydration in CanvasContext (Task 4b interactive grid bundled qua Cursor scope creep — không separate hash)
-      - `731116c` feat(xmatrix): canvas polish - vision input + submit wire + smart route (Task 4c FINAL — submit wire phát hiện M-Hoshin-1 ship placeholder)
+      - `aa2f69e` feat(xmatrix): wire correlations state and API hydration in CanvasContext
+      - `731116c` feat(xmatrix): canvas polish - vision input + submit wire + smart route (gộp Task 4b interactive grid + Task 4c FINAL polish — 5 fixes: vision input, role detection, symbol encoding, submit wire, smart route)
       - `4c8a106` feat(xmatrix): orphan correlation warnings with sensei messages (Task 5)
       - `0deba82` feat(xmatrix): AI coach correlations with sensei questions popover (Task 7)
-      - `[pending]` feat(xmatrix): AI prefill from Discovery with binary accept-or-cancel modal (Task 8 — shipped trong session, commit pending)
-      - `[pending]` docs: update handoff after M-Hoshin-2 (Task 9 — this commit)
+      - `1577b26` docs: update handoff after M-Hoshin-2 (Task 9 docs — committed before final feature commit)
+      - `d64e1cf` feat(xmatrix): AI prefill from Discovery with binary accept-or-cancel modal (Task 8 — shipped sau docs, thứ tự non-monotonic giữa Task 1 commit thứ 3 và Task 8 commit thứ 9 — pattern lessons đã capture)
     - **Pattern lessons**:
       1. **Cursor có thể ship "task xong" với placeholder code không communicate** (M-Hoshin-1 SubmitBar handleSubmit `[T3c] Submit placeholder, will wire API in Task 6` không note vào HANDOFF). Mitigation: sau khi Cursor báo ship milestone, GREP toàn repo cho keyword `placeholder|TODO|will wire|Task N` trước khi update HANDOFF — phát hiện debt sớm hơn là discover lúc ship feature kế.
       2. **Mid-milestone scope expansion qua phát hiện gap**: M-Hoshin-2 expand scope thêm submit wire fix khi phát hiện M-Hoshin-1 incomplete. Pattern: nếu phát hiện foundation gap tại Task N của milestone X, đánh giá nếu fix được trong cùng milestone (yes nếu < 1-2 tasks) hay defer milestone riêng (no nếu architectural redesign). M-Hoshin-2 chọn yes — gộp Task 4c FINAL với 5 fixes cùng commit. Defer alternative đã được consider nhưng reject vì foundation gap block toàn bộ correlation feature testing.
