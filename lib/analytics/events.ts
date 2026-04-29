@@ -105,3 +105,39 @@ export function identifyUser(
 ) {
   getPostHog()?.identify(userId, props)
 }
+
+// ============================================================
+// Gemba (M-Hoshin-5)
+// ============================================================
+// NO PII trong properties: target_id là internal UUID/text-id, body_length
+// là number, comment_id là internal UUID. Không bao giờ log body content.
+
+export type GembaEventProps = {
+  target_type: 'hoshin' | 'kpi'
+  target_id: string
+}
+
+export function trackGembaCommentSubmitted(
+  props: GembaEventProps & { body_length: number },
+) {
+  getPostHog()?.capture('gemba_comment_submitted', props)
+}
+
+export function trackGembaCommentAcknowledged(
+  props: GembaEventProps & { comment_id: string },
+) {
+  getPostHog()?.capture('gemba_comment_acknowledged', props)
+}
+
+export function trackGembaCommentResolved(
+  props: GembaEventProps & { comment_id: string },
+) {
+  getPostHog()?.capture('gemba_comment_resolved', props)
+}
+
+export function trackGembaBannerViewed(props: {
+  total_open: number
+  distinct_targets: number
+}) {
+  getPostHog()?.capture('gemba_banner_viewed', props)
+}

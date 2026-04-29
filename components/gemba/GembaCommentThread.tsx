@@ -8,6 +8,10 @@ import type {
   GembaStatus,
   GembaTargetType,
 } from '@/lib/gemba/types'
+import {
+  trackGembaCommentAcknowledged,
+  trackGembaCommentResolved,
+} from '@/lib/analytics/events'
 
 interface Props {
   targetType: GembaTargetType
@@ -56,9 +60,9 @@ function statusStyle(status: GembaStatus): React.CSSProperties {
   }
 }
 
-// targetType + targetId reserved trên Props cho future use
-// (refresh, reply…) nhưng chưa cần ở v1.
 export function GembaCommentThread({
+  targetType,
+  targetId,
   initialComments,
   canModerate,
   onUpdate,
@@ -99,6 +103,16 @@ export function GembaCommentThread({
             : c,
         ),
       )
+      const eventProps = {
+        target_type: targetType,
+        target_id: targetId,
+        comment_id: commentId,
+      }
+      if (newStatus === 'acknowledged') {
+        trackGembaCommentAcknowledged(eventProps)
+      } else {
+        trackGembaCommentResolved(eventProps)
+      }
       toast.success(
         newStatus === 'acknowledged' ? 'Đã ghi nhận' : 'Đã đánh dấu xử lý',
       )

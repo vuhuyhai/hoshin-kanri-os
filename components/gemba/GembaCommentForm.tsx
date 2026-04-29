@@ -9,6 +9,7 @@ import {
   GEMBA_BODY_MAX,
   type GembaTargetType,
 } from '@/lib/gemba/types'
+import { trackGembaCommentSubmitted } from '@/lib/analytics/events'
 
 interface Props {
   targetType: GembaTargetType
@@ -48,6 +49,11 @@ export function GembaCommentForm({
         target_type: targetType,
         target_id: targetId,
         body: body.trim(),
+      })
+      trackGembaCommentSubmitted({
+        target_type: targetType,
+        target_id: targetId,
+        body_length: body.trim().length,
       })
       toast.success('Đã gửi góp ý')
       setBody('')

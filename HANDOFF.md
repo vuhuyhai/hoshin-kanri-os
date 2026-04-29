@@ -812,7 +812,7 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-29 — post M-Hoshin-4)
+## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-5)
 
 - **Last migration applied**: `032_weekly_hansei.sql`
 - **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
@@ -1062,6 +1062,38 @@ Khi Claude mới vào session:
       5. **SQL placeholder pattern lesson #6 escalation**: "không paste-prose pollution" áp dụng cả cho placeholder UUIDs trong template SQL. Không đưa template `id IN ('uuid-1', 'uuid-2', ...)` cho user paste — phải đưa SQL hoàn chỉnh sau khi có data thật, hoặc dùng subquery/CTE để eliminate manual UUID enumeration. Đã hit pattern này 1 lần trong cleanup phase (anh paste template không fill UUIDs → syntax error).
       6. **Cleanup pollution qua ROW_NUMBER pattern**: SQL `ROW_NUMBER() OVER (PARTITION BY name, frequency, target_value ORDER BY created_at ASC)` để identify duplicates và giữ oldest, deactivate phần còn lại. Không cần enumerate UUIDs thủ công. Reusable pattern cho future cleanup tasks (M-Cleanup-2 Ladysfit orgs duplicate, future data pollution scenarios).
       7. **3-round-trip query pattern proven OK cho `<100 user/org scale`**: getRedStreaks query 3 sequential round-trips (kpis → kpi_entries → weekly_hansei) không N+1. Performance OK với org < 50 KPIs (typical SME). Future scale > 100 KPIs → migrate materialized view với pg_cron daily refresh. Threshold migration: nếu org load `/dashboard/kpi` > 500ms → optimize. Hiện tại 9 KPIs Ladysfit → query cực nhanh.
+  - **M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI) 2026-04-30**: ✅ shipped (8 commits). Mục tiêu: đảo trục input flow gốc rễ CEO-centric → bottom-up gemba bottom-up signal Member→CEO. Toyota Hoshin Kanri principles: psychological safety permanent (không edit/delete window), audit trail integrity, 1 schema 2 target_type cover Hoshin + KPI.
+    - **DB schema (migration 033)**: bảng `gemba_comments` với 2 enums (`gemba_target_type`: hoshin/kpi, `gemba_status`: open/acknowledged/resolved), CHECK body 20-1000 chars, 4 RLS policies (SELECT all org members, INSERT all, UPDATE/DELETE CEO+Manager). 4 FK references (org_id, created_by, acknowledged_by, resolved_by) tạo 8 internal `RI_ConstraintTrigger_*` + 1 explicit updated_at trigger = 9 triggers tổng. 3 indexes (org_status, target lookup, author lookup).
+    - **API routes (3 endpoints)**:
+      - POST `/api/gemba/create` — `requireOrgRole(ALL_ROLES)` — **route đầu tiên trong repo có Member primary writer**, rate-limit 20/5min/user, KHÔNG validate target tồn tại (defer)
+      - GET `/api/gemba/list` — 2 modes (?summary=1 cho banner aggregate / ?target_type=...&target_id=... cho thread)
+      - PATCH/DELETE `/api/gemba/[id]` — PATCH `WRITE_ROLES` (CEO+Manager update status), DELETE `ADMIN_ROLES` (CEO-only moderation, strict hơn RLS để defense-in-depth)
+    - **UI components (4 mới + 2 edit)**:
+      - `GembaCommentForm.tsx` — Member POV inline collapsed default (text-only "💬 Góp ý" link), expand textarea với char counter 20-1000
+      - `GembaBanner.tsx` — CEO banner conditional render (hide nếu total_open=0 hoặc !canModerate), pattern y HanseiBanner
+      - `GembaCommentThread.tsx` — collapsed default link "{N} góp ý", expand list với status badge + buttons acknowledge/resolve cho CEO+Manager
+      - `KpiGembaSection.tsx` (Server) + `KpiGembaSectionClient.tsx` (Client wrapper với Context) — Server-side fetch summary + per-KPI comments, Context provider để KpiCard truy cập qua `useGembaComments(kpiId)`
+      - Wire `app/dashboard/kpi/page.tsx` (Gemba banner ABOVE Hansei banner — α 2 banner stack riêng decision Task 1)
+      - Wire `app/dashboard/kpi/components/KpiCard.tsx` (form + thread render conditional)
+    - **Analytics**: 4 events typed (no PII): `gemba_comment_submitted`, `gemba_comment_acknowledged`, `gemba_comment_resolved`, `gemba_banner_viewed`. Banner view tracked qua `useEffect` mount-once với `useRef` guard (StrictMode-safe).
+    - **Smoke test 6 case PASS** (Member account verify Risk #1):
+      - Setup: tạo Member test account `member-test@ladysfit.local` trong Ladysfit org (e4b953d9-...) trước Task 2
+      - CASE 1: CEO submit comment 200 OK + banner render
+      - CASE 2: Member submit comment 200 OK (Risk #1 verify — `requireOrgRole(ALL_ROLES)` + RLS `gemba_comments_insert` work với `created_by=auth.uid()` constraint)
+      - CASE 3: Validation < 20 chars → button disabled
+      - CASE 4: CEO acknowledge → resolve → status badge progress đúng (open→acknowledged→resolved)
+      - CASE 5: Member KHÔNG thấy banner + KHÔNG thấy buttons (role-gated UI work)
+      - CASE 6: DB verify 3 status active (1 open + 1 acknowledged + 1 resolved)
+    - **8 commits** (chronological): docs Task 1 design audit → migration 033 + types → domain types + queries + validation schemas → API routes (create+list+patch/delete) → form Member POV → banner+thread+status CEO POV → analytics events + HANDOFF update.
+    - **Pattern lessons** (đáng generalize):
+      1. **`requireOrgRole(ALL_ROLES)` route đầu tiên trong repo có Member primary writer**: Verify qua smoke test với Member account thật, KHÔNG dùng dev CEO account giả lập (postgres role bypass RLS, không bao giờ test được Member writeable từ DB query). Future feature có Member writer → MUST tạo Member test account trước Task 2 (front-load setup), không chờ tới smoke test cuối milestone.
+      2. **Audit trail integrity > convenience trade-off**: Q8 design audit lựa "Member INSERT only, CEO moderate delete" thay vì "24h window UPDATE/DELETE own". Lý do: psychological safety permanent (Toyota gemba culture), audit trail clean, tech debt minimum (route-level time check phức tạp + chưa có precedent). Member typo? Post reply mới — pattern Slack thread.
+      3. **PowerShell paste escape character**: Khi paste lệnh git terminal có thể nhận `[C` ký tự đầu (Ctrl+C signal lúc terminal đang focus). Mitigation: kiểm tra ký tự đầu lệnh KHÔNG phải `[`, retype nếu fail (không paste).
+      4. **Trigger filter chuẩn dùng `tgisinternal=false`**: Filter `tgname NOT LIKE 'pg_%'` KHÔNG catch FK constraint triggers (chúng tên `RI_ConstraintTrigger_*`). Future migration verify nên dùng `WHERE tgrelid = 'table'::regclass AND tgisinternal = false` để chỉ đếm explicit triggers.
+      5. **Smoke test instructions phải numbered + expected output cụ thể**: Task 7A em viết instructions ngắn → user skip browser test, claim "all pass" mà chỉ run SQL CASE 4. Task 7B em viết 6 case numbered + expected output từng step → user follow-through tốt hơn. Pattern: critical UI features cần break instructions thành step-by-step với "STEP X.Y — sau khi click N, anh quan sát thấy gì?".
+      6. **Pattern challenge "all pass" claim proven worth**: Em panic ở Task 7B screenshot không có banner → request screenshot CASE 1 + CASE 4 + DB CASE 6 → confirm thật sự pass. Trade-off: thà false-alarm hơn miss bug. Trong M-Hoshin-5 đã 2 lần (Task 7A + 7B) anh "all pass" mà em phải challenge → cả 2 lần đều resolved positive (pass thật) nhưng pattern vẫn correct.
+      7. **Banner stack riêng pattern proven 3 lần**: HanseiBanner (M-Hoshin-4) + AnnualReviewBanner (M-Hoshin-3) + GembaBanner (M-Hoshin-5) — 3 banner độc lập trên dashboard (Annual + Hansei + Gemba). Pattern chosen Task 1 Q-banner = α 2 banner stack riêng. Future banner mới: render độc lập, không gộp.
+      8. **Cursor scope creep mitigation qua phase boundary**: Task 7 dự kiến gộp Member + CEO POV → em chia 7A (Member) + 7B (CEO) → mỗi sub-task ship 1 commit, dễ verify từng layer. Pattern proven M-Hoshin-2 lesson #1 (4-phase boundary).
 
 ---
 
@@ -1246,6 +1278,40 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHI extend canvas pattern (Server Component fetch + Client wrapper), audit checklist: every state field có UI input + validation + auto-save trigger nếu cần (xem M-Hoshin-3 lesson "vision input gap").
 - KHI add UI component vào dashboard, default render mobile + responsive (NOT `hidden md:*` pattern — pitfall #14).
 
+### 2026-04-30 — Gemba Feedback Bottom-up Signal (M-Hoshin-5)
+
+**Milestone**: M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI).
+
+**Scope**: 1 table mới (`gemba_comments`) + 2 enum types + 3 API endpoints + 4 UI components + 2 wire integrations + 4 PostHog events. 8 commits.
+
+**Driving need**: Đảo trục input flow gốc rễ CEO-centric (M-Hoshin-1/2/3/4 đều build cho CEO write top-down) sang gemba bottom-up (Member observe + comment). Toyota gemba philosophy: psychological safety + signal flow từ frontline lên management. App có role 'Member' trong DB từ migration 001 nhưng UI chưa khai thác Member writeable channel nào (chỉ kpi_entries qua RLS user-level).
+
+**8 quyết định locked ở Task 1 + Task 1B**:
+
+1. **Schema design**: Table mới `gemba_comments` (NOT extend `kpi_entries.comment` hoặc duplicate `hoshin_comments`+`kpi_comments`). Lý do: pattern proven 3 lần (xmatrix_correlations, annual_reviews, weekly_hansei). 1 schema với `target_type` enum tránh duplication, target_id text khớp JSON-embedded Hoshin ID pattern.
+2. **Target scope**: Hoshin + KPI (NOT YearGoals). Member có context cho Hoshin (5 vital few) + KPI (operational). YearGoals scope CEO chỉ.
+3. **Status enum**: `open | acknowledged | resolved` action lifecycle (NOT `observation/suggestion/concern` signal-type). Member friction thấp (không phải nghĩ "đây là gì"), pattern y `annual_reviews.status` lifecycle.
+4. **UX entry Member**: Inline collapsed "💬 Góp ý" button, click expand textarea (NOT always-visible form, NOT modal popup, NOT separate route). Pattern y `KpiCard.showForm` toggle hiện tại — proven UX không che context.
+5. **UX CEO read**: Banner top + inline thread expand (NOT only banner, NOT only inline, NOT dedicated route). Pattern y `HanseiBanner` + drill-down. Banner cho urgency, inline cho context.
+6. **Notification scope**: On-app banner ONLY (NO email, NO Zalo, NO digest). Lý do: kill scope creep, Resend infra defer M-Hoshin-6+. Email mỗi comment = noise (CEO bật rule ignore).
+7. **AI assist**: Defer M-Hoshin-6 (NOT ship AI sensei summarize comment patterns trong M-Hoshin-5). Lý do: chưa có data thực, AI sẽ hallucinate insight. Pattern lesson M-Hoshin-4 #4: ship Plan/Do/Check trước, Act phase optimize sau khi có baseline data.
+8. **Member writeable**: INSERT only, NO UPDATE/DELETE own (NOT 24h window edit). CEO + Manager moderate DELETE. Lý do: audit trail integrity > convenience. Psychological safety permanent (Toyota gemba culture không "24h take-back"). Tech debt minimum (route-level time check phức tạp + chưa có precedent).
+9. **Banner stack** (locked Task 1B): α 2 banner stack riêng (Gemba banner trên + Hansei banner dưới), NOT β gộp 1 banner "Việc cần xử lý". Pattern proven 2 lần (HanseiBanner + AnnualReviewBanner trên `/dashboard`). Hansei = self-action, Gemba = reactive-action — 2 intent khác nhau.
+10. **Member test account strategy** (locked Task 1B): Tạo Member test account TRƯỚC Task 2 (NOT sau Task 4 hoặc giả lập role update). Lý do: pattern lesson M-Hoshin-3 #1 (multi-org dev confusion consume 30 phút diagnose). Front-load 5 phút setup hơn 1-2h debug RLS bug ở Task 7+.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG modify schema `gemba_comments` mà không bump migration. Composite indexes + 4 FK + 4 RLS policies critical cho performance + security.
+- KHÔNG hardcode `GEMBA_BODY_MIN=20` hoặc `GEMBA_BODY_MAX=1000` — import từ `lib/gemba/types.ts`. Future tuning data-driven (vd Member viết quá ngắn → bump min 30, hoặc Member viết quá dài → cap 500).
+- KHÔNG dùng vision_json `hoshin.id` làm join key cho gemba comment lookup (regenerate on save) — luôn dùng `target_id` text matching pattern xmatrix_correlations. Hoshin lookup từ `x_matrices.vision_json.hoshins[].id` đọc trong app layer.
+- KHÔNG add "Member edit own comment trong 24h" mà không thêm route-level time check + DB CHECK constraint + UI warning ("còn N phút edit"). Quyết định Q8 = INSERT-only đã lock — đảo ngược cần re-design audit trail story.
+- KHÔNG skip Member account smoke test khi feature có Member writer. Pattern lesson M-Hoshin-5 #1 — postgres role bypass RLS không test được Member writeable path.
+- KHÔNG add email/Zalo notification mà không design email digest cron job (scope M-Hoshin-6+). Decision Q6 đã lock on-app only.
+- KHÔNG add AI sensei trong M-Hoshin-5 scope (defer M-Hoshin-6). Nếu thêm → MUST wire rate-limit helper bucket=`gemba` (pattern M-Hoshin-4 commit `a8d5e58`).
+- KHI extend gemba state, audit checklist: every state field có UI input + validation + auto-save trigger nếu cần (xem M-Hoshin-3 lesson "vision input gap").
+- KHI add UI component vào dashboard, default render mobile + responsive (NOT `hidden md:*` pattern — pitfall #14).
+- Banner UI component conditional render: hide khi `total_open===0` hoặc `!canModerate`. Tránh "empty state" banner làm dashboard ồn.
+
 ---
 
 ## 18. Next Steps (Roadmap)
@@ -1254,24 +1320,24 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần** ✅ shipped 2026-04-29 (6 commits). Weekly PDCA loop closed: detection 2+ red weeks streak, 2-field hansei form, history list per KPI, optimistic banner update, re-prompt sau streak extend. Detail xem §16 known open items + §17 architecture decision.
+- **M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI)** ✅ shipped 2026-04-30 (8 commits). Bottom-up signal Member→CEO closed: 1 schema 2 target_type (Hoshin+KPI), status lifecycle (open→ack→resolved), Member primary writer (route đầu tiên `requireOrgRole(ALL_ROLES)`), CEO moderate delete strict. Detail xem §16 + §17.
 
-### Milestone tiếp theo: M-Hoshin-5 — Gemba feedback (Member comment trên Hoshins)
+### Milestone tiếp theo: M-Hoshin-6 — Gemba AI Assist + Notification (TBD scope)
 
-**Mục tiêu**: Member role (không phải CEO) comment trên Hoshins / KPIs để suggest modifications, raise concern, escalate gemba signal lên CEO. Đảo trục input flow của app gốc rễ CEO-centric (CEO write top-down) sang gemba bottom-up (Member observe + comment).
+**Mục tiêu** (TBD design audit Task 1): Add AI assist + notification cho gemba feedback signal đã có data baseline từ M-Hoshin-5.
 
 **Tasks dự kiến** (TBD detail):
-1. **Schema design** — extend `kpi_entries` thêm comment field hay table mới `gemba_comments`?
-2. **UX** — inline comment form trong KpiCard hay separate modal?
-3. **Notification** — email/Zalo OA khi CEO có comment chưa reply?
-4. **AI assist optional** — sensei summarize comment patterns thành insights cho monthly report?
+1. **AI sensei summarize comment patterns**: Aggregate gemba comments thành insight cho monthly report (vd "5 góp ý tuần này về KPI X — 3 đề xuất tăng cường nhân sự"). Wire qua existing AI route `/api/report/monthly`.
+2. **Email/Zalo digest**: CEO nhận daily digest "X góp ý mới hôm nay" thay vì notification mỗi comment. Resend infra có sẵn, cần cron job.
+3. **Member edit own trong 24h** (revisit decision Q8 nếu user complain): Route-level time check + DB CHECK constraint + UI warning. Pattern fallback nếu Member typo friction tăng.
+4. **Hoshin card integration** (defer Task 7C M-Hoshin-5): Wire GembaCommentForm + Thread vào Hoshin card trong x-matrix canvas (target_type='hoshin' đã ready ở schema).
 
-**Blockers**: cần wireframe member POV (hiện tại app gốc rễ CEO-centric, gemba feedback đảo trục — Member comment, CEO read).
+**Blockers**: Cần data baseline ≥10 comments thực tế trong production để prompt design AI sensei. Trigger condition: user feedback "thiếu insight tổng hợp" hoặc M-Hoshin-5 có ≥10 gemba comments sau 2 tuần ship.
 
-**Dependency on M-Hoshin-4**: ✅ shipped (PDCA infrastructure + hansei patterns proven cho weekly cadence).
+**Dependency on M-Hoshin-5**: ✅ shipped (gemba_comments table + 4 events PostHog tracking + Member writer pattern proven).
 
 ### Future milestones (TBD priority)
 
-- **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications). **Priority: HIGH** nếu user feedback "thiếu collaboration" — see above.
 - **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11). **Priority: MEDIUM**.
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
 - **M-Cleanup-2**: Cleanup 8 duplicate "Ladysfit" orgs trong DB (data pollution from testing).

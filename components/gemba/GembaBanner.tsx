@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { MessageCircle } from 'lucide-react'
 import type { GembaUnreadSummary } from '@/lib/gemba/types'
+import { trackGembaBannerViewed } from '@/lib/analytics/events'
 
 interface Props {
   summary: GembaUnreadSummary
@@ -9,9 +11,22 @@ interface Props {
 }
 
 export function GembaBanner({ summary, canModerate }: Props) {
-  if (!canModerate || summary.total_open === 0) return null
-
+  // useRef guard tránh fire 2 lần do StrictMode double-effect.
+  // Hooks gọi unconditional TRƯỚC early return null.
+  const tracked = useRef(false)
   const distinctTargets = summary.by_target.length
+
+  useEffect(() => {
+    if (tracked.current) return
+    if (!canModerate || summary.total_open === 0) return
+    tracked.current = true
+    trackGembaBannerViewed({
+      total_open: summary.total_open,
+      distinct_targets: distinctTargets,
+    })
+  }, [summary.total_open, canModerate, distinctTargets])
+
+  if (!canModerate || summary.total_open === 0) return null
 
   return (
     <section
