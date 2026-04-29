@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { KpiSparkline } from './KpiSparkline'
 import { KpiUpdateForm } from './KpiUpdateForm'
+import { GembaCommentForm } from '@/components/gemba/GembaCommentForm'
 import type { KpiWithEntries } from '@/app/api/kpi/list/route'
 import { cn } from '@/lib/utils'
 
@@ -182,6 +183,16 @@ export function KpiCard({ kpi, onEntryAdded }: KpiCardProps) {
           onCancel={() => setShowForm(false)}
         />
       )}
+
+      {/* Gemba comment form — Member primary writer (M-Hoshin-5).
+          onSuccess defer Task 7B (thread display refresh). */}
+      <div className="pt-3 border-t border-ink/10">
+        <GembaCommentForm
+          targetType="kpi"
+          targetId={kpi.id}
+          targetLabel={`KPI: ${kpi.name}`}
+        />
+      </div>
     </div>
   )
 }
