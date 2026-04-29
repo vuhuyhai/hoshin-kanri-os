@@ -1,6 +1,25 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { getRedStreaks } from '@/lib/hansei/queries'
 import { KpiDashboardClient } from './components/KpiDashboardClient'
+import { KpiHanseiSection } from './components/KpiHanseiSection'
 
-export default function KpiPage() {
+export default async function KpiPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('org_members')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const orgId = membership?.org_id ?? ''
+  const redStreaks = orgId ? await getRedStreaks(supabase, orgId) : []
+
   return (
     <div className="w-full min-h-full p-6 lg:p-8">
       {/* Page header */}
@@ -13,6 +32,7 @@ export default function KpiPage() {
           Cập nhật số liệu hàng tuần để theo dõi tiến độ Hoshins.
         </p>
       </div>
+      <KpiHanseiSection initialRedStreaks={redStreaks} />
       <KpiDashboardClient />
     </div>
   )
