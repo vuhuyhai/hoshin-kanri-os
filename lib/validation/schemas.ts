@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import {
+  GEMBA_TARGET_TYPES,
+  GEMBA_BODY_MIN,
+  GEMBA_BODY_MAX,
+} from '@/lib/gemba/types'
 
 // Zod schemas for API request bodies. Grouped by domain, one source of
 // truth per endpoint. Import both the schema (for parseBody in the route)
@@ -511,3 +516,34 @@ export const transitionAnnualReviewSchema = z.object({
   newYear: z.number().int().min(2024).max(2100),
 })
 export type TransitionAnnualReviewInput = z.infer<typeof transitionAnnualReviewSchema>
+
+// ============================================================
+// Gemba Comments (M-Hoshin-5)
+// ============================================================
+
+// POST /api/gemba/create
+// target_id max 100 chars match upsertCorrelationSchema convention
+// (JSON-embedded hoshin IDs are short slugs; KPI UUIDs fit too).
+export const createGembaCommentSchema = z.object({
+  target_type: z.enum(GEMBA_TARGET_TYPES),
+  target_id: z
+    .string()
+    .min(1, 'target_id không được trống')
+    .max(100, 'target_id quá dài'),
+  body: z
+    .string()
+    .min(GEMBA_BODY_MIN, `Góp ý cần ít nhất ${GEMBA_BODY_MIN} ký tự để có ý nghĩa`)
+    .max(GEMBA_BODY_MAX, `Góp ý không quá ${GEMBA_BODY_MAX} ký tự`),
+})
+export type CreateGembaCommentInput = z.infer<typeof createGembaCommentSchema>
+
+// PATCH /api/gemba/[id]
+// Chỉ cho phép forward transitions (open → acknowledged → resolved).
+// API route gắn acknowledged_by/resolved_by + timestamps từ auth.uid()
+// và now() — client không control.
+export const updateGembaCommentStatusSchema = z.object({
+  status: z.enum(['acknowledged', 'resolved'] as const),
+})
+export type UpdateGembaCommentStatusInput = z.infer<
+  typeof updateGembaCommentStatusSchema
+>
