@@ -812,15 +812,15 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-28)
+## 16. Current State Snapshot (2026-04-29)
 
-- **Last migration applied**: `030_xmatrix_correlations.sql`
-- **API routes count**: 41
-- **Lib modules**: admin, ai, analytics, blog, discovery, email, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
-- **Components**: analytics (2), blog (8), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
-- **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, kpi, report, settings, help
+- **Last migration applied**: `031_annual_reviews.sql`
+- **API routes count**: 45
+- **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
+- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
+- **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, x-matrix/[year]/review, kpi, report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Mobile-1 (Mobile Layout Redesign — partial scope) — Stacked Vertical pattern shipped, mini-map sticky killed indefinitely
+- **Latest feature work**: M-Hoshin-3 (Annual Review Workflow) — shipped 8 commits + 1 hotfix transition
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1008,6 +1008,38 @@ Khi Claude mới vào session:
       3. **HIGH confidence diagnose ≠ 100% fix**: Cursor diagnose Option 1 confidence HIGH (`min-h-0` fix flexbox `min-height: auto` default), ship đúng spec, vẫn không stick. Multi-cause sticky bug (Tailwind + Next.js + nested layout) khó định danh từ static review. Pattern: nếu HIGH confidence fix không work → defer/kill thay vì pivot MEDIUM/LOW option (sunk-cost trap).
       4. **Refactor không gắn fix = ship sau**: `scrollMainToTop()` helper là refactor (replace `window.scrollTo` cho dashboard pages), không phải fix bug. Khi fix gắn revert → refactor không nên ship riêng. Wait until 1 fix khác cần helper rồi ship cùng commit.
       5. **Submit bar mobile không broken** — em prompt assumption wrong trong §18 Next Steps cũ ("Submit bar mobile — full-width, persistent footer pattern thay vì inline"). Verified qua test mobile session: inline pattern hiện tại work fine, không cần redesign. Pattern: verify "broken" claim TRƯỚC khi schedule task; tránh fix problems không tồn tại.
+  - **M-Hoshin-3 — Annual Review Workflow 2026-04-29**: ✅ shipped (8 commits + 1 hotfix). Mục tiêu: close PDCA loop. End-of-year review vs target, hansei capture (Toyota A3 4-fields), KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive.
+    - **DB schema (migration 031)**: 3 tables mới `annual_reviews`, `kpi_actuals`, `carry_overs` với RLS policies (SELECT all org members, INSERT/UPDATE/DELETE CEO only). Pattern y M-Hoshin-2 correlations table.
+    - **API routes (4 endpoints)**:
+      - POST `/api/annual-review/create` — idempotent, return existing draft, 409 cho completed/transitioned
+      - GET/PUT `/api/annual-review/[id]` — read full review + write A3/KPI actuals/carry-overs
+      - POST `/api/annual-review/[id]/transition` — atomic archive + create new active matrix
+    - **UI**:
+      - Banner trên `/dashboard` khi có x_matrix năm cũ chưa transition
+      - Manual trigger card khi không có pending banner
+      - Review page `/dashboard/x-matrix/[year]/review` với A3 form (4 textarea Toyota A3 pattern), KPI Actuals (manual entry, achievement % auto-compute, color band green/yellow/red), Carry-over decisions (4-button radio per Hoshin: pending/carry/modify/drop)
+      - Transition preview modal (NB v3.2 styling) với carry/modify/drop sections + warning panel
+    - **Auto-flagging**: Hoshin có ANY KPI < 70% → AlertCircle red + suggest carry-over. Hoshin đạt target → CheckCircle green + drop natural. Threshold hardcoded 70 trong `lib/annual-review/flagging.ts`.
+    - **Auto-save**: 2s debounce qua PUT API. Initial mount guard (`useRef`) tránh save state seeded từ server.
+    - **Validation Complete**: A3 fields ≥ 50 chars mỗi, mọi KPI có actual, mọi flagged Hoshin có decision khác pending. Errors expand-on-click, capped 5 + "...và N khác".
+    - **Defensive auto-archive (commit f03d59d)**: Transition API archive TẤT CẢ matrix active của org_id trước khi insert new. Migration 015 UNIQUE constraint từng cause 23505 conflict ở smoke test. Trade-off: convenience > safety — user matrix mới khác đang dùng có thể bị archive âm thầm. Pattern fallback: nếu production complain → revisit chuyển 409 reject với error rõ.
+    - **M-Hoshin-3 commits** (chronological):
+      - `786942b` feat: add migration 031 + types
+      - `25bc23e` feat: API routes CRUD + transition
+      - `d782d9f` feat: dashboard banner + manual trigger card
+      - `5192408` feat: page shell + data fetching
+      - `af8b5d2` feat: A3 form + KPI actuals + auto-save
+      - `266d090` feat: carry-over decisions + complete button
+      - `193f329` feat: transition preview modal + execute
+      - `f03d59d` fix: defensive auto-archive on transition
+    - **Pattern lessons** (đáng capture):
+      1. **Multi-org dev environment confusion**: Debug log `userId + orgId` đầu Server Component cho time-dependent features. Đã consume ~30 phút diagnose RLS/policy/query trong M-Hoshin-3 smoke test trong khi root cause chỉ là **wrong org login** (8 Ladysfit orgs trong DB, query `name ilike '%ladysfit%' limit 1` bốc đại). Mitigation: trước khi diagnose RLS/data layer, ALWAYS verify identity context (`auth.uid()`, `org_members.org_id`) trước.
+      2. **vision_json kpi.id regenerate on save → kpi.name là join key**: Pattern khi link kpi entity giữa table `kpis` (DB) và `x_matrices.vision_json.hoshins[].kpis[]` (JSONB), dùng `name` field làm join key (NOT id). Đã code-comment trong `lib/annual-review/queries.ts`. Áp dụng cho Hoshin/initiative future references nếu xảy ra cùng pattern.
+      3. **Migration 015 UNIQUE active per org constraint hit lần 2**: Bug 23505 đã hit ở M-Hoshin-2 commit `731116c` (smart `/new` route smart load existing) và M-Hoshin-3 commit `f03d59d` (transition flow). Pattern: bất kỳ flow nào CREATE matrix active → MUST archive existing active của cùng org_id trước. Define helper `archiveActiveMatrices(supabase, orgId)` cho future routes nếu pattern tái diễn.
+      4. **Defensive auto-archive vs explicit reject trade-off**: UNIQUE constraint conflict có 2 approaches. M-Hoshin-3 chọn auto-archive (convenience > safety). Lý do: edge case "user manual tạo matrix năm sau active trước khi review năm cũ" hiếm trong production. Pattern fallback: nếu user complain "matrix bị archive đột ngột" → revisit chuyển 409 reject với message "Năm X đã có matrix active. Hãy archive trước khi transition".
+      5. **Test data limitations cho carry-over flagging**: KPIs trong `kpis` table và KPIs trong `vision_json.hoshins[].kpis[]` phải MATCH names để flagging logic link KPI → Hoshin. Khi seed test data manual qua SQL → must align names. Smoke test M-Hoshin-3 skip carry-over flagging verify vì test data không match — production user fill cùng canvas thì auto-match. Document pattern này khi seed test data future.
+      6. **SQL paste-prose pollution (workflow lesson)**: Khi đưa SQL multi-step trong code blocks, ABSOLUTELY tách rõ block — code only, KHÔNG mix comment hướng dẫn dạng "→ Expected: ..." vào trong block. User có xu hướng paste cả block, dẫn đến syntax error. Hit ít nhất 4 lần trong M-Hoshin-3 smoke test. Mitigation: prose hướng dẫn TÁCH ra ngoài block, code blocks chứa SQL pure paste-able.
+      7. **8 Ladysfit orgs duplicate name pollution**: DB có 8 orgs cùng tên "Ladysfit*" do test pollution qua thời gian. Query `name ilike '%ladysfit%' limit 1` bốc tùy đại 1 trong 8. Anti-pattern: NEVER dùng `ilike` + `limit 1` cho name lookup khi data có duplicate risk. Pattern: lookup bằng `id` UUID hoặc unique combination (vd `name + email_verified_admin`).
 
 ---
 
@@ -1138,32 +1170,62 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHÔNG re-investigate mini-map sticky bug mà không có user complaint mới.
 - Khi add component mới vào canvas, default render trên cả mobile và desktop. Nếu cần ẩn 1 viewport → dùng `md:hidden` (ẩn desktop, show mobile) hoặc `hidden md:block` (ẩn mobile, show desktop) thay vì hardcode `hidden md:grid`.
 
+### 2026-04-29 — Annual Review Workflow (M-Hoshin-3)
+
+**Milestone**: M-Hoshin-3 — Annual Review Workflow.
+
+**Scope**: 3 tables mới (`annual_reviews`, `kpi_actuals`, `carry_overs`) + 4 API endpoints + UI page review + 6 components annual-review + integration với dashboard banner. 8 commits + 1 hotfix.
+
+**Driving need**: Close PDCA loop của Hoshin Kanri methodology. Trước M-Hoshin-3, app chỉ support Plan + Do (matrix create + KPI tracking). Thiếu Check (review vs target) + Act (carry-over learnings sang năm mới). End-of-year transition là moment quan trọng nhất Toyota method — không có nó, system trở thành "annual planning tool" chứ không phải Hoshin Kanri thật.
+
+**6 quyết định locked ở Task 1**:
+
+1. **Trigger flow**: Cả 2 — banner auto khi sang năm mới + nút manual trên dashboard.
+2. **KPI actual value**: Manual nhập (user tự điền actual) — NOT compute từ kpi_entries (tránh ambiguity sum/avg/last).
+3. **Hansei structure**: Toyota A3 4-fields (Background / Current State / Target Gap / Next Action) — match Toyota method, structured giúp AI assist tốt hơn free-form.
+4. **DB schema**: 3 tables tách (`annual_reviews` parent + `kpi_actuals` leaf + `carry_overs` decisions) — composite query phức tạp dễ index, audit trail rõ, RLS policy độc lập, pattern proven từ M-Hoshin-2 correlations.
+5. **Carry-over criteria**: KPI < 70% (red zone) → auto-flag Hoshin chứa KPI đó. Threshold match với KPI dashboard color band hiện tại (red < 70%, yellow 70-100%, green ≥ 100%).
+6. **Year transition state**: User confirm step-by-step (review → preview new → confirm transition). Modal preview KHÔNG dedicated page — stay on review context, less code.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG modify schema 3 tables (`annual_reviews`, `kpi_actuals`, `carry_overs`) mà không bump migration. Composite unique constraints + FK cascade behavior critical.
+- KHÔNG hardcode threshold 70% — import `RED_THRESHOLD` từ `lib/annual-review/flagging.ts` nếu cần align với KPI dashboard color band.
+- KHÔNG dùng vision_json `kpi.id` làm join key — luôn dùng `kpi.name`. ID regenerate khi save vision_json.
+- KHI tạo matrix active mới (bất kỳ route nào) → MUST archive existing active của cùng org_id trước. Pattern proven ở migration 015 UNIQUE constraint, M-Hoshin-2 smart `/new` route, M-Hoshin-3 transition flow.
+- KHÔNG add granular accept cho transition carry-over (per-Hoshin individual confirm) mà không design UX dedicated. Hiện tại binary modal-level confirm OK cho beta SaaS, granular defer cho production complaint signal.
+- Khi extend Annual Review state, audit checklist: every state field has UI input + validation message + auto-save trigger.
+
 ---
 
 ## 18. Next Steps (Roadmap)
 
-### Milestone tiếp theo: M-Hoshin-3 — Annual Review Workflow
+### Shipped milestones (recent)
 
-**Mục tiêu**: Close PDCA loop. End-of-year review vs target, capture learnings, propagate carry-overs sang năm sau. Có thể bao gồm granular accept cho AI Prefill (defer từ M-Hoshin-2).
+- **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
+
+### Milestone tiếp theo: M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần
+
+**Mục tiêu**: Khi KPI có 2+ tuần liên tiếp < 70% → auto-prompt user nhập hansei mini-reflection per KPI (NOT full A3 — just "tại sao đỏ + làm gì khác"). Build trên top M-Hoshin-3 infrastructure (kpi_actuals + A3 patterns).
 
 **Tasks dự kiến** (TBD detail):
-1. **Annual review form** — comparison table target vs actual cho mỗi YearGoal/Hoshin
-2. **Hansei (reflection) capture** — what worked/didn't, why
-3. **Carry-over engine** — auto-suggest year goals/Hoshins từ "didn't complete" sang năm mới
-4. **Year transition flow** — archive cũ + create new year x_matrix với prefill carry-overs
+1. **Red streak detection** — query `kpi_entries` để identify KPIs có 2+ tuần liên tiếp đỏ
+2. **Mini-hansei schema** — extend hoặc reuse `annual_reviews` patterns cho per-KPI weekly reflection
+3. **Auto-prompt UI** — banner trên `/dashboard/kpi` + inline form trong KPI tracker
+4. **AI assist** — sensei questions per red streak (reuse coach-correlation pattern từ M-Hoshin-2)
 
 **Blockers**:
-- Cần wireframe annual review UI
-- Cần verify AI prompt cho hansei generation (Toyota A3 pattern)
+- Cần verify schema design: extend `annual_reviews` hay table mới `weekly_hansei`?
+- Cần wireframe inline form vs separate modal
 
-**Dependency on M-Mobile-1**: ✅ shipped
+**Dependency on M-Hoshin-3**: ✅ shipped (kpi_actuals + A3 pattern proven)
 
 ### Future milestones (TBD priority)
 
-- **M-Hoshin-3**: Annual Review Workflow (close PDCA loop — review year-end vs target, learnings, carry-overs). Có thể bao gồm granular accept cho AI Prefill (defer từ M-Hoshin-2). **Priority: HIGH** (next milestone — see above).
-- **M-Hoshin-4**: Hansei reflections (auto-prompt khi KPI red 2+ tuần)
+- **M-Hoshin-4**: Hansei auto-prompt khi KPI red 2+ tuần. **Priority: HIGH** (next milestone — extension natural M-Hoshin-3 — see above).
 - **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications)
-- **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần production stable)
+- **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11)
+- **M-Cleanup-2**: Cleanup 8 duplicate "Ladysfit" orgs trong DB (data pollution from testing)
 - **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu)
 
 ---
