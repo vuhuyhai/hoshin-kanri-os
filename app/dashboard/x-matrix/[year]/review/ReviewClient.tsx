@@ -1,19 +1,23 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { fetchJson, FetchJsonError } from '@/lib/http/fetch-json'
 import type { ReviewPageData } from '@/lib/annual-review/queries'
 import type {
   A3Reflection,
   KpiActualEntry,
+  CarryOverEntry,
 } from '@/lib/annual-review/types'
 import { A3ReflectionForm } from '@/components/annual-review/A3ReflectionForm'
 import { KpiActualsForm } from '@/components/annual-review/KpiActualsForm'
+import { CarryOverDecisions } from '@/components/annual-review/CarryOverDecisions'
+import { CompleteButton } from '@/components/annual-review/CompleteButton'
 import {
   SaveIndicator,
   type SaveStatus,
 } from '@/components/annual-review/SaveIndicator'
+import { flagHoshins } from '@/lib/annual-review/flagging'
 
 interface Props {
   data: ReviewPageData
@@ -45,6 +49,14 @@ function ReviewClientInner({ data }: { data: ReviewPageDataWithReview }) {
       note: a.note ?? undefined,
     })),
   )
+  const [carryOvers, setCarryOvers] = useState<CarryOverEntry[]>(() =>
+    data.review.carryOvers.map((c) => ({
+      sourceHoshinId: c.sourceHoshinId,
+      decision: c.decision,
+      modifiedTitle: c.modifiedTitle ?? undefined,
+      rationale: c.rationale ?? undefined,
+    })),
+  )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
 
@@ -52,10 +64,25 @@ function ReviewClientInner({ data }: { data: ReviewPageDataWithReview }) {
   const isInitialMount = useRef(true)
   const isLocked = data.review.status === 'transitioned'
 
+  const hoshins = useMemo(
+    () =>
+      (data.matrix.visionJson.hoshins ?? []).map((h) => ({
+        id: h.id,
+        title: h.title,
+      })),
+    [data.matrix.visionJson],
+  )
+
+  const flags = useMemo(
+    () => flagHoshins(hoshins, data.kpis, kpiActuals),
+    [hoshins, data.kpis, kpiActuals],
+  )
+
   const save = useCallback(
     async (payload: {
       a3?: A3Reflection
       kpiActuals?: KpiActualEntry[]
+      carryOvers?: CarryOverEntry[]
     }) => {
       setSaveStatus('saving')
       try {
@@ -90,13 +117,13 @@ function ReviewClientInner({ data }: { data: ReviewPageDataWithReview }) {
 
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     debounceTimer.current = setTimeout(() => {
-      save({ a3, kpiActuals })
+      save({ a3, kpiActuals, carryOvers })
     }, AUTOSAVE_DEBOUNCE_MS)
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current)
     }
-  }, [a3, kpiActuals, save, isLocked])
+  }, [a3, kpiActuals, carryOvers, save, isLocked])
 
   const statusLabel =
     data.review.status === 'draft'
@@ -135,15 +162,23 @@ function ReviewClientInner({ data }: { data: ReviewPageDataWithReview }) {
         disabled={isLocked}
       />
 
-      <section className="card-brutal p-6 bg-bg-paper">
-        <h2 className="font-display font-bold text-xl mb-2">
-          Carry-over decisions
-        </h2>
-        <p className="text-text-3 text-sm italic">
-          Sẽ ship ở Task 4c. KPI &lt; 70% sẽ auto-flag Hoshin để bạn quyết
-          carry/drop/modify.
-        </p>
-      </section>
+      <CarryOverDecisions
+        flags={flags}
+        decisions={carryOvers}
+        onChange={setCarryOvers}
+        disabled={isLocked}
+      />
+
+      <CompleteButton
+        reviewId={data.review.id}
+        a3={a3}
+        kpiActuals={kpiActuals}
+        kpis={data.kpis}
+        flags={flags}
+        carryOvers={carryOvers}
+        status={data.review.status}
+        matrixYear={data.matrix.year}
+      />
     </div>
   )
 }
