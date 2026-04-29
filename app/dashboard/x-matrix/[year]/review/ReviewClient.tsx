@@ -1,80 +1,149 @@
 'use client'
 
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { toast } from 'sonner'
+import { fetchJson, FetchJsonError } from '@/lib/http/fetch-json'
 import type { ReviewPageData } from '@/lib/annual-review/queries'
+import type {
+  A3Reflection,
+  KpiActualEntry,
+} from '@/lib/annual-review/types'
+import { A3ReflectionForm } from '@/components/annual-review/A3ReflectionForm'
+import { KpiActualsForm } from '@/components/annual-review/KpiActualsForm'
+import {
+  SaveIndicator,
+  type SaveStatus,
+} from '@/components/annual-review/SaveIndicator'
 
 interface Props {
   data: ReviewPageData
   userId: string
 }
 
+const AUTOSAVE_DEBOUNCE_MS = 2000
+
 export function ReviewClient({ data }: Props) {
-  // Auto-create above guarantees review is non-null when this renders.
+  // Auto-create in page.tsx guarantees review is non-null when this renders.
   if (!data.review) return null
 
-  const hoshins = data.matrix.visionJson.hoshins ?? []
+  return <ReviewClientInner data={data as ReviewPageDataWithReview} />
+}
+
+type ReviewPageDataWithReview = ReviewPageData & {
+  review: NonNullable<ReviewPageData['review']>
+}
+
+function ReviewClientInner({ data }: { data: ReviewPageDataWithReview }) {
+  const [a3, setA3] = useState<A3Reflection>(data.review.a3)
+  const [kpiActuals, setKpiActuals] = useState<KpiActualEntry[]>(() =>
+    // Server returns note as `string | null`, our domain type uses
+    // `string | undefined`. Normalize at the boundary.
+    data.review.kpiActuals.map((a) => ({
+      kpiId: a.kpiId,
+      actualValue: a.actualValue,
+      achievementPct: a.achievementPct,
+      note: a.note ?? undefined,
+    })),
+  )
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isInitialMount = useRef(true)
+  const isLocked = data.review.status === 'transitioned'
+
+  const save = useCallback(
+    async (payload: {
+      a3?: A3Reflection
+      kpiActuals?: KpiActualEntry[]
+    }) => {
+      setSaveStatus('saving')
+      try {
+        // postJson hardcodes POST + omits `method` from its init type, so
+        // we drop down to fetchJson directly for PUT.
+        await fetchJson(`/api/annual-review/${data.review.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        setSaveStatus('saved')
+        setLastSavedAt(new Date())
+      } catch (err) {
+        setSaveStatus('error')
+        // FetchJsonError.message already prefers the server's `error`
+        // field, so plain `err.message` gives the Vietnamese copy from
+        // the API route.
+        const msg =
+          err instanceof FetchJsonError ? err.message : 'Lưu thất bại'
+        toast.error(`Lưu thất bại: ${msg}`)
+      }
+    },
+    [data.review.id],
+  )
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+    if (isLocked) return
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      save({ a3, kpiActuals })
+    }, AUTOSAVE_DEBOUNCE_MS)
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    }
+  }, [a3, kpiActuals, save, isLocked])
+
+  const statusLabel =
+    data.review.status === 'draft'
+      ? 'Đang draft'
+      : data.review.status === 'completed'
+        ? 'Đã hoàn tất'
+        : 'Đã chuyển năm'
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <header>
-        <h1 className="font-display font-bold text-3xl text-ink">
-          Review năm {data.matrix.year}
-        </h1>
-        <p className="text-text-2 mt-1">
-          {data.matrix.title ?? 'X-Matrix'} · Status: {data.review.status}
-        </p>
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display font-bold text-3xl text-ink">
+            Review năm {data.matrix.year}
+          </h1>
+          <p className="text-text-2 mt-1 text-sm">
+            {data.matrix.title ?? 'X-Matrix'} · {statusLabel}
+          </p>
+        </div>
+        <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
       </header>
 
-      <section className="card-brutal p-6">
-        <h2 className="font-display font-bold text-xl mb-4">Data check</h2>
-        <ul className="space-y-2 text-sm">
-          <li>
-            Review ID: <code>{data.review.id}</code>
-          </li>
-          <li>KPIs count: {data.kpis.length}</li>
-          <li>KPI actuals saved: {data.review.kpiActuals.length}</li>
-          <li>Carry-overs saved: {data.review.carryOvers.length}</li>
-        </ul>
-      </section>
+      {isLocked && (
+        <div className="card-yellow p-4">
+          <p className="text-ink font-medium">
+            Review này đã chuyển năm. Không thể edit.
+          </p>
+        </div>
+      )}
 
-      <section className="card-brutal p-6">
-        <h2 className="font-display font-bold text-xl mb-4">KPIs cần review</h2>
-        {data.kpis.length === 0 ? (
-          <p className="text-text-3">Không có KPI nào active cho matrix này.</p>
-        ) : (
-          <ul className="space-y-2">
-            {data.kpis.map((kpi) => (
-              <li
-                key={kpi.id}
-                className="flex justify-between border-b border-ink/10 pb-2"
-              >
-                <span className="font-medium">{kpi.name}</span>
-                <span className="text-text-3">
-                  Target: {kpi.targetValue} {kpi.unit ?? ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <A3ReflectionForm value={a3} onChange={setA3} disabled={isLocked} />
+      <KpiActualsForm
+        kpis={data.kpis}
+        actuals={kpiActuals}
+        onChange={setKpiActuals}
+        disabled={isLocked}
+      />
 
-      <section className="card-brutal p-6">
-        <h2 className="font-display font-bold text-xl mb-4">Hoshins từ matrix</h2>
-        {hoshins.length === 0 ? (
-          <p className="text-text-3">Không có Hoshins.</p>
-        ) : (
-          <ul className="space-y-2">
-            {hoshins.map((h) => (
-              <li key={h.id}>
-                <strong>{h.title}</strong>
-              </li>
-            ))}
-          </ul>
-        )}
+      <section className="card-brutal p-6 bg-bg-paper">
+        <h2 className="font-display font-bold text-xl mb-2">
+          Carry-over decisions
+        </h2>
+        <p className="text-text-3 text-sm italic">
+          Sẽ ship ở Task 4c. KPI &lt; 70% sẽ auto-flag Hoshin để bạn quyết
+          carry/drop/modify.
+        </p>
       </section>
-
-      <p className="text-text-3 text-sm italic">
-        UI form sẽ ship ở Task 4b (A3 + KPI actuals + carry-over decisions).
-      </p>
     </div>
   )
 }
