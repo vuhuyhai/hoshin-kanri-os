@@ -1248,6 +1248,83 @@ export type Database = {
           },
         ]
       }
+      gemba_comments: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          org_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: "open" | "acknowledged" | "resolved"
+          target_id: string
+          target_type: "hoshin" | "kpi"
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          org_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: "open" | "acknowledged" | "resolved"
+          target_id: string
+          target_type: "hoshin" | "kpi"
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          org_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: "open" | "acknowledged" | "resolved"
+          target_id?: string
+          target_type?: "hoshin" | "kpi"
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gemba_comments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gemba_comments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gemba_comments_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gemba_comments_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xray_leads: {
         Row: {
           answers_json: Json
@@ -1413,7 +1490,8 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      gemba_target_type: "hoshin" | "kpi"
+      gemba_status: "open" | "acknowledged" | "resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1540,6 +1618,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      gemba_target_type: ["hoshin", "kpi"],
+      gemba_status: ["open", "acknowledged", "resolved"],
+    },
   },
 } as const
