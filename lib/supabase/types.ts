@@ -1187,6 +1187,67 @@ export type Database = {
           },
         ]
       }
+      weekly_hansei: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          kpi_id: string
+          next_action: string
+          org_id: string
+          streak_weeks: number
+          updated_at: string
+          week_start: string
+          why_red: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_id: string
+          next_action: string
+          org_id: string
+          streak_weeks: number
+          updated_at?: string
+          week_start: string
+          why_red: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_id?: string
+          next_action?: string
+          org_id?: string
+          streak_weeks?: number
+          updated_at?: string
+          week_start?: string
+          why_red?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_hansei_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_hansei_kpi_id_fkey"
+            columns: ["kpi_id"]
+            isOneToOne: false
+            referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_hansei_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xray_leads: {
         Row: {
           answers_json: Json
