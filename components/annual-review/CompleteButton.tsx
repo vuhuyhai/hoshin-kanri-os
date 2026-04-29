@@ -12,6 +12,7 @@ import type {
 } from '@/lib/annual-review/types'
 import type { ReviewKpi } from '@/lib/annual-review/queries'
 import type { HoshinFlag } from '@/lib/annual-review/flagging'
+import { TransitionPreviewModal } from './TransitionPreviewModal'
 
 interface Props {
   reviewId: string
@@ -89,17 +90,52 @@ function validate(
 
 export function CompleteButton(props: Props) {
   const [submitting, setSubmitting] = useState(false)
+  const [transitionOpen, setTransitionOpen] = useState(false)
   const router = useRouter()
 
-  if (props.status !== 'draft') {
+  if (props.status === 'transitioned') {
     return (
       <div className="card-yellow p-4 text-center">
         <p className="font-display font-bold text-ink">
-          {props.status === 'completed'
-            ? '✓ Review đã hoàn tất — sẵn sàng chuyển năm'
-            : 'Review đã chuyển năm'}
+          Review đã chuyển năm
         </p>
       </div>
+    )
+  }
+
+  if (props.status === 'completed') {
+    return (
+      <>
+        <div className="card-brutal p-6 sticky bottom-4 bg-white">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display font-bold text-lg text-ink">
+                ✓ Review hoàn tất
+              </h3>
+              <p className="text-text-2 text-sm mt-1">
+                Sẵn sàng chuyển sang năm {props.matrixYear + 1}. Hoshins
+                carry-over sẽ migrate, matrix cũ archive.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTransitionOpen(true)}
+              className="btn-brutal-primary whitespace-nowrap shrink-0"
+            >
+              Chuyển sang năm {props.matrixYear + 1} →
+            </button>
+          </div>
+        </div>
+
+        <TransitionPreviewModal
+          open={transitionOpen}
+          onOpenChange={setTransitionOpen}
+          reviewId={props.reviewId}
+          oldYear={props.matrixYear}
+          flags={props.flags}
+          carryOvers={props.carryOvers}
+        />
+      </>
     )
   }
 
