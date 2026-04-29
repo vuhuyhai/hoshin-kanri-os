@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-28
+> **Last verified**: 2026-04-29
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -812,15 +812,15 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-29)
+## 16. Current State Snapshot (2026-04-29 — post M-Hoshin-4)
 
-- **Last migration applied**: `031_annual_reviews.sql`
-- **API routes count**: 45
-- **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
-- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
-- **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, x-matrix/[year]/review, kpi, report, settings, help
+- **Last migration applied**: `032_weekly_hansei.sql`
+- **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
+- **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
+- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
+- **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Hoshin-3 (Annual Review Workflow) — shipped 8 commits + 1 hotfix transition
+- **Latest feature work**: M-Hoshin-4 (Hansei Auto-prompt khi KPI red 2+ tuần) — shipped 6 commits
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1040,6 +1040,28 @@ Khi Claude mới vào session:
       5. **Test data limitations cho carry-over flagging**: KPIs trong `kpis` table và KPIs trong `vision_json.hoshins[].kpis[]` phải MATCH names để flagging logic link KPI → Hoshin. Khi seed test data manual qua SQL → must align names. Smoke test M-Hoshin-3 skip carry-over flagging verify vì test data không match — production user fill cùng canvas thì auto-match. Document pattern này khi seed test data future.
       6. **SQL paste-prose pollution (workflow lesson)**: Khi đưa SQL multi-step trong code blocks, ABSOLUTELY tách rõ block — code only, KHÔNG mix comment hướng dẫn dạng "→ Expected: ..." vào trong block. User có xu hướng paste cả block, dẫn đến syntax error. Hit ít nhất 4 lần trong M-Hoshin-3 smoke test. Mitigation: prose hướng dẫn TÁCH ra ngoài block, code blocks chứa SQL pure paste-able.
       7. **8 Ladysfit orgs duplicate name pollution**: DB có 8 orgs cùng tên "Ladysfit*" do test pollution qua thời gian. Query `name ilike '%ladysfit%' limit 1` bốc tùy đại 1 trong 8. Anti-pattern: NEVER dùng `ilike` + `limit 1` cho name lookup khi data có duplicate risk. Pattern: lookup bằng `id` UUID hoặc unique combination (vd `name + email_verified_admin`).
+  - **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần (2026-04-29)**: ✅ shipped (6 commits). Mục tiêu: close PDCA loop tuần — khi KPI có 2+ tuần liên tiếp < 70% target → auto-prompt user nhập mini-hansei reflection (2 fields: why_red + next_action). Build trên M-Hoshin-3 patterns (Server Component fetch + Client wrapper, soft validation, idempotent upsert).
+    - **DB schema (migration 032)**: bảng `weekly_hansei` với composite UNIQUE (kpi_id, week_start) cho idempotent upsert per streak. 4 RLS policies (SELECT all org members, INSERT/UPDATE WRITE_ROLES, DELETE ADMIN_ROLES). Trigger `update_weekly_hansei_updated_at` BEFORE UPDATE. Indexes (org_id, week_start DESC) + (kpi_id, week_start DESC).
+    - **API routes (2 endpoints)**:
+      - POST `/api/hansei/create` — Zod parseBody, requireOrgRole WRITE_ROLES, rate-limit 30/5min/user, server-side streak verify (anti-fake), idempotent upsert qua onConflict
+      - GET `/api/hansei/list?kpi_id=` — list history per KPI, ALL_ROLES read
+    - **Detection logic** (`lib/hansei/queries.ts`): 3 round-trips fixed (NOT N+1). Query `kpis` filter weekly/daily → query `kpi_entries` 6 tuần gần nhất → query `weekly_hansei` per KPI history. Group entries theo Monday-Sunday ISO week, tính LAST VALUE per tuần (Q2 decision), count consecutive red streak từ tuần hiện tại lùi về. Re-prompt logic Q6: `weeks_since_last_hansei >= RE_PROMPT_INTERVAL_WEEKS=2`.
+    - **UI** (`components/hansei/*` + `app/dashboard/kpi/components/KpiHanseiSection.tsx`):
+      - Banner pattern y AnnualReviewBanner — yellow bg + sticker "HANSEI" + brand-color streak badge
+      - Inline form 2-field (why_red + next_action), min 30 / max 1000 chars, dual char counter green/red
+      - History list per KPI với week badge + 2 sections (Tại sao đỏ / Hành động) + footer timestamp
+      - Server Component fetch redStreaks → Client wrapper KpiHanseiSection handle expanded state + optimistic filter
+    - **Smoke test 5 cases PASS** (Option B full): 1 tuần đỏ no banner, 2 tuần show, submit hide, streak break reset, 4 tuần re-prompt với history list show
+    - **6 commits**: `2202968` docs plan → `47ad626` migration + types → `a5bd983` detection queries + schema → `ce1949d` API endpoints → `330b185` components → `446f19f` wire dashboard
+    - **KPI data cleanup post-test**: deactivate 56 duplicate KPIs trong Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, deactivate phần còn lại). 65 active → 9 unique. Pollution từ test sessions cũ. Cleanup soft (`is_active=false`) không hard delete vì FK CASCADE impact (kpi_entries, kpi_actuals, weekly_hansei).
+    - **Pattern lessons** (đáng generalize):
+      1. **Server Component fetch + Client wrapper escalated to convention**: Pattern proven 3 lần liên tiếp — M-Hoshin-3 (AnnualReviewBanner), M-Hoshin-4 (KpiHanseiSection), implicit M-Hoshin-2 (KpiDashboardClient cũ). Server fetch giảm latency (no waterfall), Client wrapper handle interactive state. Future dashboard features mặc định pattern này, không cần debate Approach A/B/C lại.
+      2. **vision_json kpi.id regenerate (M-Hoshin-3 #2 reused successfully)**: Detection logic dùng `kpis.id` (table FK) làm join key, KHÔNG dùng vision_json kpi.id. Verified hoạt động đúng qua smoke test.
+      3. **Smoke test rigor — challenge unverified "all pass" claim**: User nói "all pass" mà chưa screenshot UI behavior → request explicit Option A (minimal — chỉ verify Case 2+3 critical) hoặc Option B (full 5 cases). SQL success ≠ UI correct. Pattern: critical UI features (banner show, form submit) cần screenshot verify ít nhất 1-2 cases. Không trust phantom claims.
+      4. **Test data tận dụng vs seed clean tradeoff**: 4 KPIs weekly duplicate có sẵn (data pollution) → pick 1 (`1e27af36-...`) để test thay vì seed KPI mới + cleanup phức tạp. Trade-off: minimal pollution tăng (chỉ test entries + hansei rows, KPI shared), cleanup gọn (không touch KPIs structure). Anti-pattern: seed thêm KPI test → tăng pollution thêm.
+      5. **SQL placeholder pattern lesson #6 escalation**: "không paste-prose pollution" áp dụng cả cho placeholder UUIDs trong template SQL. Không đưa template `id IN ('uuid-1', 'uuid-2', ...)` cho user paste — phải đưa SQL hoàn chỉnh sau khi có data thật, hoặc dùng subquery/CTE để eliminate manual UUID enumeration. Đã hit pattern này 1 lần trong cleanup phase (anh paste template không fill UUIDs → syntax error).
+      6. **Cleanup pollution qua ROW_NUMBER pattern**: SQL `ROW_NUMBER() OVER (PARTITION BY name, frequency, target_value ORDER BY created_at ASC)` để identify duplicates và giữ oldest, deactivate phần còn lại. Không cần enumerate UUIDs thủ công. Reusable pattern cho future cleanup tasks (M-Cleanup-2 Ladysfit orgs duplicate, future data pollution scenarios).
+      7. **3-round-trip query pattern proven OK cho `<100 user/org scale`**: getRedStreaks query 3 sequential round-trips (kpis → kpi_entries → weekly_hansei) không N+1. Performance OK với org < 50 KPIs (typical SME). Future scale > 100 KPIs → migrate materialized view với pg_cron daily refresh. Threshold migration: nếu org load `/dashboard/kpi` > 500ms → optimize. Hiện tại 9 KPIs Ladysfit → query cực nhanh.
 
 ---
 
@@ -1196,6 +1218,34 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHÔNG add granular accept cho transition carry-over (per-Hoshin individual confirm) mà không design UX dedicated. Hiện tại binary modal-level confirm OK cho beta SaaS, granular defer cho production complaint signal.
 - Khi extend Annual Review state, audit checklist: every state field has UI input + validation message + auto-save trigger.
 
+### 2026-04-29 — Hansei Auto-prompt Weekly PDCA (M-Hoshin-4)
+
+**Milestone**: M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần.
+
+**Scope**: 1 table mới (`weekly_hansei`) + 2 API endpoints + 3 UI components + 1 Client wrapper + wire vào KPI dashboard. 6 commits.
+
+**Driving need**: Close weekly PDCA loop của Hoshin Kanri methodology. M-Hoshin-3 đã close annual PDCA (year-end review) nhưng thiếu intervention cấp tuần khi KPI bị stuck đỏ. Toyota gemba philosophy: hansei = intentional reflection on failure tại moment phát hiện, không đợi quarterly/annual review.
+
+**6 quyết định locked ở Task 1**:
+
+1. **Schema design**: Table mới `weekly_hansei` (NOT extend `kpi_entries` hoặc reuse `annual_reviews`). Lý do: clean separation concern, RLS policy độc lập, pattern proven từ M-Hoshin-2/3.
+2. **Detection**: Query realtime mỗi load `/dashboard/kpi`. NOT pg_cron/materialized view. Solo dev simplicity, scale < 100 KPIs OK. Migrate materialized view khi org load > 500ms.
+3. **UX trigger**: Banner top + click expand inline form. NOT modal popup (block UX). NOT inline cạnh mỗi KPI card (clutter). Pattern y AnnualReviewBanner.
+4. **Hansei structure**: 2 fields minimal (why_red + next_action). Match Toyota mini-A3 cho weekly cadence. Friction thấp critical cho adoption. Full A3 4-field reserved cho annual review.
+5. **AI assist**: Defer M-Hoshin-5. Ship manual hansei trước → có data baseline, AI cost protection, không scope creep. Pattern: ship Plan/Do/Check trước, Act phase optimize sau.
+6. **Frequency**: 1 lần/streak với re-prompt nếu streak extend >= 2 tuần kể từ lần hansei trước. NOT weekly Monday (annoying), NOT mỗi load (aggressive). Streak-based intentional reflection match Toyota philosophy.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG modify schema `weekly_hansei` mà không bump migration. Composite UNIQUE (kpi_id, week_start) critical cho idempotent upsert.
+- KHÔNG hardcode `RED_THRESHOLD = 0.7` — import từ `lib/hansei/types.ts` nếu cần align với KPI dashboard color band (consistency).
+- KHÔNG hardcode `MIN_STREAK_WEEKS = 2` hoặc `RE_PROMPT_INTERVAL_WEEKS = 2` — import từ `lib/hansei/types.ts`. Future tuning data-driven.
+- KHÔNG dùng `kpi.id` từ vision_json làm join key (regenerate on save) — luôn dùng `kpis.id` table FK (M-Hoshin-3 pattern lesson #2).
+- KHÔNG add AI sensei route trong M-Hoshin-4 scope (defer M-Hoshin-5). Nếu thêm → MUST wire rate-limit helper bucket=`hansei` (pattern từ commit `a8d5e58`).
+- KHÔNG skip server-side streak verify trong POST `/api/hansei/create`. Client tự fake `streak_weeks` là attack vector trivial — verify qua `getRedStreaks()` re-compute trước insert.
+- KHI extend canvas pattern (Server Component fetch + Client wrapper), audit checklist: every state field có UI input + validation + auto-save trigger nếu cần (xem M-Hoshin-3 lesson "vision input gap").
+- KHI add UI component vào dashboard, default render mobile + responsive (NOT `hidden md:*` pattern — pitfall #14).
+
 ---
 
 ## 18. Next Steps (Roadmap)
@@ -1203,30 +1253,30 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 ### Shipped milestones (recent)
 
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
+- **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần** ✅ shipped 2026-04-29 (6 commits). Weekly PDCA loop closed: detection 2+ red weeks streak, 2-field hansei form, history list per KPI, optimistic banner update, re-prompt sau streak extend. Detail xem §16 known open items + §17 architecture decision.
 
-### Milestone tiếp theo: M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần
+### Milestone tiếp theo: M-Hoshin-5 — Gemba feedback (Member comment trên Hoshins)
 
-**Mục tiêu**: Khi KPI có 2+ tuần liên tiếp < 70% → auto-prompt user nhập hansei mini-reflection per KPI (NOT full A3 — just "tại sao đỏ + làm gì khác"). Build trên top M-Hoshin-3 infrastructure (kpi_actuals + A3 patterns).
+**Mục tiêu**: Member role (không phải CEO) comment trên Hoshins / KPIs để suggest modifications, raise concern, escalate gemba signal lên CEO. Đảo trục input flow của app gốc rễ CEO-centric (CEO write top-down) sang gemba bottom-up (Member observe + comment).
 
 **Tasks dự kiến** (TBD detail):
-1. **Red streak detection** — query `kpi_entries` để identify KPIs có 2+ tuần liên tiếp đỏ
-2. **Mini-hansei schema** — extend hoặc reuse `annual_reviews` patterns cho per-KPI weekly reflection
-3. **Auto-prompt UI** — banner trên `/dashboard/kpi` + inline form trong KPI tracker
-4. **AI assist** — sensei questions per red streak (reuse coach-correlation pattern từ M-Hoshin-2)
+1. **Schema design** — extend `kpi_entries` thêm comment field hay table mới `gemba_comments`?
+2. **UX** — inline comment form trong KpiCard hay separate modal?
+3. **Notification** — email/Zalo OA khi CEO có comment chưa reply?
+4. **AI assist optional** — sensei summarize comment patterns thành insights cho monthly report?
 
-**Blockers**:
-- Cần verify schema design: extend `annual_reviews` hay table mới `weekly_hansei`?
-- Cần wireframe inline form vs separate modal
+**Blockers**: cần wireframe member POV (hiện tại app gốc rễ CEO-centric, gemba feedback đảo trục — Member comment, CEO read).
 
-**Dependency on M-Hoshin-3**: ✅ shipped (kpi_actuals + A3 pattern proven)
+**Dependency on M-Hoshin-4**: ✅ shipped (PDCA infrastructure + hansei patterns proven cho weekly cadence).
 
 ### Future milestones (TBD priority)
 
-- **M-Hoshin-4**: Hansei auto-prompt khi KPI red 2+ tuần. **Priority: HIGH** (next milestone — extension natural M-Hoshin-3 — see above).
-- **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications)
-- **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11)
-- **M-Cleanup-2**: Cleanup 8 duplicate "Ladysfit" orgs trong DB (data pollution from testing)
-- **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu)
+- **M-Hoshin-5**: Gemba feedback (Member comment trên Hoshins, suggest modifications). **Priority: HIGH** nếu user feedback "thiếu collaboration" — see above.
+- **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11). **Priority: MEDIUM**.
+- **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
+- **M-Cleanup-2**: Cleanup 8 duplicate "Ladysfit" orgs trong DB (data pollution from testing).
+- **M-Cleanup-3**: ✅ shipped inline trong M-Hoshin-4 cleanup phase — deactivate 56 duplicate KPIs Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, soft delete reversible). 65 active → 9 unique. KHÔNG cần milestone formal.
+- **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu). **Priority: MEDIUM**, design system rollout continuation.
 
 ---
 
