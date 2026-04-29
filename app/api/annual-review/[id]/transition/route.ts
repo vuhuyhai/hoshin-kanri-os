@@ -157,22 +157,26 @@ export async function POST(
       hoshins: newHoshins,
     }
 
-    // Migration 015: x_matrices has UNIQUE active per org. Archive the
-    // old matrix and deactivate its KPIs BEFORE inserting the new active
-    // row, otherwise the partial unique index throws and leaves the
-    // annual review in 'completed' state.
+    // Migration 015: x_matrices has UNIQUE active per org. Defensive
+    // auto-archive — archive ALL active matrices of this org (not just
+    // the one being reviewed) before inserting the new active row.
+    // Handles the data-pollution case where another active matrix
+    // already exists (e.g. user manually created one for newYear);
+    // otherwise the partial unique index throws 23505 and leaves the
+    // annual review stuck in 'completed' state.
     const { error: archiveError } = await supabase
       .from('x_matrices')
       .update({
         status: 'archived',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', oldMatrix.id)
+      .eq('org_id', review.org_id)
+      .eq('status', 'active')
 
     if (archiveError) {
       console.error(`[annual-review/transition] [${requestId}]`, archiveError)
       return NextResponse.json(
-        { error: 'Không thể archive X-Matrix cũ', requestId },
+        { error: 'Không thể archive matrix active hiện tại', requestId },
         { status: 500 },
       )
     }
@@ -180,7 +184,7 @@ export async function POST(
     await supabase
       .from('kpis')
       .update({ is_active: false })
-      .eq('x_matrix_id', oldMatrix.id)
+      .eq('org_id', review.org_id)
       .eq('is_active', true)
 
     const { data: newMatrix, error: insertError } = await supabase
@@ -197,13 +201,10 @@ export async function POST(
 
     if (insertError || !newMatrix) {
       console.error(`[annual-review/transition] [${requestId}]`, insertError)
-      // Best-effort rollback: re-activate old matrix so the org isn't
-      // left without an active X-Matrix. KPIs stay deactivated — user
-      // can reactivate them via the dashboard.
-      await supabase
-        .from('x_matrices')
-        .update({ status: 'active' })
-        .eq('id', oldMatrix.id)
+      // No automatic rollback: the defensive archive above may have
+      // touched multiple rows, so re-activating a single one risks
+      // picking the wrong matrix. Admin should investigate via
+      // requestId and manually re-activate the intended matrix.
       return NextResponse.json(
         { error: 'Không thể tạo X-Matrix mới', requestId },
         { status: 500 },
