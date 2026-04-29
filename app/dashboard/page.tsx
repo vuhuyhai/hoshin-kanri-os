@@ -2,6 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  getReviewableMatrices,
+  filterPendingReview,
+} from '@/lib/annual-review/queries'
+import { AnnualReviewBanner } from '@/components/dashboard/AnnualReviewBanner'
+import { AnnualReviewCard } from '@/components/dashboard/AnnualReviewCard'
 
 const DISCOVERY_STEPS = [
   { key: 'x-ray', label: 'Business X-Ray', href: '/x-ray' },
@@ -75,6 +81,13 @@ export default async function DashboardPage() {
 
   const allDiscoveryDone = completedCount === DISCOVERY_STEPS.length
 
+  const reviewable = orgId
+    ? await getReviewableMatrices(supabase, orgId)
+    : []
+  const pending = filterPendingReview(reviewable)
+  const latestPending = pending[0] ?? null
+  const showCard = !latestPending && reviewable.length > 0
+
   return (
     <div className="w-full min-h-full p-6 lg:p-8">
       {/* Page header */}
@@ -87,6 +100,11 @@ export default async function DashboardPage() {
           Hoshin Kanri OS giúp bạn biến chiến lược thành hành động đo được.
         </p>
       </div>
+
+      {/* Annual review banner — show at top when prior-year matrix has no
+          completed/transitioned review yet. Banner replaces the manual
+          card so the CTA isn't duplicated. */}
+      {latestPending && <AnnualReviewBanner matrix={latestPending} />}
 
       {/* State B: Has X-Matrix — show quick actions */}
       {hasXMatrix && (
@@ -144,6 +162,7 @@ export default async function DashboardPage() {
                 </p>
               </div>
             </Link>
+            {showCard && <AnnualReviewCard />}
           </div>
         </div>
       )}
