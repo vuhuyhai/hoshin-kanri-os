@@ -460,3 +460,54 @@ export const updateOrgSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, 'Không có thay đổi')
 export type UpdateOrgInput = z.infer<typeof updateOrgSchema>
+
+// ============================================================
+// Annual Review (M-Hoshin-3)
+// ============================================================
+
+// POST /api/annual-review/create
+export const createAnnualReviewSchema = z.object({
+  xMatrixId: z.string().uuid('xMatrixId phải là UUID'),
+})
+export type CreateAnnualReviewInput = z.infer<typeof createAnnualReviewSchema>
+
+// PUT /api/annual-review/[id]
+// 'transitioned' is set only by the transition route — clients can move
+// draft → completed here, then trigger the transition flow separately.
+export const updateAnnualReviewSchema = z.object({
+  status: z.enum(['draft', 'completed']).optional(),
+  a3: z
+    .object({
+      background: z.string().max(2000),
+      currentState: z.string().max(2000),
+      targetGap: z.string().max(2000),
+      nextAction: z.string().max(2000),
+    })
+    .optional(),
+  kpiActuals: z
+    .array(
+      z.object({
+        kpiId: z.string().uuid(),
+        actualValue: z.number().finite(),
+        note: z.string().max(500).optional(),
+      }),
+    )
+    .optional(),
+  carryOvers: z
+    .array(
+      z.object({
+        sourceHoshinId: z.string().min(1).max(100),
+        decision: z.enum(['carry', 'drop', 'modify', 'pending']),
+        modifiedTitle: z.string().max(200).optional(),
+        rationale: z.string().max(1000).optional(),
+      }),
+    )
+    .optional(),
+})
+export type UpdateAnnualReviewInput = z.infer<typeof updateAnnualReviewSchema>
+
+// POST /api/annual-review/[id]/transition
+export const transitionAnnualReviewSchema = z.object({
+  newYear: z.number().int().min(2024).max(2100),
+})
+export type TransitionAnnualReviewInput = z.infer<typeof transitionAnnualReviewSchema>
