@@ -1031,6 +1031,162 @@ export type Database = {
           },
         ]
       }
+      annual_reviews: {
+        Row: {
+          a3_background: string | null
+          a3_current_state: string | null
+          a3_next_action: string | null
+          a3_target_gap: string | null
+          created_at: string
+          id: string
+          org_id: string
+          reviewed_at: string | null
+          reviewed_by: string
+          status: "draft" | "completed" | "transitioned"
+          updated_at: string
+          x_matrix_id: string
+        }
+        Insert: {
+          a3_background?: string | null
+          a3_current_state?: string | null
+          a3_next_action?: string | null
+          a3_target_gap?: string | null
+          created_at?: string
+          id?: string
+          org_id: string
+          reviewed_at?: string | null
+          reviewed_by: string
+          status?: "draft" | "completed" | "transitioned"
+          updated_at?: string
+          x_matrix_id: string
+        }
+        Update: {
+          a3_background?: string | null
+          a3_current_state?: string | null
+          a3_next_action?: string | null
+          a3_target_gap?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string
+          status?: "draft" | "completed" | "transitioned"
+          updated_at?: string
+          x_matrix_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annual_reviews_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annual_reviews_x_matrix_id_fkey"
+            columns: ["x_matrix_id"]
+            isOneToOne: true
+            referencedRelation: "x_matrices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annual_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_actuals: {
+        Row: {
+          achievement_pct: number | null
+          actual_value: number
+          annual_review_id: string
+          created_at: string
+          id: string
+          kpi_id: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          achievement_pct?: number | null
+          actual_value: number
+          annual_review_id: string
+          created_at?: string
+          id?: string
+          kpi_id: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          achievement_pct?: number | null
+          actual_value?: number
+          annual_review_id?: string
+          created_at?: string
+          id?: string
+          kpi_id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_actuals_annual_review_id_fkey"
+            columns: ["annual_review_id"]
+            isOneToOne: false
+            referencedRelation: "annual_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_actuals_kpi_id_fkey"
+            columns: ["kpi_id"]
+            isOneToOne: false
+            referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carry_overs: {
+        Row: {
+          annual_review_id: string
+          created_at: string
+          decision: "carry" | "drop" | "modify" | "pending"
+          id: string
+          modified_title: string | null
+          rationale: string | null
+          source_hoshin_id: string
+          updated_at: string
+        }
+        Insert: {
+          annual_review_id: string
+          created_at?: string
+          decision?: "carry" | "drop" | "modify" | "pending"
+          id?: string
+          modified_title?: string | null
+          rationale?: string | null
+          source_hoshin_id: string
+          updated_at?: string
+        }
+        Update: {
+          annual_review_id?: string
+          created_at?: string
+          decision?: "carry" | "drop" | "modify" | "pending"
+          id?: string
+          modified_title?: string | null
+          rationale?: string | null
+          source_hoshin_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carry_overs_annual_review_id_fkey"
+            columns: ["annual_review_id"]
+            isOneToOne: false
+            referencedRelation: "annual_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xray_leads: {
         Row: {
           answers_json: Json
