@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getRedStreaks } from '@/lib/hansei/queries'
 import { KpiDashboardClient } from './components/KpiDashboardClient'
 import { KpiHanseiSection } from './components/KpiHanseiSection'
+import { KpiGembaSection } from './components/KpiGembaSection'
 
 export default async function KpiPage() {
   const supabase = await createClient()
@@ -13,11 +14,12 @@ export default async function KpiPage() {
 
   const { data: membership } = await supabase
     .from('org_members')
-    .select('org_id')
+    .select('org_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
 
   const orgId = membership?.org_id ?? ''
+  const role = (membership?.role ?? 'Member') as 'CEO' | 'Manager' | 'Member'
   const redStreaks = orgId ? await getRedStreaks(supabase, orgId) : []
 
   return (
@@ -32,8 +34,12 @@ export default async function KpiPage() {
           Cập nhật số liệu hàng tuần để theo dõi tiến độ Hoshins.
         </p>
       </div>
-      <KpiHanseiSection initialRedStreaks={redStreaks} />
-      <KpiDashboardClient />
+      {/* Gemba banner top + Context Provider wrap children. Hansei
+          banner sau gemba (decision Task 1: 2 banner stack riêng). */}
+      <KpiGembaSection orgId={orgId} role={role}>
+        <KpiHanseiSection initialRedStreaks={redStreaks} />
+        <KpiDashboardClient />
+      </KpiGembaSection>
     </div>
   )
 }

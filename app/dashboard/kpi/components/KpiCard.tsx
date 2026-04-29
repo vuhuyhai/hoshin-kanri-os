@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { KpiSparkline } from './KpiSparkline'
 import { KpiUpdateForm } from './KpiUpdateForm'
 import { GembaCommentForm } from '@/components/gemba/GembaCommentForm'
+import { GembaCommentThread } from '@/components/gemba/GembaCommentThread'
+import { useGembaComments } from './KpiGembaSectionClient'
 import type { KpiWithEntries } from '@/app/api/kpi/list/route'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +70,7 @@ interface KpiCardProps {
 
 export function KpiCard({ kpi, onEntryAdded }: KpiCardProps) {
   const [showForm, setShowForm] = useState(false)
+  const { comments, canModerate } = useGembaComments(kpi.id)
 
   const light = getTrafficLight(kpi.latestValue, kpi.targetValue)
   const config = LIGHT_CONFIG[light]
@@ -185,13 +188,21 @@ export function KpiCard({ kpi, onEntryAdded }: KpiCardProps) {
       )}
 
       {/* Gemba comment form — Member primary writer (M-Hoshin-5).
-          onSuccess defer Task 7B (thread display refresh). */}
-      <div className="pt-3 border-t border-ink/10">
+          Thread render conditional khi có comment server-fetched. */}
+      <div className="pt-3 border-t border-ink/10 space-y-3">
         <GembaCommentForm
           targetType="kpi"
           targetId={kpi.id}
           targetLabel={`KPI: ${kpi.name}`}
         />
+        {comments.length > 0 && (
+          <GembaCommentThread
+            targetType="kpi"
+            targetId={kpi.id}
+            initialComments={comments}
+            canModerate={canModerate}
+          />
+        )}
       </div>
     </div>
   )
