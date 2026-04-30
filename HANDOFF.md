@@ -812,15 +812,15 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-5)
+## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-6)
 
 - **Last migration applied**: `032_weekly_hansei.sql`
 - **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
-- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix (7)
-- **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new, x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
+- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix (8 — bao gồm `canvas/cards/HoshinCard.tsx` refactored 2-button siblings + `canvas/GembaModal.tsx` mới ship M-Hoshin-6). Route-local Server Components mới: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
+- **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Hoshin-4 (Hansei Auto-prompt khi KPI red 2+ tuần) — shipped 6 commits
+- **Latest feature work**: M-Hoshin-6 (Hoshin Gemba Integration — badge + modal trên HoshinCard với canvas role-gate) — shipped 4 commits
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1094,6 +1094,32 @@ Khi Claude mới vào session:
       6. **Pattern challenge "all pass" claim proven worth**: Em panic ở Task 7B screenshot không có banner → request screenshot CASE 1 + CASE 4 + DB CASE 6 → confirm thật sự pass. Trade-off: thà false-alarm hơn miss bug. Trong M-Hoshin-5 đã 2 lần (Task 7A + 7B) anh "all pass" mà em phải challenge → cả 2 lần đều resolved positive (pass thật) nhưng pattern vẫn correct.
       7. **Banner stack riêng pattern proven 3 lần**: HanseiBanner (M-Hoshin-4) + AnnualReviewBanner (M-Hoshin-3) + GembaBanner (M-Hoshin-5) — 3 banner độc lập trên dashboard (Annual + Hansei + Gemba). Pattern chosen Task 1 Q-banner = α 2 banner stack riêng. Future banner mới: render độc lập, không gộp.
       8. **Cursor scope creep mitigation qua phase boundary**: Task 7 dự kiến gộp Member + CEO POV → em chia 7A (Member) + 7B (CEO) → mỗi sub-task ship 1 commit, dễ verify từng layer. Pattern proven M-Hoshin-2 lesson #1 (4-phase boundary).
+  - **M-Hoshin-6 — Hoshin Gemba Integration (2026-04-30)**: ✅ shipped (4 commits). Mục tiêu: integrate `gemba_comments` table M-Hoshin-5 (target_type='hoshin' schema-ready) vào X-Matrix canvas. CEO+Manager comment trên Hoshin cards qua badge footer + dedicated modal. Canvas role-gate Member redirect `/dashboard` (eliminate Member-POV gap).
+    - **Architecture (Q4 α+γ pattern)**: Server Component `HoshinGembaSection.tsx` fetch summary + commentsMap từ vision_json (NOT table — hoshins embedded JSONB). Client wrapper `HoshinGembaSectionClient.tsx` expose Context với hook `useHoshinGembaComments(hoshinId)`. Wrap OUTSIDE `XMatrixCanvasPage` (page.tsx render `<HoshinGembaSection>...</HoshinGembaSection>`). HoshinCard consume hook, render badge conditional.
+    - **UI features**:
+      - Footer badge 2 variants: count > 0 hiện `💬 N` brand color, count === 0 hiện `+ 💬` faded gray opacity-60 hover-100 (entry point cho Hoshin chưa có comment).
+      - Click badge → spawn `GembaModal` riêng (NOT mix với HoshinEditModal). Card vẫn click-to-edit như cũ.
+      - GembaModal render thread + form. Gate form khi `xMatrixId=null` (draft chưa persist) với hint "Lưu X-Matrix trước khi thêm góp ý".
+      - GembaBanner (M-Hoshin-5 component) extend `targetLabel` prop (`'KPI'` default | `'Hoshin'`). HoshinGembaSectionClient pass `targetLabel="Hoshin"` để banner copy đọc tự nhiên trên canvas.
+    - **Canvas role-gate Q-canvas**: `app/dashboard/x-matrix/new/page.tsx` thêm 3 dòng `if (membership.role === 'Member') redirect('/dashboard')` sau membership check, trước canEdit. Eliminate Member-POV gap (Member thấy edit affordances không persist confusing). Member submit gemba qua KPI card (M-Hoshin-5 đã ship) — bottom-up philosophy preserved.
+    - **HoshinCard refactor (Task 3B-fix)**: Original Task 3B ship badge `<button>` nested trong card `<button>` — invalid HTML5 + a11y break. Fix: wrapper `<div className="relative">` chứa 2 SIBLINGS (card button + badge button absolute positioned). XÓA `e.stopPropagation()` (siblings không bubble lên nhau). aria-label phân biệt 2 variants ("Xem N góp ý..." vs "Thêm góp ý...").
+    - **Smoke test 6 cases PASS**: DOM siblings + Console clean, hover faded variant, click `+ 💬` → GembaModal trống, click card area khác → HoshinEditModal, Tab keyboard natural order (card → badge), banner copy "Hoshin" đúng (NOT KPI).
+    - **4 commits** (chronological):
+      - `f9e0ce9` Task 3A — foundation (role-gate + Server fetch + Context)
+      - `fc411f3` Task 3B — badge + GembaModal UI (initial impl)
+      - `408ef04` Task 3B-fix — refactor avoid nested button
+      - `4447c42` Task 3B-fix-2 — badge 2 variants for empty state
+    - **Scope creep deferred (3/4 §18 features defer)**:
+      - AI sensei summarize: defer M-Hoshin-7+ (chưa có baseline data ≥10 comments thực, DB chỉ có 2 test comments tại Task 1 verify)
+      - Email/Zalo digest: defer M-Hoshin-7+ (Resend cron infra needed)
+      - Member edit own 24h: defer indefinitely (Q8 M-Hoshin-5 lock INSERT-only đã có rationale rõ, revisit chỉ khi user complain)
+    - **Pattern lessons** (đáng generalize):
+      1. **Verify-first cho assumption critical**: Task 2 verify 3 critical assumption (hoshin.id stability + canvas role check + KpiGembaSection reusability) BEFORE code. Phát hiện HANDOFF §17 M-Hoshin-5 constraint #3 phrasing "regenerate on save" misleading — actual behavior: hoshin.id `hoshin_${idx+1}_${Date.now()}` timestamp-locked tại ADD time, NOT regenerate khi SubmitBar save → text-match safe. Áp dụng pattern verify-first cho mọi feature touching JSON-embedded IDs.
+      2. **Phase boundary discipline 4 commits**: Chia milestone thành 3A (foundation) → 3B (initial UI) → 3B-fix (HTML/a11y) → 3B-fix-2 (UX gap empty state). Mỗi commit ship + verify riêng, easier rollback. Pattern proven 5 milestones liên tiếp (M-Hoshin-2/3/4/5/6).
+      3. **HTML5 nested button trade-off rejected**: Cursor Task 3B ship badge nested trong card button với rationale "React + browsers handle correctly với `stopPropagation()`". Em push back vì a11y break (screen readers parse sai, Chrome DevTools warning). Fix Task 3B-fix wrapper `<div>` chứa 2 SIBLINGS button. Pattern lesson: KHÔNG accept "browser tolerance ≠ correct" rationale cho a11y issue. Wrapper div +5 dòng layout cost > debug nested button bug sau này.
+      4. **UX gap empty state phát hiện late**: Q2 β decision Task 1 (badge chỉ show count > 0) ship Task 3B → Task 4 smoke test phát hiện CEO/Manager không có entry point Hoshin chưa có comment. Fix Task 3B-fix-2 badge 2 variants. Pattern lesson: design audit Task 1 nên explicit flag empty state UX cho mọi conditional render decision. Audit checklist mới: "render điều kiện X → empty state UX là gì?".
+      5. **Cursor auto-commit pattern consistent**: Cả 4 task M-Hoshin-6 Cursor đều auto-commit ở cuối session. Em lệnh commit em đưa sẵn nhưng `git status` báo "nothing to commit" — Cursor đã commit trước. Pattern: SAU mỗi Task Cursor báo ship, anh chạy `git log --oneline -5` verify commit message đúng + hash mới (KHÔNG run `git add . && git commit` nữa). Em note vào HANDOFF §11 Dev Workflow.
+      6. **Claude in Chrome integration unreliable**: M-Hoshin-6 Task 4 em dự định dùng Claude in Chrome smoke test thay anh, extension không connect được sau Step 1-7 troubleshooting. Em phải fall back Plan B (anh test manual + screenshots). Pattern lesson cho future: KHÔNG depend vào browser automation tool, plan B (manual verify) phải sẵn sàng. Vibe coding session limit ~8h (M-Hoshin-2 lesson #8) — 30+ phút debug tool config = sunk-cost trap.
 
 ---
 
@@ -1303,7 +1329,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 - KHÔNG modify schema `gemba_comments` mà không bump migration. Composite indexes + 4 FK + 4 RLS policies critical cho performance + security.
 - KHÔNG hardcode `GEMBA_BODY_MIN=20` hoặc `GEMBA_BODY_MAX=1000` — import từ `lib/gemba/types.ts`. Future tuning data-driven (vd Member viết quá ngắn → bump min 30, hoặc Member viết quá dài → cap 500).
-- KHÔNG dùng vision_json `hoshin.id` làm join key cho gemba comment lookup (regenerate on save) — luôn dùng `target_id` text matching pattern xmatrix_correlations. Hoshin lookup từ `x_matrices.vision_json.hoshins[].id` đọc trong app layer.
+- KHÔNG dùng vision_json `hoshin.id` làm join key TRƯỚC khi save Hoshin. Sau khi save lần đầu, `hoshin.id` (format `hoshin_${idx+1}_${Date.now()}`) timestamp-locked tại ADD time, NOT regenerate khi SubmitBar save → text-match safe. Verified M-Hoshin-6 Task 2 V1 (commit `f9e0ce9`). Edge case acceptable: delete hoshin slot + re-add = id mới với timestamp khác → comments cũ orphan (intended behavior, deleted = gone). Hoshin lookup từ `x_matrices.vision_json.hoshins[].id` đọc trong app layer.
 - KHÔNG add "Member edit own comment trong 24h" mà không thêm route-level time check + DB CHECK constraint + UI warning ("còn N phút edit"). Quyết định Q8 = INSERT-only đã lock — đảo ngược cần re-design audit trail story.
 - KHÔNG skip Member account smoke test khi feature có Member writer. Pattern lesson M-Hoshin-5 #1 — postgres role bypass RLS không test được Member writeable path.
 - KHÔNG add email/Zalo notification mà không design email digest cron job (scope M-Hoshin-6+). Decision Q6 đã lock on-app only.
@@ -1312,29 +1338,52 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHI add UI component vào dashboard, default render mobile + responsive (NOT `hidden md:*` pattern — pitfall #14).
 - Banner UI component conditional render: hide khi `total_open===0` hoặc `!canModerate`. Tránh "empty state" banner làm dashboard ồn.
 
+### 2026-04-30 — Hoshin Gemba Integration (M-Hoshin-6)
+
+**Milestone**: M-Hoshin-6 — Hoshin Gemba Integration.
+
+**Scope**: Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin' schema-ready) vào X-Matrix canvas. 4 commits, 0 migration mới (schema đã ready M-Hoshin-5), 0 API mới (endpoint `/api/gemba/list` + `/create` + `/[id]` đã handle target_type='hoshin' từ M-Hoshin-5).
+
+**Driving need**: M-Hoshin-5 ship `gemba_comments` với 2 target_type nhưng chỉ wire UI cho KPI side. Hoshin side schema ready nhưng UI chưa render — Task 7C M-Hoshin-5 deferred. M-Hoshin-6 đóng technical debt này + giải quyết Member-POV gap canvas.
+
+**5 quyết định locked Task 1 + Task 1B (design audit)**:
+
+1. **Q1 β — Render location**: Footer badge count + dedicated GembaModal riêng (NOT inline section, NOT tab trong HoshinEditModal). Lý do: HoshinCard.tsx là `<button>` 110px compact (NOT `<div>` như KpiCard), không inline được. Tách 2 modal isolate gemba khỏi edit-flow CEO.
+2. **Q2 β — Badge visibility**: Show 2 variants conditional (NOT empty-hide hoàn toàn, NOT always-show). Variant count > 0 hiện `💬 N` brand color; variant count === 0 hiện `+ 💬` faded gray opacity-60 hover-100. Lý do: empty-hide phát hiện UX gap Task 4 (CEO/Manager không có entry point Hoshin chưa có comment) → Task 3B-fix-2 fix với 2 variants. Q2 β-revised giữ tinh thần "subtle không noise" nhưng đảm bảo functional entry point.
+3. **Q3 γ — Defer Member writer Hoshin**: GembaModal render form chỉ CEO+Manager (NOT all-roles, NOT defer thread cũng). Lý do: Q-canvas role-gate (Member redirect `/dashboard`) → Member không reach canvas được → form Member dead code nếu render. Member submit gemba qua KPI card (M-Hoshin-5 đã ship) — bottom-up philosophy preserved. M-Hoshin-7 mở canvas Member-POV → bật form additive sau (không refactor).
+4. **Q4 α+γ compose — Data fetching**: Server Component fetch summary + commentsMap trên page level + Context Provider client-side wrap OUTSIDE XMatrixCanvasPage. NOT prop drilling 4-level (page → canvas → grid → slot → card), NOT sibling context CanvasContext. Pattern y M-Hoshin-5 KpiGembaSection commit `47350e1`. N+1 ≤6 query (MAX_HOSHINS=5) acceptable.
+5. **Q-canvas — Role-gate page level**: Member redirect `/dashboard` 3 dòng `if (membership.role === 'Member') redirect('/dashboard')` trong page.tsx. NOT render canvas + hide UI affordances cho Member, NOT defer fix. Lý do: Member-POV canvas gap separate concern (M-Hoshin-7 sẽ redesign Member-POV canvas). Hiện tại Member chưa cần vào canvas → eliminate confusion thay vì half-fix.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG modify HoshinCard structure trở lại nested button (`<button>` trong `<button>`). Wrapper `<div>` chứa 2 SIBLINGS button là HTML5 valid + a11y safe. "Browser tolerance != correct" rationale rejected.
+- KHÔNG remove Q2 β-revised 2 variants (count=0 phải có visual entry point `+ 💬` faded, KHÔNG empty-hide hoàn toàn).
+- KHÔNG render form Member writer trong GembaModal mà KHÔNG đồng thời bật Member access canvas page (Q3 γ + Q-canvas pair lock).
+- KHI extend gemba feature mới (vd reaction emoji, mention user), reuse pattern Server fetch + Context wrap OUTSIDE container (HoshinGembaSectionClient + KpiGembaSectionClient parallel pattern).
+- KHÔNG dùng vision_json `hoshin.id` làm join key cho draft Hoshin (chưa SubmitBar save). Gate form khi `xMatrixId=null` với hint "Lưu X-Matrix trước khi thêm góp ý".
+- KHI add UI component có conditional render (show/hide based on count/state), audit checklist Task 1 design phải explicit flag empty state UX cho mọi conditional.
+
 ---
 
 ## 18. Next Steps (Roadmap)
 
 ### Shipped milestones (recent)
 
+- **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần** ✅ shipped 2026-04-29 (6 commits). Weekly PDCA loop closed: detection 2+ red weeks streak, 2-field hansei form, history list per KPI, optimistic banner update, re-prompt sau streak extend. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI)** ✅ shipped 2026-04-30 (8 commits). Bottom-up signal Member→CEO closed: 1 schema 2 target_type (Hoshin+KPI), status lifecycle (open→ack→resolved), Member primary writer (route đầu tiên `requireOrgRole(ALL_ROLES)`), CEO moderate delete strict. Detail xem §16 + §17.
 
-### Milestone tiếp theo: M-Hoshin-6 — Gemba AI Assist + Notification (TBD scope)
+### Milestone tiếp theo: M-Hoshin-7 — TBD scope (chờ Vũ Hải decision)
 
-**Mục tiêu** (TBD design audit Task 1): Add AI assist + notification cho gemba feedback signal đã có data baseline từ M-Hoshin-5.
+**Candidates ưu tiên** (chọn 1 sau khi anh decide):
 
-**Tasks dự kiến** (TBD detail):
-1. **AI sensei summarize comment patterns**: Aggregate gemba comments thành insight cho monthly report (vd "5 góp ý tuần này về KPI X — 3 đề xuất tăng cường nhân sự"). Wire qua existing AI route `/api/report/monthly`.
-2. **Email/Zalo digest**: CEO nhận daily digest "X góp ý mới hôm nay" thay vì notification mỗi comment. Resend infra có sẵn, cần cron job.
-3. **Member edit own trong 24h** (revisit decision Q8 nếu user complain): Route-level time check + DB CHECK constraint + UI warning. Pattern fallback nếu Member typo friction tăng.
-4. **Hoshin card integration** (defer Task 7C M-Hoshin-5): Wire GembaCommentForm + Thread vào Hoshin card trong x-matrix canvas (target_type='hoshin' đã ready ở schema).
+1. **M-Cleanup-1 — Wizard files cleanup** (target 2026-05-11): Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 6 wizard files (`XMatrixWizard` + 4 step files + `WizardProgress`). Cost ~30 phút, kill technical debt. Trigger: 2 tuần production stable từ M-Hoshin-1 ship 2026-04-27.
+2. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor sang NB v3.2 design tokens. Continue design system rollout (Foundation M-Design-1 + Landing M-Design-2 đã shipped). Cost ~3-5 commits, 1 session.
+3. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas (đảo Q-canvas role-gate M-Hoshin-6) + hide edit affordances conditional (`canEdit` gate). Gate form Member-writer trong GembaModal bật additive (Q3 β re-enable). Cost ~5-7 commits, 1-2 sessions.
+4. **M-Gemba-AI-1 — AI sensei summarize comments**: Defer M-Hoshin-6 scope vì chưa có baseline data ≥10 comments. Trigger: M-Hoshin-5+6 accumulate ≥10 production comments OR user complain "thiếu insight tổng hợp". Currently DB có 2 test comments → KHÔNG enough.
 
-**Blockers**: Cần data baseline ≥10 comments thực tế trong production để prompt design AI sensei. Trigger condition: user feedback "thiếu insight tổng hợp" hoặc M-Hoshin-5 có ≥10 gemba comments sau 2 tuần ship.
-
-**Dependency on M-Hoshin-5**: ✅ shipped (gemba_comments table + 4 events PostHog tracking + Member writer pattern proven).
+**Em recommend M-Cleanup-1 first** (lý do: 2 tuần stable countdown 2026-05-11 đến nơi, kill tech debt nhanh trước khi rollback risk hết significance).
 
 ### Future milestones (TBD priority)
 
