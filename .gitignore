@@ -46,3 +46,6 @@ cookies.txt
 
 diff-handoff.txt
 *.diff.txt
+
+# Smoke test artifacts
+test-output/
