@@ -1472,7 +1472,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
-- **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ SHIPPED 2026-04-30 (3 commits: `3e29a66` fix + `5501c7d` HANDOFF L7-L9 + `[HASH_THẬT]` close-out L10-L16). Production verified `chienluoc.org` 5/5 PASS. Security incident handled: 5 keys rotated. SMOKE_TEST.md Phase 1.4 hardened. Total 10 pattern lessons (L7-L16). See §16 + §17.
+- **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ SHIPPED 2026-04-30 (3 commits: `3e29a66` fix + `5501c7d` HANDOFF L7-L9 + `b12c919` close-out L10-L16). Production verified `chienluoc.org` 5/5 PASS. Security incident handled: 5 keys rotated. SMOKE_TEST.md Phase 1.4 hardened. Total 10 pattern lessons (L7-L16). See §16 + §17.
 - **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
 - **M-Hoshin-6.1 — Hotfix gate gemba form khi Hoshin chưa persist** ✅ shipped 2026-04-30 (1 commit `13cf793` + 1 SQL DELETE 4 orphan rows). Production user submit comment trên Hoshin draft (xMatrixId truthy nhưng hoshin.id chưa trong vision_json) → orphan target_id. Fix: Server fetch `existingHoshinIds` → Context expose `isPersisted` per hoshin → GembaModal gate form `!isPersisted`. Detail xem §16.
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
