@@ -17,12 +17,20 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: membership } = await supabase
+    const { data: membership, error: membershipError } = await supabase
       .from('org_members')
       .select('org_id')
       .eq('user_id', user.id)
-      .limit(1)
-      .single()
+      .maybeSingle()
+
+    if (membershipError?.code === 'PGRST116') {
+      console.warn(`[swot-prefill-from-xray] Multi-org user ${user.id}`)
+      return NextResponse.json(
+        { error: 'User belongs to multiple organizations. Please specify org_id explicitly.' },
+        { status: 409 },
+      )
+    }
+
     if (!membership) return NextResponse.json({ prefilled: false })
 
     const orgId = membership.org_id
