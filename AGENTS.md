@@ -115,3 +115,13 @@ These are enforced by the code review bar. Deviate only with a concrete reason:
 2. `npm run build` — must pass for anything touching routes, configs, or types.
 3. Explain what you actually verified. If you couldn't test a UI change in a browser, **say so explicitly**. Don't claim a success you didn't observe.
 4. Keep the final response terse. Bullet points > paragraphs. User reads diffs, not essays.
+
+---
+
+## Test environment caveats (added 2026-04-30)
+
+- **Unicode path + `cmd` shell:** project root contains Vietnamese diacritics (`Vũ Hải`). On this Windows machine, `cmd` invoked via Desktop Commander MCP fails when quoted Unicode paths are used (e.g. `cd /d "C:\Users\ASUS\Desktop\Hoshin Kanri by Vũ Hải\..."` errors with "filename syntax incorrect"). Workaround: create a junction from an ASCII path and use it for the session. `mklink /J C:\hoshin-test C:\Users\ASUS\Desktop\HOSHIN~1\hoshin-kanri-os`, then `rmdir C:\hoshin-test` after. The junction is a filesystem soft link — no copy, no sync issue.
+- **`/api/health` does not exist.** Smoke test playbook references it but the route is not implemented. Use `GET /` returning 200 as the health check. Either add the route or remove from the playbook — pick one.
+- **API keys rotated 2026-04-30.** Supabase anon + service_role, Anthropic, Resend, Tavily — all rotated. If routes start 401-ing unexpectedly, first sanity-check `.env.local` matches Supabase dashboard + Anthropic console. Don't assume code regression.
+- **Onboarding `/setup-org` has no logout exit.** Newly-authed users with no org are stuck on this page — no avatar menu, no logout link. Either by design or oversight; flag if user asks why they can't escape.
+
