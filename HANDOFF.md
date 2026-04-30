@@ -1120,6 +1120,44 @@ Khi Claude mới vào session:
       4. **UX gap empty state phát hiện late**: Q2 β decision Task 1 (badge chỉ show count > 0) ship Task 3B → Task 4 smoke test phát hiện CEO/Manager không có entry point Hoshin chưa có comment. Fix Task 3B-fix-2 badge 2 variants. Pattern lesson: design audit Task 1 nên explicit flag empty state UX cho mọi conditional render decision. Audit checklist mới: "render điều kiện X → empty state UX là gì?".
       5. **Cursor auto-commit pattern consistent**: Cả 4 task M-Hoshin-6 Cursor đều auto-commit ở cuối session. Em lệnh commit em đưa sẵn nhưng `git status` báo "nothing to commit" — Cursor đã commit trước. Pattern: SAU mỗi Task Cursor báo ship, anh chạy `git log --oneline -5` verify commit message đúng + hash mới (KHÔNG run `git add . && git commit` nữa). Em note vào HANDOFF §11 Dev Workflow.
       6. **Claude in Chrome integration unreliable**: M-Hoshin-6 Task 4 em dự định dùng Claude in Chrome smoke test thay anh, extension không connect được sau Step 1-7 troubleshooting. Em phải fall back Plan B (anh test manual + screenshots). Pattern lesson cho future: KHÔNG depend vào browser automation tool, plan B (manual verify) phải sẵn sàng. Vibe coding session limit ~8h (M-Hoshin-2 lesson #8) — 30+ phút debug tool config = sunk-cost trap.
+  - **M-Hoshin-6.1 Hotfix — Gate gemba form khi Hoshin chưa persist (2026-04-30)**: ✅ shipped (1 commit `13cf793` + 1 SQL cleanup DELETE 4 orphan rows trên org Ladysfit `e4b953d9-ccdc-45a3-befe-a4cfa88baff1`).
+    - **Bug discovered**: Production user (Vũ Hải CEO) test M-Hoshin-6 sau deploy → submit 4 gemba comments trên Hoshin draft (chưa SubmitBar save) → DB lưu với target_id format `hoshin_${idx}_${timestamp}` không match hoshin nào trong `vision_json.hoshins[].id` đã save → ORPHAN comments. UI banner detect 4 open comments nhưng badge `💬 N` không render trên HoshinCard nào (target_id mismatch).
+    - **Root cause**: Task 3B implementation gate form chỉ khi `xMatrixId === null`. Smart `/new` route (M-Hoshin-2) load existing matrix → `xMatrixId` TRUTHY từ matrix CŨ → gate KHÔNG fire → user submit được comment trên Hoshin draft chưa persist (target_id thuộc client-only `ADD_HOSHIN` action, KHÔNG nằm trong vision_json đã save).
+    - **Fix (commit `13cf793`)**: Server Component `HoshinGembaSection` truyền `existingHoshinIds` (derived từ `vision_json.hoshins.map(h=>h.id)`) → Context expose `isPersisted` per hoshin → GembaModal gate form `!isPersisted` với hint vàng "⚠️ Hoshin này chưa được lưu vào X-Matrix. Click 'Lưu X-Matrix' ở thanh dưới để có thể nhận góp ý." Defensive `xMatrixId === null` branch giữ unreachable cho symmetry (xem §17 constraint M-Hoshin-6 entry).
+    - **SQL cleanup orphan (audit trail)**:
+      ```sql
+      DELETE FROM gemba_comments
+      WHERE org_id = 'e4b953d9-ccdc-45a3-befe-a4cfa88baff1'
+        AND target_type = 'hoshin';
+      -- Result: 4 rows deleted (verified pre/post: 4 → 0)
+      ```
+    - **Files changed (4)**:
+      - [app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx](app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx) — pass `existingHoshinIds={hoshinIds}` từ vision_json hoshins map
+      - [app/dashboard/x-matrix/new/components/HoshinGembaSectionClient.tsx](app/dashboard/x-matrix/new/components/HoshinGembaSectionClient.tsx) — extend ContextValue + Props + hook return `isPersisted: ctx.existingHoshinIds.includes(hoshinId)`
+      - [components/x-matrix/canvas/cards/HoshinCard.tsx](components/x-matrix/canvas/cards/HoshinCard.tsx) — destructure `isPersisted` + pass xuống GembaModal
+      - [components/x-matrix/canvas/GembaModal.tsx](components/x-matrix/canvas/GembaModal.tsx) — add `isPersisted: boolean` prop + render warning trước khi check `xMatrixId`
+    - **Pattern lessons** (4 mới):
+      1. **`name ILIKE LIMIT 1` anti-pattern (escalate M-Hoshin-3 lesson #1)**: Khi DB có 9 duplicate Ladysfit orgs, `LIMIT 1` bốc đại 1 trong 9 (Query 1+3 ban đầu trả "No rows" vì bốc nhầm org sau cùng — không có data) → em diagnose sai 3 hypothesis liên tiếp. Pattern đúng: query `org_members` JOIN `auth.users` với email cụ thể từ session (`fitnessviet@gmail.com`), NOT `name ILIKE LIMIT 1`. Anti-pattern này hit lần 2 → escalate constraint cứng.
+      2. **Cursor verify report cần cross-check DB shape thật**: Task 2 V1 verify report ghi "id timestamp-locked qua save round-trip stable" — đúng technically nhưng MISLEADING ở scope: chỉ apply cho Hoshin đã save vào `vision_json`, NOT cho draft Hoshin chưa SubmitBar save. AI pair programmer phải verify với DB query state thực tế (`SELECT vision_json->'hoshins' FROM x_matrices WHERE id=...`) trước khi trust verify report blindly.
+      3. **Diagnose-first cho UI bug verify org_id session đầu tiên**: 3 hypothesis sai liên tiếp (H1 orphan draft → H4 banner filter target_type → H7 multi-org confusion) trước khi đến root cause đúng (draft not saved). Pattern: VERIFY identity context (`auth.uid()` + `org_members.org_id`) TRƯỚC khi propose fix UI bug. Audit checklist:
+         - (a) email session từ Supabase auth
+         - (b) `org_id` từ `org_members` JOIN với email
+         - (c) DB state thật query với `org_id` đó
+         - (d) compare DB state với UI symptom mới propose fix
+      4. **Cursor đôi khi pause clarify thay vì auto-ship**: M-Hoshin-1→6 Cursor luôn auto-commit. M-Hoshin-6.1 lần đầu Cursor pause hỏi 2 clarification (DELETE status + Option A vs B vs Hybrid). AI pair programmer phải đọc giọng văn reply để distinguish:
+         - **Anh Vũ Hải reply**: paste output terminal, screenshots, "Done"
+         - **Cursor reply**: reference HANDOFF section cụ thể (§17 M-Hoshin-5), prompt-engineering pattern ("anh confirm 2 điều"), structured A/B/Hybrid trade-off
+         - Khi Cursor pause clarify = defensive engineering OK, KHÔNG phải lazy.
+    - **Verification plan**: Manual verify 2026-05-07 (1 tuần post-deploy). Chạy SQL:
+      ```sql
+      SELECT COUNT(*) FROM gemba_comments
+      WHERE target_type='hoshin'
+        AND target_id NOT IN (
+          SELECT jsonb_array_elements(vision_json->'hoshins')->>'id'
+          FROM x_matrices WHERE org_id = '<org_id>'
+        );
+      ```
+      Expected: 0 orphan rows. Nếu > 0 → trigger M-Auto-Persist-1 priority bump (UI gate `!isPersisted` không đủ defensive, cần auto-save backend).
 
 ---
 
@@ -1362,6 +1400,8 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHI extend gemba feature mới (vd reaction emoji, mention user), reuse pattern Server fetch + Context wrap OUTSIDE container (HoshinGembaSectionClient + KpiGembaSectionClient parallel pattern).
 - KHÔNG dùng vision_json `hoshin.id` làm join key cho draft Hoshin (chưa SubmitBar save). Gate form khi `xMatrixId=null` với hint "Lưu X-Matrix trước khi thêm góp ý".
 - KHI add UI component có conditional render (show/hide based on count/state), audit checklist Task 1 design phải explicit flag empty state UX cho mọi conditional.
+- KHÔNG dùng vision_json `hoshin.id` làm `target_id` matching cho gemba comments TRƯỚC khi SubmitBar save (constraint M-Hoshin-6.1 hotfix). GembaModal phải gate form `!isPersisted` (Hoshin chưa nằm trong `vision_json.hoshins[]`) trước khi cho phép submit comment. Nếu thêm gemba target loại mới (initiative/kpi-on-hoshin) cùng pattern JSON-embedded ID, MUST replicate `existingTargetIds` Server fetch + `isPersisted` flag pattern.
+- KHÔNG remove constraint `xMatrixId === null` cũ trong GembaModal khi thêm `!isPersisted` — defensive cho edge case `xMatrixId` chưa load (canvas mới mount, Context value transient null). Pattern 2-layer gate: (1) `!isPersisted` priority cao nhất (warning ⚠️ "chưa được lưu"), (2) `xMatrixId === null` fallback (hint "Lưu X-Matrix trước"), (3) render form. Cả 2 layer giữ nguyên dù 1 nhánh unreachable trong production — symmetry hơn dead-code cleanup.
 
 ---
 
@@ -1370,6 +1410,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 ### Shipped milestones (recent)
 
 - **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
+- **M-Hoshin-6.1 — Hotfix gate gemba form khi Hoshin chưa persist** ✅ shipped 2026-04-30 (1 commit `13cf793` + 1 SQL DELETE 4 orphan rows). Production user submit comment trên Hoshin draft (xMatrixId truthy nhưng hoshin.id chưa trong vision_json) → orphan target_id. Fix: Server fetch `existingHoshinIds` → Context expose `isPersisted` per hoshin → GembaModal gate form `!isPersisted`. Detail xem §16.
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần** ✅ shipped 2026-04-29 (6 commits). Weekly PDCA loop closed: detection 2+ red weeks streak, 2-field hansei form, history list per KPI, optimistic banner update, re-prompt sau streak extend. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI)** ✅ shipped 2026-04-30 (8 commits). Bottom-up signal Member→CEO closed: 1 schema 2 target_type (Hoshin+KPI), status lifecycle (open→ack→resolved), Member primary writer (route đầu tiên `requireOrgRole(ALL_ROLES)`), CEO moderate delete strict. Detail xem §16 + §17.
@@ -1389,7 +1430,8 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 - **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11). **Priority: MEDIUM**.
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
-- **M-Cleanup-2**: Cleanup 8 duplicate "Ladysfit" orgs trong DB (data pollution from testing).
+- **M-Cleanup-2**: Cleanup 9 duplicate "Ladysfit" orgs trong DB (data pollution from testing). **Priority: CRITICAL** (escalated from MEDIUM 2026-04-30 sau M-Hoshin-6.1 — `name ILIKE LIMIT 1` anti-pattern hit 2 sessions diagnose, tổng cost ~1h). Pattern: cleanup giữ oldest org (FK CASCADE preserve audit trail) + transfer `org_members` của duplicates sang oldest + soft-deactivate phần còn lại.
+- **M-Auto-Persist-1**: Auto-save Hoshin draft khi user thao tác create/edit (tránh recurrence draft orphan kiểu M-Hoshin-6.1). Trigger condition: user thật phàn nàn lần 2 — hiện UI gate `!isPersisted` đã đủ defensive cho edge case này.
 - **M-Cleanup-3**: ✅ shipped inline trong M-Hoshin-4 cleanup phase — deactivate 56 duplicate KPIs Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, soft delete reversible). 65 active → 9 unique. KHÔNG cần milestone formal.
 - **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu). **Priority: MEDIUM**, design system rollout continuation.
 
