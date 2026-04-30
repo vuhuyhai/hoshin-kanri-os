@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { XMatrixWizard } from '@/components/x-matrix/XMatrixWizard'
 import { XMatrixCanvasPage } from '@/components/x-matrix/canvas/XMatrixCanvasPage'
+import { HoshinGembaSection } from './components/HoshinGembaSection'
 import type { OrgMember, XMatrixData } from '@/lib/x-matrix/types'
 
 export default async function NewXMatrixPage() {
@@ -18,6 +19,13 @@ export default async function NewXMatrixPage() {
     .maybeSingle()
 
   if (!membership) redirect('/onboarding/setup-org')
+
+  // Canvas là edit-flow CEO/Manager. Member không có edit affordance
+  // → redirect /dashboard (KPI + Hansei + Gemba writeable). Future
+  // M-Hoshin-7 nới Member writer Hoshin sẽ revisit gate này.
+  if (membership.role === 'Member') {
+    redirect('/dashboard')
+  }
 
   const canEdit = membership.role === 'CEO' || membership.role === 'Manager'
 
@@ -68,13 +76,22 @@ export default async function NewXMatrixPage() {
     )
   }
 
+  const hoshinsForGemba = initialData?.hoshins ?? []
+
   return (
-    <XMatrixCanvasPage
+    <HoshinGembaSection
       orgId={membership.org_id}
-      members={members}
-      canEdit={canEdit}
-      xMatrixId={existingMatrix?.id}
-      initialData={initialData}
-    />
+      userRole={membership.role as 'CEO' | 'Manager'}
+      hoshins={hoshinsForGemba}
+      xMatrixId={existingMatrix?.id ?? null}
+    >
+      <XMatrixCanvasPage
+        orgId={membership.org_id}
+        members={members}
+        canEdit={canEdit}
+        xMatrixId={existingMatrix?.id}
+        initialData={initialData}
+      />
+    </HoshinGembaSection>
   )
 }
