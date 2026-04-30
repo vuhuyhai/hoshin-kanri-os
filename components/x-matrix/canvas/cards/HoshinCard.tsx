@@ -98,7 +98,7 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
           {initCount} INI · {kpiCount} KPI
         </div>
       </button>
-      {hasComments && (
+      {hasComments ? (
         <button
           type="button"
           onClick={() => setGembaModalOpen(true)}
@@ -107,6 +107,16 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
         >
           <span aria-hidden>💬</span>
           <span>{comments.length}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setGembaModalOpen(true)}
+          aria-label="Thêm góp ý cho Hoshin này"
+          className="absolute bottom-1 right-1 inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-[var(--text-3)] opacity-60 transition-opacity hover:opacity-100"
+        >
+          <span aria-hidden>+</span>
+          <span aria-hidden>💬</span>
         </button>
       )}
       <HoshinEditModal
