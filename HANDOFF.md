@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-29
+> **Last verified**: 2026-04-30 — post M-Hoshin-7
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -812,7 +812,7 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-6)
+## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-7)
 
 - **Last migration applied**: `032_weekly_hansei.sql`
 - **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
@@ -820,7 +820,7 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix (8 — bao gồm `canvas/cards/HoshinCard.tsx` refactored 2-button siblings + `canvas/GembaModal.tsx` mới ship M-Hoshin-6). Route-local Server Components mới: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Hoshin-6 (Hoshin Gemba Integration — badge + modal trên HoshinCard với canvas role-gate) — shipped 4 commits
+- **Latest feature work**: M-Hoshin-7 (Anti-pattern Audit + Fix multi-org lookup) — 1 commit `3e29a66`. Original M-Cleanup-2 ABORTED sau diagnose: 9 Ladysfit orgs là multi-tenant production users (NOT pollution). Rescoped → audit `.limit(1).single()` pattern → fix 2 SWOT routes.
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1137,7 +1137,7 @@ Khi Claude mới vào session:
       - [components/x-matrix/canvas/cards/HoshinCard.tsx](components/x-matrix/canvas/cards/HoshinCard.tsx) — destructure `isPersisted` + pass xuống GembaModal
       - [components/x-matrix/canvas/GembaModal.tsx](components/x-matrix/canvas/GembaModal.tsx) — add `isPersisted: boolean` prop + render warning trước khi check `xMatrixId`
     - **Pattern lessons** (4 mới):
-      1. **`name ILIKE LIMIT 1` anti-pattern (escalate M-Hoshin-3 lesson #1)**: Khi DB có 9 duplicate Ladysfit orgs, `LIMIT 1` bốc đại 1 trong 9 (Query 1+3 ban đầu trả "No rows" vì bốc nhầm org sau cùng — không có data) → em diagnose sai 3 hypothesis liên tiếp. Pattern đúng: query `org_members` JOIN `auth.users` với email cụ thể từ session (`fitnessviet@gmail.com`), NOT `name ILIKE LIMIT 1`. Anti-pattern này hit lần 2 → escalate constraint cứng.
+      1. ~~**`name ILIKE LIMIT 1` anti-pattern**~~ **CORRECTED M-Hoshin-7**: Root cause hiểu sai. Pattern `name ILIKE` là QUERY DIAGNOSE em (AI) dùng, KHÔNG phải production code. Real anti-pattern: `.limit(1).single()` cho user→org lookup (silent pick khi multi-row). Fix: 2 routes commit `3e29a66`. See L8 + L9 trong M-Hoshin-7 entry.
       2. **Cursor verify report cần cross-check DB shape thật**: Task 2 V1 verify report ghi "id timestamp-locked qua save round-trip stable" — đúng technically nhưng MISLEADING ở scope: chỉ apply cho Hoshin đã save vào `vision_json`, NOT cho draft Hoshin chưa SubmitBar save. AI pair programmer phải verify với DB query state thực tế (`SELECT vision_json->'hoshins' FROM x_matrices WHERE id=...`) trước khi trust verify report blindly.
       3. **Diagnose-first cho UI bug verify org_id session đầu tiên**: 3 hypothesis sai liên tiếp (H1 orphan draft → H4 banner filter target_type → H7 multi-org confusion) trước khi đến root cause đúng (draft not saved). Pattern: VERIFY identity context (`auth.uid()` + `org_members.org_id`) TRƯỚC khi propose fix UI bug. Audit checklist:
          - (a) email session từ Supabase auth
@@ -1158,12 +1158,58 @@ Khi Claude mới vào session:
         );
       ```
       Expected: 0 orphan rows. Nếu > 0 → trigger M-Auto-Persist-1 priority bump (UI gate `!isPersisted` không đủ defensive, cần auto-save backend).
+  - **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup (2026-04-30)**: ✅ shipped (1 commit `3e29a66`). Original scope (M-Cleanup-2 CRITICAL — hard DELETE 8 duplicate Ladysfit orgs) ABORTED sau diagnose phát hiện 9 orgs là **multi-tenant production users** với owner email khác nhau, KHÔNG phải pollution. Rescoped → static audit `name ILIKE LIMIT 1` anti-pattern (0 hit production code) → fix 2 SWOT routes có pattern `.limit(1).single()` cho user→org lookup (silent pick khi multi-row).
+    - **Diagnose findings**: 9 Ladysfit orgs cấu trúc thực tế:
+      - 1 canonical (Vũ Hải `fitnessviet@gmail.com`, CEO, 89 KPIs + 19 xmatrix)
+      - 8 user thật khác chủ với data thật (4 xmatrix + ~110 SWOT + ~20 discovery)
+      - 9 emails khác nhau, 9 owners độc lập
+      - Nếu execute hard DELETE plan ban đầu → mất 8 user thật + data (CRITICAL data loss avoided)
+    - **Static audit results** (4 patterns toàn codebase):
+      - 0 hit `.ilike(` / `.like(` / `.eq('name', …)` trong `app/`, `lib/`, `components/`
+      - 0 hit raw `name = '…'` lookup trong migrations
+      - 13/13 `.from('organizations')` reads scope bằng `.eq('id', …)` (id-based, đúng)
+      - 2 RELATED HIGH hits — `org_members.eq('user_id', user.id).limit(1).single()` (`xray-context`, `prefill-from-xray`) — silent wrong-pick nếu user multi-org
+      - 2 LOW hits — admin SQL views `010_admin_views.sql` lines 60-61 + 89-90 dùng `LIMIT 1` cho CEO pick
+    - **Fix (commit `3e29a66`)**: 2 files thay `.limit(1).single()` → `.maybeSingle()` + add 409 handler `error?.code === 'PGRST116'` (multi-row signal):
+      - [app/api/swot/xray-context/route.ts:16-28](app/api/swot/xray-context/route.ts#L16-L28)
+      - [app/api/swot/prefill-from-xray/route.ts:20-33](app/api/swot/prefill-from-xray/route.ts#L20-L33)
+      - 0 frontend caller nào fetch 2 endpoint này (search toàn repo) → có thể dead routes từ refactor cũ. Defer cleanup vào M-Cleanup-5
+    - **Verify**: `npm run typecheck` PASS (clean), `npm run build` PASS (cả 2 routes xuất hiện trong manifest dynamic functions)
+    - **Pattern lessons M-Hoshin-7** (3 mới):
+      1. **L7 (Schema verification before SELECT)**: Em (AI) hit 3 errors liên tiếp khi build diagnose query (`relation "orgs" does not exist`, `column o.slug does not exist`). Pattern đúng: TRƯỚC khi viết SELECT trên schema unknown, MUST chạy `information_schema.tables WHERE name ILIKE '%X%'` + `information_schema.columns WHERE table_name = 'X'`. Cost 3 vòng query thừa. Anti-pattern: assume schema từ HANDOFF prose hoặc training data.
+      2. **L8 (Verify HANDOFF assumption với DB trước destructive ops)**: M-Cleanup-2 escalated CRITICAL dựa trên HANDOFF §18 prose "9 duplicate Ladysfit orgs (data pollution from testing)". Diagnose thực tế cho thấy 8/9 orgs có owner khác với data thật. Nếu execute DELETE plan → mất 8 user. Pattern đúng: TRƯỚC khi build destructive op (DELETE, DROP, bulk UPDATE), MUST query owner + data counts để confirm assumption. Anti-pattern: trust HANDOFF prose blindly cho destructive scope.
+      3. **L9 (User→resource lookup pattern standardize)**: 11/13 routes dùng `.eq('user_id', user.id).maybeSingle()` (no `.limit`) — pattern đúng vì THROW khi multi-row → loud failure. 2 routes (`xray-context`, `prefill-from-xray`) dùng `.limit(1).single()` → silent pick. Fix M-Hoshin-7 commit `3e29a66`. Pattern lesson: `.limit(1)` chỉ đúng khi resource có natural ordering (vd `.order('updated_at desc').limit(1)` lấy "latest"). Cho user→resource scope, dùng `.maybeSingle()` để catch ambiguity.
 
 ---
 
 ## 17. Architecture Decisions
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
+
+### 2026-04-30 — Multi-tenant production reality (M-Hoshin-7)
+
+**Discovery**: M-Cleanup-2 diagnose phát hiện 9 organizations với name chứa "Ladysfit" KHÔNG phải duplicate test pollution như HANDOFF cũ giả định. Đây là 9 multi-tenant production users:
+- 1 canonical (Vũ Hải `fitnessviet@gmail.com`, CEO, 89 KPIs + 19 xmatrix + data đầy đủ)
+- 8 user thật khác chủ với data thật (4 xmatrix + ~110 SWOT + ~20 discovery)
+- 9 emails khác nhau, 9 owners độc lập
+
+**Implications for future milestones**:
+
+1. **Tuyệt đối KHÔNG dùng `name` cho org lookup** — name không unique (9 orgs cùng tên/biến thể "Ladysfit"). Pattern đúng: scope bằng `id` từ session/membership context.
+
+2. **Pattern user→org lookup chuẩn**: `.from('org_members').eq('user_id', user.id).maybeSingle()` (KHÔNG `.limit(1)`). `.maybeSingle()` THROW khi >1 row → loud failure 409. `.single()` swallow ambiguity → silent wrong-pick.
+
+3. **Multi-org users sắp xuất hiện**: M-Member-POV-1 (Q3 β re-enable Member writer cross-org), admin debug membership add bản thân vào org thứ 2 → 0 user multi-org hiện tại nhưng path sẽ trigger.
+
+4. **HANDOFF assumption blind-trust = data risk**: M-Cleanup-2 escalated CRITICAL dựa trên prose "duplicate orgs from testing". Nếu execute hard DELETE → mất 8 user thật. Pattern lesson L8.
+
+**Constraints cho future AI sessions**:
+- KHÔNG ship destructive ops (DELETE, ALTER DROP, UPDATE bulk) chỉ dựa trên HANDOFF prose. MUST query data + counts trước khi build plan.
+- KHÔNG dùng `.limit(1).single()` cho user→org lookup. Dùng `.maybeSingle()`.
+- KHI add route mới có user→resource lookup, audit 11/13 baseline routes pattern (`.eq('user_id', user.id).maybeSingle()`).
+- KHI migration thêm org-related logic, MUST handle multi-org case explicit (param `org_id`, không assume single).
+
+---
 
 ### 2026-04-27 — Design system migrated to NB v3.2 Refined Tempered
 
@@ -1409,28 +1455,30 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ shipped 2026-04-30 (1 commit `3e29a66`). Original M-Cleanup-2 ABORTED sau diagnose: 9 Ladysfit orgs là production users multi-tenant (KHÔNG pollution). Rescoped → audit `name ILIKE LIMIT 1` (0 hit code) → fix 2 SWOT routes có pattern `.limit(1).single()` cho user→org lookup. Detail xem §16 + §17.
 - **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
 - **M-Hoshin-6.1 — Hotfix gate gemba form khi Hoshin chưa persist** ✅ shipped 2026-04-30 (1 commit `13cf793` + 1 SQL DELETE 4 orphan rows). Production user submit comment trên Hoshin draft (xMatrixId truthy nhưng hoshin.id chưa trong vision_json) → orphan target_id. Fix: Server fetch `existingHoshinIds` → Context expose `isPersisted` per hoshin → GembaModal gate form `!isPersisted`. Detail xem §16.
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần** ✅ shipped 2026-04-29 (6 commits). Weekly PDCA loop closed: detection 2+ red weeks streak, 2-field hansei form, history list per KPI, optimistic banner update, re-prompt sau streak extend. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI)** ✅ shipped 2026-04-30 (8 commits). Bottom-up signal Member→CEO closed: 1 schema 2 target_type (Hoshin+KPI), status lifecycle (open→ack→resolved), Member primary writer (route đầu tiên `requireOrgRole(ALL_ROLES)`), CEO moderate delete strict. Detail xem §16 + §17.
 
-### Milestone tiếp theo: M-Hoshin-7 — TBD scope (chờ Vũ Hải decision)
+### Milestone tiếp theo: M-Hoshin-8 — TBD scope (chờ Vũ Hải decision)
 
 **Candidates ưu tiên** (chọn 1 sau khi anh decide):
 
-1. **M-Cleanup-1 — Wizard files cleanup** (target 2026-05-11): Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 6 wizard files (`XMatrixWizard` + 4 step files + `WizardProgress`). Cost ~30 phút, kill technical debt. Trigger: 2 tuần production stable từ M-Hoshin-1 ship 2026-04-27.
-2. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor sang NB v3.2 design tokens. Continue design system rollout (Foundation M-Design-1 + Landing M-Design-2 đã shipped). Cost ~3-5 commits, 1 session.
-3. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas (đảo Q-canvas role-gate M-Hoshin-6) + hide edit affordances conditional (`canEdit` gate). Gate form Member-writer trong GembaModal bật additive (Q3 β re-enable). Cost ~5-7 commits, 1-2 sessions.
-4. **M-Gemba-AI-1 — AI sensei summarize comments**: Defer M-Hoshin-6 scope vì chưa có baseline data ≥10 comments. Trigger: M-Hoshin-5+6 accumulate ≥10 production comments OR user complain "thiếu insight tổng hợp". Currently DB có 2 test comments → KHÔNG enough.
+1. **M-Cleanup-1 — Wizard files cleanup** (target 2026-05-11): Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 6 wizard files. Cost ~30 phút.
+2. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor. Cost ~3-5 commits.
+3. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
+4. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes. Cost ~30 phút (verify trigger trước).
 
-**Em recommend M-Cleanup-1 first** (lý do: 2 tuần stable countdown 2026-05-11 đến nơi, kill tech debt nhanh trước khi rollback risk hết significance).
+**Em chưa recommend** vì M-Hoshin-7 surface mismatched assumption — anh nên audit HANDOFF entries khác trước khi M-Hoshin-8 decide.
 
 ### Future milestones (TBD priority)
 
 - **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11). **Priority: MEDIUM**.
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
-- **M-Cleanup-2**: Cleanup 9 duplicate "Ladysfit" orgs trong DB (data pollution from testing). **Priority: CRITICAL** (escalated from MEDIUM 2026-04-30 sau M-Hoshin-6.1 — `name ILIKE LIMIT 1` anti-pattern hit 2 sessions diagnose, tổng cost ~1h). Pattern: cleanup giữ oldest org (FK CASCADE preserve audit trail) + transfer `org_members` của duplicates sang oldest + soft-deactivate phần còn lại.
+- **~~M-Cleanup-2 (CRITICAL)~~ REMOVED**: Original scope dựa trên assumption sai. Diagnose M-Hoshin-7 phát hiện 9 orgs là multi-tenant production users với owner khác nhau, KHÔNG phải pollution. KHÔNG cleanup. See §17 Architecture Decision 2026-04-30 + L8.
+- **M-Cleanup-5 (NEW from M-Hoshin-7)**: 2 LOW risk hits — admin SQL views `010_admin_views.sql` lines 60-61 + 89-90 dùng `LIMIT 1` cho CEO pick. Trigger condition: support team có >1 CEO per org. Currently rare → defer. Plus 2 orphan routes candidate cleanup (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller, có thể dead from refactor). Trigger condition: confirm Vũ Hải 2 routes dead. Cost ~30 phút.
 - **M-Auto-Persist-1**: Auto-save Hoshin draft khi user thao tác create/edit (tránh recurrence draft orphan kiểu M-Hoshin-6.1). Trigger condition: user thật phàn nàn lần 2 — hiện UI gate `!isPersisted` đã đủ defensive cho edge case này.
 - **M-Cleanup-3**: ✅ shipped inline trong M-Hoshin-4 cleanup phase — deactivate 56 duplicate KPIs Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, soft delete reversible). 65 active → 9 unique. KHÔNG cần milestone formal.
 - **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu). **Priority: MEDIUM**, design system rollout continuation.
