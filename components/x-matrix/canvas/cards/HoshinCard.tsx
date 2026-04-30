@@ -26,9 +26,8 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   const [gembaModalOpen, setGembaModalOpen] = useState(false)
 
   // Hooks unconditional — empty hoshinId → context trả về [] an toàn.
-  const { comments, canModerate, xMatrixId } = useHoshinGembaComments(
-    hoshin?.id ?? '',
-  )
+  const { comments, canModerate, xMatrixId, isPersisted } =
+    useHoshinGembaComments(hoshin?.id ?? '')
 
   const handleEmptyClick = () => {
     dispatch({
@@ -132,6 +131,7 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
         xMatrixId={xMatrixId}
         comments={comments}
         canModerate={canModerate}
+        isPersisted={isPersisted}
       />
     </div>
   )

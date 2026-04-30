@@ -53,6 +53,7 @@ export async function HoshinGembaSection({
       commentsMap={commentsMap}
       role={userRole}
       xMatrixId={xMatrixId}
+      existingHoshinIds={hoshinIds}
     >
       {children}
     </HoshinGembaSectionClient>

@@ -13,6 +13,7 @@ interface ContextValue {
   commentsMap: Record<string, GembaCommentWithAuthor[]>
   canModerate: boolean
   xMatrixId: string | null
+  existingHoshinIds: string[]
 }
 
 const HoshinGembaContext = createContext<ContextValue | null>(null)
@@ -20,19 +21,30 @@ const HoshinGembaContext = createContext<ContextValue | null>(null)
 // Hook cho HoshinCard (Task 3B). Outside Provider → defensive default
 // (Member redirect ra /dashboard ở page-level role-gate, nhưng future
 // M-Hoshin-7 nới Member writer sẽ exercise null path).
+//
+// isPersisted (M-Hoshin-6.1 hotfix): hoshin.id có nằm trong vision_json
+// đã save chưa. False = Hoshin client-only (chưa SubmitBar save) →
+// gate form ở GembaModal tránh orphan target_id.
 export function useHoshinGembaComments(hoshinId: string): {
   comments: GembaCommentWithAuthor[]
   canModerate: boolean
   xMatrixId: string | null
+  isPersisted: boolean
 } {
   const ctx = useContext(HoshinGembaContext)
   if (!ctx) {
-    return { comments: [], canModerate: false, xMatrixId: null }
+    return {
+      comments: [],
+      canModerate: false,
+      xMatrixId: null,
+      isPersisted: false,
+    }
   }
   return {
     comments: ctx.commentsMap[hoshinId] ?? [],
     canModerate: ctx.canModerate,
     xMatrixId: ctx.xMatrixId,
+    isPersisted: ctx.existingHoshinIds.includes(hoshinId),
   }
 }
 
@@ -41,6 +53,7 @@ interface Props {
   commentsMap: Record<string, GembaCommentWithAuthor[]>
   role: Role
   xMatrixId: string | null
+  existingHoshinIds: string[]
   children: React.ReactNode
 }
 
@@ -49,6 +62,7 @@ export function HoshinGembaSectionClient({
   commentsMap,
   role,
   xMatrixId,
+  existingHoshinIds,
   children,
 }: Props) {
   // Q-canvas page-level đã redirect Member → /dashboard. canModerate
@@ -78,7 +92,7 @@ export function HoshinGembaSectionClient({
         targetLabel="Hoshin"
       />
       <HoshinGembaContext.Provider
-        value={{ commentsMap, canModerate, xMatrixId }}
+        value={{ commentsMap, canModerate, xMatrixId, existingHoshinIds }}
       >
         {children}
       </HoshinGembaContext.Provider>

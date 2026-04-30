@@ -22,6 +22,11 @@ interface Props {
   xMatrixId: string | null
   comments: GembaCommentWithAuthor[]
   canModerate: boolean
+  // M-Hoshin-6.1 hotfix: hoshin.id có nằm trong vision_json đã save
+  // chưa. Smart /new route load existing matrix → xMatrixId truthy
+  // nhưng Hoshin mới (client-side ADD_HOSHIN) chưa persist → submit
+  // sẽ orphan. Gate form ở đây thay vì chỉ check xMatrixId.
+  isPersisted: boolean
 }
 
 export function GembaModal({
@@ -32,6 +37,7 @@ export function GembaModal({
   xMatrixId,
   comments,
   canModerate,
+  isPersisted,
 }: Props) {
   const titleLabel = hoshinTitle.trim() || '(Chưa đặt tên)'
   return (
@@ -44,7 +50,23 @@ export function GembaModal({
           <DialogDescription>{titleLabel}</DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          {xMatrixId === null ? (
+          {!isPersisted ? (
+            <div
+              className="border-2 border-ink p-3 text-sm font-body text-ink"
+              style={{
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--accent-yellow)',
+              }}
+            >
+              <p className="font-semibold">
+                ⚠️ Hoshin này chưa được lưu vào X-Matrix
+              </p>
+              <p className="mt-1">
+                Click <strong>'Lưu X-Matrix'</strong> ở thanh dưới để có
+                thể nhận góp ý cho Hoshin này.
+              </p>
+            </div>
+          ) : xMatrixId === null ? (
             <div
               className="border-2 border-ink p-3 text-sm font-body text-ink"
               style={{
