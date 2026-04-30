@@ -1,0 +1,28 @@
+---
+description: Auto-load context bridge files at the start of every Cursor session
+alwaysApply: true
+---
+
+# Context bridge — read these first
+
+Before answering or editing anything in this repo, read in order:
+
+1. `CLAUDE.md` — project metadata, multi-Claude workflow, handoff conventions
+2. `AGENTS.md` — codebase conventions, known pitfalls, file map
+3. `ACTIVE_CONTEXT.md` — what's being worked on right now (volatile)
+4. If the user references `@plans/M-NN-...`, read that plan file in full before executing
+
+`ACTIVE_CONTEXT.md` is the bridge between Cursor sessions and claude.ai web sessions. It tells you:
+- What feature/task is currently active (`Current focus`)
+- What's recently shipped (skip re-implementing)
+- What's stuck (`Stuck on` — fixing this is often the priority)
+- Open decisions pending Vũ Hải's call
+
+If `ACTIVE_CONTEXT.md`'s `Last updated` is > 3 days old, flag this to Vũ Hải before trusting its content — re-sync from `git log` first.
+
+When finishing a task, update `ACTIVE_CONTEXT.md`:
+- Move done items from `Current focus` → `Recently shipped`
+- Clear `Stuck on` if resolved
+- Update `Last updated` timestamp
+
+Communication: Vietnamese with Vũ Hải. English in code. Direct tone, no nịnh.
