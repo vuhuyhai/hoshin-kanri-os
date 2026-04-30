@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-30 — post M-Hoshin-7
+> **Last verified**: 2026-04-30 — post M-Hoshin-7 (close-out + 7 pattern lessons L10-L16)
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -814,6 +814,7 @@ Khi Claude mới vào session:
 
 ## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-7)
 
+- **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-04-30 post M-Hoshin-7 deploy)
 - **Last migration applied**: `032_weekly_hansei.sql`
 - **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
@@ -1179,6 +1180,22 @@ Khi Claude mới vào session:
       1. **L7 (Schema verification before SELECT)**: Em (AI) hit 3 errors liên tiếp khi build diagnose query (`relation "orgs" does not exist`, `column o.slug does not exist`). Pattern đúng: TRƯỚC khi viết SELECT trên schema unknown, MUST chạy `information_schema.tables WHERE name ILIKE '%X%'` + `information_schema.columns WHERE table_name = 'X'`. Cost 3 vòng query thừa. Anti-pattern: assume schema từ HANDOFF prose hoặc training data.
       2. **L8 (Verify HANDOFF assumption với DB trước destructive ops)**: M-Cleanup-2 escalated CRITICAL dựa trên HANDOFF §18 prose "9 duplicate Ladysfit orgs (data pollution from testing)". Diagnose thực tế cho thấy 8/9 orgs có owner khác với data thật. Nếu execute DELETE plan → mất 8 user. Pattern đúng: TRƯỚC khi build destructive op (DELETE, DROP, bulk UPDATE), MUST query owner + data counts để confirm assumption. Anti-pattern: trust HANDOFF prose blindly cho destructive scope.
       3. **L9 (User→resource lookup pattern standardize)**: 11/13 routes dùng `.eq('user_id', user.id).maybeSingle()` (no `.limit`) — pattern đúng vì THROW khi multi-row → loud failure. 2 routes (`xray-context`, `prefill-from-xray`) dùng `.limit(1).single()` → silent pick. Fix M-Hoshin-7 commit `3e29a66`. Pattern lesson: `.limit(1)` chỉ đúng khi resource có natural ordering (vd `.order('updated_at desc').limit(1)` lấy "latest"). Cho user→resource scope, dùng `.maybeSingle()` để catch ambiguity.
+      4. **L10 (Handoff prompt giữa AI tools cần expected output marker)**: Khi AI #1 đưa prompt cho user paste sang AI #2 (Cursor → Claude Desktop), AI #1 không phân biệt được "user đang chuẩn bị chạy" vs "user paste lại prompt sau khi chạy xong, đây là raw output". Pattern đúng: prompt MUST có marker rõ ràng vd "Báo cáo về với prefix `[CLAUDE DESKTOP RESULT]`" hoặc "Sau khi chạy xong, paste output Phase 7 dạng `==START==/==END==` block". Anti-pattern: assume state từ context window. Em mất 1 turn ask_user_input clarify "anh đang ở đâu trong workflow".
+      5. **L11 (AI đọc full .env.local = leak event, MUST rotate)**: Bất kể AI nói "internal session" hay "không log ra ngoài", một khi value của secret render vào AI context window = đã expose. MUST treat như leak event và rotate ngay 100% secrets liệt kê. Pattern phòng ngừa: SMOKE_TEST.md Phase env-check MUST có HARD RULE cấm `type/cat/Get-Content` toàn file. Chỉ dùng `Select-String -Pattern "^KEY=" -Quiet` (PowerShell) hoặc `findstr /B "KEY=" file >nul && echo FOUND || echo MISSING` (CMD). Zero value exposure trong stdout. Nếu vi phạm: báo cáo ⚠️ SECURITY VIOLATION ở đầu output, liệt kê field tên (KHÔNG value), halt cho đến khi rotate xong.
+      6. **L12 (Smoke test plan là living doc, MUST update khi seed/auth flow đổi)**: Issue 4 SMOKE_TEST.md ghi user smoketest bị onboarding lock, thực tế đã có org từ session trước (tested 2026-04-30) → onboarding redirect không trigger. Pattern: smoke test docs có shelf life — schema/auth/seed thay đổi → docs lệch reality. Mỗi milestone shipping change DB seed hoặc auth flow MUST verify SMOKE_TEST.md còn match. Anti-pattern: trust test plan blindly cho assertions như "user sẽ redirect sang /onboarding/setup-org".
+      7. **L13 (Shell detection — PowerShell ≠ cmd syntax)**: AI đưa script với `&&`/`||` syntax cmd-style nhưng anh paste vào PowerShell 5.x → fail "token not valid statement separator". PowerShell <7 không support short-circuit operators. Pattern đúng: detect prompt prefix `PS C:\>` để biết đây PowerShell + adapt syntax (dùng `if ($lastexitcode -eq 0)` hoặc Cmdlet native như `Select-String`/`Test-Path`). Hoặc explicit instruct user open `cmd.exe` thay vì paste vào PowerShell. Anti-pattern: assume cmd syntax universal trên Windows.
+      8. **L14 (Verify state TRƯỚC khi đưa redundant action)**: Em đưa `git add HANDOFF.md && commit` ở Task 7.2 nhưng anh đã commit rồi (`5501c7d`) — em không track giữa các turn. Cũng vậy với `chore: redeploy with rotated keys` (`3f82caa`) — anh tự làm, em không biết. Pattern đúng cho mọi git/deploy action: instruct user chạy `git status` + `git log --oneline -5` + paste output → AI verify state hiện tại → đưa next command đúng. Anti-pattern: assume state từ memory turn trước.
+      9. **L15 (Test user credentials acceptable trong AI context, production user/admin TUYỆT ĐỐI không)**: Smoketest user (smoketest@hoshinkanri.local) có 0 quyền production, 0 PII, dedicated cho test → AI có thể track + reuse credential. Production user (vd CEO email + password) TUYỆT ĐỐI không paste vào chat. Pattern: tạo dedicated `*test*` prefix user cho mọi smoke test, document explicit trong SMOKE_TEST.md "TEST_USER credentials are intentionally non-secret for AI agent automation". Anti-pattern: dùng production CEO credential cho smoke test.
+      10. **L16 (Credential check pattern phải có `^KEY=` regex anchor)**: `findstr /B "TEST_USER"` báo MISSING vì pattern không có `=` ở cuối → match prefix khác hoặc encoding issue (BOM/UTF-16) → false negative. Pattern đúng: `Select-String -Pattern "^KEY=" -Quiet` với regex anchor đầy đủ. Anti-pattern: incomplete pattern → silent false negative khi field thực sự tồn tại. M-Hoshin-7 hit pattern này 2 lần (Phase 1.4 + Task 10A).
+    - **Production verify (2026-04-30 22:38)**: 5/5 functional items PASS trên `chienluoc.org`:
+      1. Navigate landing render — H1 exact match
+      2. Login với TEST_USER smoketest@hoshinkanri.local — redirect /dashboard OK
+      3. Auth cookie `sb-cnbsrlhhgrfbdhisizgg-auth-token` set
+      4. GET /api/swot/xray-context → 200 `{hasXRay: false, data: null}`
+      5. GET /api/swot/prefill-from-xray → 200 `{prefilled: false}`
+
+      → M-Hoshin-7 SHIPPED. 0 regression, 2 routes mới response schema đúng spec.
+    - **Security incident handled**: Smoke test Phase 1.4 turn 1 vô tình `cmd /c type .env.local` → toàn bộ secrets render vào AI context. Vũ Hải rotate 5 keys (Supabase service_role, Supabase anon, Anthropic, Resend, Tavily) + cleanup duplicate SUPABASE_SERVICE_ROLE_KEY trong .env.local. Vercel env vars synced. Production redeploy commit `4ccdb3b` verified với key mới. SMOKE_TEST.md Phase 1.4 update với hard rule cấm `type/cat/Get-Content` toàn .env.local (DEBT 2 fix).
 
 ---
 
@@ -1455,7 +1472,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
-- **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ shipped 2026-04-30 (1 commit `3e29a66`). Original M-Cleanup-2 ABORTED sau diagnose: 9 Ladysfit orgs là production users multi-tenant (KHÔNG pollution). Rescoped → audit `name ILIKE LIMIT 1` (0 hit code) → fix 2 SWOT routes có pattern `.limit(1).single()` cho user→org lookup. Detail xem §16 + §17.
+- **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ SHIPPED 2026-04-30 (3 commits: `3e29a66` fix + `5501c7d` HANDOFF L7-L9 + `[HASH_THẬT]` close-out L10-L16). Production verified `chienluoc.org` 5/5 PASS. Security incident handled: 5 keys rotated. SMOKE_TEST.md Phase 1.4 hardened. Total 10 pattern lessons (L7-L16). See §16 + §17.
 - **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
 - **M-Hoshin-6.1 — Hotfix gate gemba form khi Hoshin chưa persist** ✅ shipped 2026-04-30 (1 commit `13cf793` + 1 SQL DELETE 4 orphan rows). Production user submit comment trên Hoshin draft (xMatrixId truthy nhưng hoshin.id chưa trong vision_json) → orphan target_id. Fix: Server fetch `existingHoshinIds` → Context expose `isPersisted` per hoshin → GembaModal gate form `!isPersisted`. Detail xem §16.
 - **M-Hoshin-3 — Annual Review Workflow** ✅ shipped 2026-04-29 (8 commits + 1 hotfix). PDCA loop closed: A3 hansei capture, KPI actuals manual entry, carry-over decisions per Hoshin, year transition with defensive auto-archive. Detail xem §16 known open items + §17 architecture decision.

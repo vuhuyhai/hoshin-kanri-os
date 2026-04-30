@@ -65,16 +65,34 @@ dir C:\hoshin-test
 
 **Workaround:** Khi gặp "context closed", chỉ cần `browser_navigate` lại URL hiện tại để mở lại — không phải fail.
 
-### Issue 4: Onboarding flow lock user without org
+### Issue 4: Onboarding flow lock user without org — RESOLVED 2026-04-30
 
-**Note:** Sau login lần đầu, user bị redirect về `/onboarding/setup-org` và **không có UI logout**. Logout cho test phải dùng JS API call:
+**Status:** RESOLVED. Test user `smoketest@hoshinkanri.local` đã có org sẵn, không bị onboarding redirect. Giữ note dưới đây như historical reference cho user mới onboard:
 
-```js
-// Trong Playwright browser_evaluate
-window.localStorage.clear();
-document.cookie.split(';').forEach(c => {
-  document.cookie = c.replace(/^ +/, '').replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
-});
+> Sau login lần đầu, user mới bị redirect về `/onboarding/setup-org` và **không có UI logout**. Logout cho test phải dùng JS API call:
+>
+> ```js
+> // Trong Playwright browser_evaluate
+> window.localStorage.clear();
+> document.cookie.split(';').forEach(c => {
+>   document.cookie = c.replace(/^ +/, '').replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+> });
+> ```
+
+### Issue 5: DC shell parse path có space + Unicode (M-Hoshin-7 smoke test 2026-04-30)
+
+**Triệu chứng:** `xcopy "C:\Users\ASUS\Desktop\Hoshin Kanri by Vũ Hải\..."` fail vì Desktop Commander shell parse quote sai khi path có space + Unicode.
+
+**Workaround 1 — short name 8.3 trong DC shell:**
+
+```cmd
+xcopy C:\Users\ASUS\Desktop\HOSHIN~1\hoshin-kanri-os\test-output\ ...
+```
+
+**Workaround 2 — PowerShell `Copy-Item` qua Desktop Commander start_process:**
+
+```powershell
+Copy-Item -Path "C:\Users\ASUS\.playwright-mcp\page-*.png" -Destination "C:\Users\ASUS\Desktop\HOSHIN~1\hoshin-kanri-os\test-output\latest\"
 ```
 
 ---
@@ -95,6 +113,8 @@ document.cookie.split(';').forEach(c => {
 
 ## 🔬 Phase 1 — Pre-flight check (Desktop Commander)
 
+### 1.1-1.3 — Junction, project files, port
+
 ```cmd
 :: 1.1 — Tạo junction để bypass Unicode (xem Issue 1)
 mklink /J C:\hoshin-test "C:\Users\ASUS\Desktop\Hoshin Kanri by Vũ Hải\hoshin-kanri-os"
@@ -104,11 +124,79 @@ dir C:\hoshin-test\package.json C:\hoshin-test\next.config.* C:\hoshin-test\.env
 
 :: 1.3 — Port 3000 status
 netstat -ano | findstr ":3000 "
+```
 
-:: 1.4 — Verify credentials trong .env.local (KHÔNG in nội dung)
-findstr /C:"TEST_USER_EMAIL" C:\hoshin-test\.env.local
-findstr /C:"TEST_USER_PASSWORD" C:\hoshin-test\.env.local
-findstr /C:"NEXT_PUBLIC_SUPABASE_URL" C:\hoshin-test\.env.local
+### 1.4 — Verify credentials trong `.env.local`
+
+#### 🛑 HARD RULE — SECURITY CRITICAL (M-Hoshin-7 L11)
+
+**TUYỆT ĐỐI cấm đọc full file `.env.local` bằng bất kỳ tool nào:**
+
+❌ FORBIDDEN:
+- `cmd /c type .env.local`
+- `Get-Content .env.local`
+- `cat .env.local`
+- `desktop_commander:read_file` trên `.env.local`
+- Bất kỳ method nào làm value của secrets render vào AI context window
+
+✅ ONLY ALLOWED PATTERNS:
+
+PowerShell (recommend):
+
+```powershell
+$found = Select-String -Path .env.local -Pattern "^KEY_NAME=" -Quiet
+if ($found) { Write-Host "OK $key exists" } else { Write-Host "MISSING $key" }
+```
+
+CMD (fallback):
+
+```cmd
+findstr /B "KEY_NAME=" .env.local >nul && echo FOUND || echo MISSING
+```
+
+**NẾU `findstr` / `Select-String` báo MISSING:**
+- KHÔNG fallback sang `type` / `cat` / `Get-Content` để debug
+- Kiểm tra file encoding bằng: `(Get-Item .env.local).Length` + `[System.IO.File]::ReadAllBytes(".env.local")[0..2]` để check BOM
+- Báo cáo MISSING + dừng Phase 1, escalate cho user
+
+**NẾU vi phạm rule này (đọc full file):**
+1. Báo cáo NGAY ở đầu output Phase 7 với ⚠️ flag SECURITY VIOLATION
+2. Liệt kê tên field bị lộ (KHÔNG paste value)
+3. Recommend rotate ngay tất cả secrets
+4. Halt smoke test cho đến khi user xác nhận đã rotate
+
+#### Verification commands
+
+Chạy qua Desktop Commander `start_process` với `powershell.exe`:
+
+```powershell
+$keys = @(
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "ANTHROPIC_API_KEY",
+  "RESEND_API_KEY",
+  "TAVILY_API_KEY",
+  "TEST_USER_EMAIL",
+  "TEST_USER_PASSWORD"
+)
+foreach ($key in $keys) {
+  $found = Select-String -Path C:\hoshin-test\.env.local -Pattern "^$key=" -Quiet
+  if ($found) { Write-Host "OK   $key" } else { Write-Host "MISS $key" }
+}
+```
+
+CMD fallback (per-key, anchor `^KEY=`):
+
+```cmd
+findstr /B /R /C:"^NEXT_PUBLIC_SUPABASE_URL=" C:\hoshin-test\.env.local >nul && echo OK NEXT_PUBLIC_SUPABASE_URL || echo MISS NEXT_PUBLIC_SUPABASE_URL
+findstr /B /R /C:"^NEXT_PUBLIC_SUPABASE_ANON_KEY=" C:\hoshin-test\.env.local >nul && echo OK NEXT_PUBLIC_SUPABASE_ANON_KEY || echo MISS NEXT_PUBLIC_SUPABASE_ANON_KEY
+findstr /B /R /C:"^SUPABASE_SERVICE_ROLE_KEY=" C:\hoshin-test\.env.local >nul && echo OK SUPABASE_SERVICE_ROLE_KEY || echo MISS SUPABASE_SERVICE_ROLE_KEY
+findstr /B /R /C:"^ANTHROPIC_API_KEY=" C:\hoshin-test\.env.local >nul && echo OK ANTHROPIC_API_KEY || echo MISS ANTHROPIC_API_KEY
+findstr /B /R /C:"^RESEND_API_KEY=" C:\hoshin-test\.env.local >nul && echo OK RESEND_API_KEY || echo MISS RESEND_API_KEY
+findstr /B /R /C:"^TAVILY_API_KEY=" C:\hoshin-test\.env.local >nul && echo OK TAVILY_API_KEY || echo MISS TAVILY_API_KEY
+findstr /B /R /C:"^TEST_USER_EMAIL=" C:\hoshin-test\.env.local >nul && echo OK TEST_USER_EMAIL || echo MISS TEST_USER_EMAIL
+findstr /B /R /C:"^TEST_USER_PASSWORD=" C:\hoshin-test\.env.local >nul && echo OK TEST_USER_PASSWORD || echo MISS TEST_USER_PASSWORD
 ```
 
 **Hành động:**
