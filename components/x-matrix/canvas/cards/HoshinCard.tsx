@@ -69,7 +69,7 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   const hasComments = comments.length > 0
 
   return (
-    <>
+    <div className="relative">
       <button
         type="button"
         onClick={handleFilledClick}
@@ -94,26 +94,21 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
             (Chưa đặt tên — click để sửa)
           </span>
         )}
-        <div className="mt-auto flex items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-wider text-[var(--text-2)]">
-          <span>
-            {initCount} INI · {kpiCount} KPI
-          </span>
-          {hasComments && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setGembaModalOpen(true)
-              }}
-              aria-label={`Xem ${comments.length} góp ý`}
-              className="inline-flex items-center gap-1 rounded-sm bg-[var(--white)]/70 px-1.5 py-0.5 normal-case tracking-normal text-ink hover:bg-[var(--white)]"
-            >
-              <span aria-hidden>💬</span>
-              <span>{comments.length}</span>
-            </button>
-          )}
+        <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-[var(--text-2)]">
+          {initCount} INI · {kpiCount} KPI
         </div>
       </button>
+      {hasComments && (
+        <button
+          type="button"
+          onClick={() => setGembaModalOpen(true)}
+          aria-label={`Xem ${comments.length} góp ý cho Hoshin này`}
+          className="absolute bottom-1 right-1 inline-flex items-center gap-1 rounded-sm bg-[var(--white)]/70 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-ink hover:bg-[var(--white)]"
+        >
+          <span aria-hidden>💬</span>
+          <span>{comments.length}</span>
+        </button>
+      )}
       <HoshinEditModal
         open={modalOpen}
         onOpenChange={setModalOpen}
@@ -128,6 +123,6 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
         comments={comments}
         canModerate={canModerate}
       />
-    </>
+    </div>
   )
 }
