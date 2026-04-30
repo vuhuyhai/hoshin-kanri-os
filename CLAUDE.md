@@ -6,7 +6,7 @@
 
 \- \*\*Status:\*\* development
 
-\- \*\*Domain:\*\* \[URL Vercel]
+\- \*\*Domain:\*\* https://vercel.com/vuhuyhais-projects/hoshin-kanri-os
 
 \- \*\*Project root:\*\* C:\\Users\\ASUS\\Desktop\\Hoshin Kanri by Vũ Hải\\hoshin-kanri-os
 
