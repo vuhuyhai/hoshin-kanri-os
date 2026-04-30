@@ -56,9 +56,27 @@ export function HoshinGembaSectionClient({
   // context cho symmetry với KpiGembaSectionClient + future
   // M-Hoshin-7 nới Member writer.
   const canModerate = role !== 'Member'
+
+  // Banner ở canvas page chỉ phản ánh Hoshin signals — KPI count đã
+  // hiện ở /dashboard/kpi banner. Filter org-wide summary xuống
+  // hoshin-targets để "X góp ý chưa xử lý trên N mục" không inflate
+  // bằng KPI counts (hai page độc lập, conditional render
+  // total_open===0 vẫn hoạt động đúng cho từng trang).
+  const hoshinByTarget = summary.by_target.filter(
+    (t) => t.target_type === 'hoshin',
+  )
+  const hoshinSummary = {
+    total_open: hoshinByTarget.reduce((sum, t) => sum + t.count, 0),
+    by_target: hoshinByTarget,
+  }
+
   return (
     <>
-      <GembaBanner summary={summary} canModerate={canModerate} />
+      <GembaBanner
+        summary={hoshinSummary}
+        canModerate={canModerate}
+        targetLabel="Hoshin"
+      />
       <HoshinGembaContext.Provider
         value={{ commentsMap, canModerate, xMatrixId }}
       >

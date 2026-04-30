@@ -8,9 +8,16 @@ import { trackGembaBannerViewed } from '@/lib/analytics/events'
 interface Props {
   summary: GembaUnreadSummary
   canModerate: boolean
+  // Trang đang render banner — chỉnh nhắc nhở "Mở comment thread tại
+  // từng <KPI|Hoshin>". Default 'KPI' để KPI page không cần đổi.
+  targetLabel?: 'KPI' | 'Hoshin'
 }
 
-export function GembaBanner({ summary, canModerate }: Props) {
+export function GembaBanner({
+  summary,
+  canModerate,
+  targetLabel = 'KPI',
+}: Props) {
   // useRef guard tránh fire 2 lần do StrictMode double-effect.
   // Hooks gọi unconditional TRƯỚC early return null.
   const tracked = useRef(false)
@@ -46,8 +53,8 @@ export function GembaBanner({ summary, canModerate }: Props) {
             {summary.total_open} góp ý chưa xử lý
           </h3>
           <p className="text-text-2 text-sm mt-1">
-            Trên {distinctTargets} mục. Mở comment thread tại từng KPI để ghi
-            nhận hoặc đánh dấu xử lý.
+            Trên {distinctTargets} mục. Mở comment thread tại từng {targetLabel}{' '}
+            để ghi nhận hoặc đánh dấu xử lý.
           </p>
         </div>
       </header>
