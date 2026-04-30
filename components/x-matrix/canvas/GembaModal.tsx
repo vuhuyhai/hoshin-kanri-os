@@ -62,7 +62,7 @@ export function GembaModal({
                 ⚠️ Hoshin này chưa được lưu vào X-Matrix
               </p>
               <p className="mt-1">
-                Click <strong>'Lưu X-Matrix'</strong> ở thanh dưới để có
+                Click <strong>‘Lưu X-Matrix’</strong> ở thanh dưới để có
                 thể nhận góp ý cho Hoshin này.
               </p>
             </div>
