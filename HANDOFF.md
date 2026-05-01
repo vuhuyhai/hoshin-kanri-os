@@ -812,16 +812,18 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-04-30 — post M-Hoshin-7)
+## 16. Current State Snapshot (2026-05-01 — post M-Cleanup-1)
 
-- **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-04-30 post M-Hoshin-7 deploy)
+- **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
+- **Last verified**: 2026-05-01 — post M-Cleanup-1 (wizard files cleanup + 4 pattern lessons L17-L20)
 - **Last migration applied**: `032_weekly_hansei.sql`
 - **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
-- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix (8 — bao gồm `canvas/cards/HoshinCard.tsx` refactored 2-button siblings + `canvas/GembaModal.tsx` mới ship M-Hoshin-6). Route-local Server Components mới: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
+- **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Hoshin-7 (Anti-pattern Audit + Fix multi-org lookup) — 1 commit `3e29a66`. Original M-Cleanup-2 ABORTED sau diagnose: 9 Ladysfit orgs là multi-tenant production users (NOT pollution). Rescoped → audit `.limit(1).single()` pattern → fix 2 SWOT routes.
+- **Latest feature work**: M-Cleanup-1 (Wizard Files Cleanup) — 1 commit `558a471` (-1184 lines, 8 files: 7 deleted + 1 modified). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files. Canvas single source of truth. 4-source verification (Vercel runtime logs + curl + web_fetch_vercel_url + reference screenshot Task 1).
+- **Previous feature work**: M-Hoshin-7 (Anti-pattern Audit + Fix multi-org lookup) — 1 commit `3e29a66`. Original M-Cleanup-2 ABORTED sau diagnose: 9 Ladysfit orgs là multi-tenant production users (NOT pollution). Rescoped → audit `.limit(1).single()` pattern → fix 2 SWOT routes.
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -960,7 +962,7 @@ Khi Claude mới vào session:
       8. **Vibe coding session limit ~8h**: Session này em + Vũ Hải đi qua 9 tasks ~8h work. Encoding debug 1.5h + sticky bug debug 1h = 30% effective time bị consumed bởi bugs. Pattern: planning + design solid (T1) → implementation fast (T2-T6) → ship trong 1 session khả thi nếu bugs không leak. Anti-pattern: nếu gặp bug debug > 30 phút → pause hoặc defer thay vì cố fix tại session.
   - **M-Hoshin-1 — Canvas mini-map sticky bug 2026-04-27**: ⏸ deferred to M-Hoshin-2 Task 6. Mini-map render OK ở top page nhưng không stick khi scroll trên mobile (650-768px viewport). Đã thử fix qua tăng z-index, đổi top-0 → top-16, move CanvasMiniMap outside wrapper div (commit reverted). Root cause chưa identify chính xác — khả năng là scroll container ancestor không đúng position-relative. Pattern lesson: bug sticky position trên Next.js + Tailwind v4 environment có thể cần investigate sâu DOM tree với DevTools Computed panel + check ancestor `overflow` chain. Functional impact: low — mini-map vẫn render, user vẫn navigate được, chỉ không sticky khi scroll.
   - **M-Hoshin-1 — AI Prefill flow deferred 2026-04-27**: ⏸ wire `/api/x-matrix/prefill` API + `SET_AI_PREFILL` action với accept/reject từng ô (Q4 design decision). Action signature đã có trong `CanvasContext.tsx` với placeholder body. Defer to M-Hoshin-2 vì scope creep — AI prefill + AI coaching correlation = 1 feature integrated. Pattern lesson: khi feature có 2 layer (data prefill + interactive validation), không tách timing — ship cùng milestone để UX consistent.
-  - **M-Hoshin-1 — Wizard files cleanup pending 2026-05-11**: ⏸ delete `components/x-matrix/XMatrixWizard.tsx` + 4 step files + `WizardProgress.tsx` sau 2 tuần production stable (target 2026-05-11). Currently kept for rollback safety — `NEXT_PUBLIC_XMATRIX_CANVAS=0` env var triggers wizard render. Cleanup task: M-Cleanup-1.
+  - **M-Hoshin-1 — Wizard files cleanup**: ✅ shipped 2026-05-01 ahead of original 2026-05-11 target qua M-Cleanup-1 (commit `558a471`). 7 wizard files deleted + feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` removed. Detail xem M-Cleanup-1 entry dưới.
   - **M-Hoshin-2 Correlation Matrix Engine 2026-04-28**: ✅ shipped (10 commits ship qua 1 day session). Mục tiêu: wire correlation matrix center 5×3 thành interactive — user click cell cycle ●◐○-, AI prefill từ Discovery, AI coach sensei questions, orphan validation warnings.
     - **DB schema (migration 030)**: thêm table `xmatrix_correlations` với composite unique (x_matrix_id, year_goal_id, hoshin_id) cho idempotent upsert. year_goal_id và hoshin_id là text (không FK) vì đây là JSON-embedded IDs từ x_matrices.vision_json.
     - **API routes mới**: `/api/xmatrix/correlations` GET (list) + PUT (upsert), `/api/xmatrix/coach-correlation` POST (sensei questions với rate limit 50/5min/user). Dùng AI_MODELS.reasoning cho coach.
@@ -1196,12 +1198,69 @@ Khi Claude mới vào session:
 
       → M-Hoshin-7 SHIPPED. 0 regression, 2 routes mới response schema đúng spec.
     - **Security incident handled**: Smoke test Phase 1.4 turn 1 vô tình `cmd /c type .env.local` → toàn bộ secrets render vào AI context. Vũ Hải rotate 5 keys (Supabase service_role, Supabase anon, Anthropic, Resend, Tavily) + cleanup duplicate SUPABASE_SERVICE_ROLE_KEY trong .env.local. Vercel env vars synced. Production redeploy commit `4ccdb3b` verified với key mới. SMOKE_TEST.md Phase 1.4 update với hard rule cấm `type/cat/Get-Content` toàn .env.local (DEBT 2 fix).
+  - **M-Cleanup-1 — Wizard Files Cleanup (2026-05-01)**: ✅ shipped (1 commit `558a471`, push 2026-05-01, branch master). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files trong `components/x-matrix/`. Canvas single source of truth cho `/dashboard/x-matrix/new` route. Wizard rollback path no longer available — future regression handle qua git revert.
+    - **Files deleted (7)**:
+      1. `components/x-matrix/XMatrixWizard.tsx` (hub orchestrator)
+      2. `components/x-matrix/Step1Vision.tsx`
+      3. `components/x-matrix/Step2Hoshins.tsx`
+      4. `components/x-matrix/Step3Initiatives.tsx`
+      5. `components/x-matrix/Step4Kpis.tsx`
+      6. `components/x-matrix/WizardProgress.tsx`
+      7. `components/x-matrix/XMatrixReview.tsx`
+    - **File modified (1)**: [app/dashboard/x-matrix/new/page.tsx](app/dashboard/x-matrix/new/page.tsx) — xóa `import { XMatrixWizard }` + xóa toàn bộ block `useLegacyWizard` (cũ L57-77 gồm comment legacy flag + `process.env.NEXT_PUBLIC_XMATRIX_CANVAS === '0'` check + div wrapper với h1 + render `<XMatrixWizard>`). Giờ chỉ còn canvas branch render `<HoshinGembaSection>` wrap `<XMatrixCanvasPage>`.
+    - **Total delta**: -1184 deletions across 8 files.
+    - **Verification timeline (5 tasks)**:
+      - Task 1 (verify production stable trước khi cleanup): ✓ env var Vercel `NEXT_PUBLIC_XMATRIX_CANVAS` không tồn tại (không set), `.env.local` flag value `False` → wizard branch dead code không serve user nào. Canvas render OK production reference screenshot.
+      - Task 2 (audit imports trước destructive delete): ✓ Self-imports only — XMatrixWizard hub import 6 siblings (Step1-4 + WizardProgress + XMatrixReview), KHÔNG file external nào import 6 children. 1 external import duy nhất: `app/dashboard/x-matrix/new/page.tsx` import `XMatrixWizard`. → Safe xóa cùng commit sau khi fix page.tsx.
+      - Task 2.5 (verify CanvasHeader render branding): ✓ Canvas tự render header riêng qua `components/x-matrix/canvas/CanvasHeader.tsx` (h1 "X-Matrix Builder" + overline "Strategy" + subtitle). An toàn xóa header markup legacy trong page.tsx — user không mất context.
+      - Task 3 (sửa code + xóa files + verify build): ✓ `npm run typecheck` PASS (0 errors), `npm run build` PASS (Compiled successfully in 8.0s, all routes generated incl. `/dashboard/x-matrix/new`).
+      - Task 4 (commit + push): ✓ commit `558a471` "chore: remove wizard files and feature flag (M-Cleanup-1)" push origin master.
+      - Task 5 (verify production stable post-deploy): ✓ Vercel deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` state READY. 4-source fallback verification — xem **Pattern lesson L17** dưới.
+    - **4-source fallback verification chain G3** (pattern phòng khi Playwright MCP browser dead):
+      1. **Vercel MCP `get_runtime_logs`** — proxy cho HTTP 200 confirmation. Runtime log entries cho `/dashboard/x-matrix/new` không có 5xx error → deploy serving requests OK.
+      2. **PowerShell `curl`** (Windows built-in từ Win 10 1804+) — fetch HTML production URL, grep `XMatrixWizard|Step1Vision|WizardProgress` → 0 match → wizard refs gone post-deploy. HTTP 200 confirmation.
+      3. **Vercel MCP `web_fetch_vercel_url`** — PRERENDER cache hit confirmation. SSR output đúng canvas render path.
+      4. **Reference screenshot Task 1** — UI logic không thay đổi giữa pre/post cleanup (canvas branch đã serve user trước M-Cleanup-1, chỉ khác ở dead-code removal). Reference screenshot pre-cleanup = post-cleanup expected output.
+    - **Pattern lessons M-Cleanup-1 (4 mới L17-L20)**:
+      1. **L17 (Playwright MCP browser idle timeout >5min)**: Browser context die khi idle giữa Task calls (vibe coding session multi-task chain). Triệu chứng: "browser has been closed" ngay từ navigate đầu tiên dù chưa interact. Pattern fallback chain G3 (4 sources trên) thay vì retry Playwright. KHÔNG cố retry Playwright >2 lần — pivot ngay sang Vercel MCP + curl + web_fetch + reference screenshot. Trong M-Cleanup-1 verify, Vercel MCP đã đủ tín hiệu prove deploy OK mà không cần screenshot mới (UI logic không đổi → reference screenshot Task 1 valid).
+      2. **L18 (PowerShell session crash silent với Invoke-WebRequest)**: Parse Vietnamese response qua `Invoke-WebRequest` có thể crash session silent (PID exit không output, không error message). Workaround: dùng `curl` Windows built-in (từ Win 10 1804+) thay vì `Invoke-WebRequest`. Parse HTML ở session khác hoặc pipe qua `Select-String` thay vì in-line parse. Pattern: PowerShell + Vietnamese text + parsing = avoid; isolate fetch và parse vào 2 step riêng.
+      3. **L19 (Static audit imports TRƯỚC destructive delete)**: Pre-delete audit pattern: grep tất cả file import 7 wizard files để phân loại self-imports vs external imports. Self-imports OK xóa cùng lúc; external imports CHẶN xóa cần xử lý trước. M-Cleanup-1 áp dụng đúng → phát hiện chỉ 1 external (page.tsx) → fix trước khi `git rm`. Áp dụng cho mọi destructive cleanup tương lai (component, lib, route deletion). Anti-pattern: `git rm` blindly → build fail downstream → revert + re-investigate (cost > audit prevention).
+      4. **L20 (Verify branding components tự render TRƯỚC khi xóa wrapper)**: Khi xóa wrapper component có header markup (h1/h2/overline), MUST verify child component có render header riêng không. M-Cleanup-1 Task 2.5 grep `components/x-matrix/canvas/*.tsx` cho `<h1|<h2|overline` → confirm `CanvasHeader.tsx` render branding → safe xóa header legacy trong page.tsx. Pattern: nếu xóa wrapper mà child không có equivalent UI → user mất context (header missing, breadcrumb gone, page identity confusing). Audit checklist destructive delete: (a) imports audit, (b) UI affordance audit (header/breadcrumb/title), (c) state/hook reuse audit.
+    - **Constraints cho future AI sessions**:
+      - KHÔNG re-add `NEXT_PUBLIC_XMATRIX_CANVAS` env var. Wizard rollback path dead — regression handle qua `git revert 558a471` nếu cần resurrect (commit chứa toàn bộ wizard code intact).
+      - KHÔNG re-create wizard 5-step pattern cho X-Matrix create flow. Canvas Density Mode là decision lock từ M-Hoshin-1 (xem §17 entry 2026-04-27 X-Matrix Canvas).
+      - KHÔNG re-create files `XMatrixWizard.tsx`, `Step[1-4]*.tsx`, `WizardProgress.tsx`, `XMatrixReview.tsx` ở `components/x-matrix/` top-level. Path đó dành cho canvas-related shared utilities tương lai (hiện trống).
 
 ---
 
 ## 17. Architecture Decisions
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
+
+### 2026-05-01 — Wizard files removed, canvas single source of truth (M-Cleanup-1)
+
+**Milestone**: M-Cleanup-1 — Wizard Files Cleanup.
+
+**Scope**: 1 commit `558a471` (push 2026-05-01). page.tsx cleanup (xóa import + xóa block `useLegacyWizard`) + `git rm` 7 wizard files trong `components/x-matrix/`. Total -1184 lines across 8 files.
+
+**Driving need**: Feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` introduced ở M-Hoshin-1 (2026-04-27) cho 2-week safety net rollback to wizard. Production stable từ 2026-04-27 → 2026-05-01 (5 days post M-Hoshin-7 close-out, no regression). Flag không set production (verified Vercel env vars empty), `.env.local` flag value `False` → wizard branch dead code không serve user nào. Cleanup tech debt + simplify mental model (1 render path).
+
+**Decisions**:
+
+- **Wizard rollback path no longer available**. Future regression handle qua `git revert 558a471` (commit chứa toàn bộ wizard code intact) thay vì runtime feature flag.
+- **Canvas single source of truth** cho `/dashboard/x-matrix/new` route. Render flow: page.tsx → `<HoshinGembaSection>` (Server Component fetch summary + commentsMap) → `<XMatrixCanvasPage>` (Client Component canvas).
+- **`components/x-matrix/` top-level trống** post-cleanup. Canvas-related code consolidate vào `components/x-matrix/canvas/` subfolder. Future canvas shared utilities có thể add vào top-level nếu cross-canvas-feature scope.
+- **CanvasHeader.tsx render branding** thay thế header markup legacy trong page.tsx (h1 "X-Matrix Builder" + overline "Strategy" + subtitle). Branding moved into canvas component → consistency cross-route nếu canvas reuse trong route khác (vd `/dashboard/x-matrix/[year]/edit` future).
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG re-add `NEXT_PUBLIC_XMATRIX_CANVAS` env var. Pattern feature-flag-for-rollback dead. Future UI replacement features → ship behind reverse flag 2 tuần MAX, sau đó MUST cleanup (M-Cleanup-1 precedent).
+- KHÔNG re-create wizard 5-step pattern cho X-Matrix create flow. Canvas Density Mode lock từ M-Hoshin-1 — xem §17 entry 2026-04-27.
+- KHÔNG re-create files `XMatrixWizard.tsx`, `Step[1-4]*.tsx`, `WizardProgress.tsx`, `XMatrixReview.tsx` ở `components/x-matrix/` top-level. Resurrect pattern proven anti-pattern (regression risk + mental model split).
+- KHI cleanup destructive (delete files/components/routes), MUST audit imports + UI affordances + state reuse TRƯỚC khi `git rm` (L19 + L20 pattern).
+- KHI xóa wrapper component có UI markup (header/title/breadcrumb), MUST verify child component có equivalent render — tránh "missing context" regression (L20 pattern).
+
+---
 
 ### 2026-04-30 — Multi-tenant production reality (M-Hoshin-7)
 
@@ -1472,6 +1531,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Cleanup-1 — Wizard Files Cleanup** ✅ SHIPPED 2026-05-01 (1 commit `558a471`, -1184 lines across 8 files). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files. Canvas single source of truth `/dashboard/x-matrix/new`. 4-source verification chain G3 (Vercel runtime logs + curl + web_fetch_vercel_url + reference screenshot). 4 pattern lessons L17-L20 (Playwright idle, PowerShell crash, static audit imports, verify branding). Production verified `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY. See §16 + §17.
 - **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ SHIPPED 2026-04-30 (3 commits: `3e29a66` fix + `5501c7d` HANDOFF L7-L9 + `b12c919` close-out L10-L16). Production verified `chienluoc.org` 5/5 PASS. Security incident handled: 5 keys rotated. SMOKE_TEST.md Phase 1.4 hardened. Total 10 pattern lessons (L7-L16). See §16 + §17.
 - **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
 - **M-Hoshin-6.1 — Hotfix gate gemba form khi Hoshin chưa persist** ✅ shipped 2026-04-30 (1 commit `13cf793` + 1 SQL DELETE 4 orphan rows). Production user submit comment trên Hoshin draft (xMatrixId truthy nhưng hoshin.id chưa trong vision_json) → orphan target_id. Fix: Server fetch `existingHoshinIds` → Context expose `isPersisted` per hoshin → GembaModal gate form `!isPersisted`. Detail xem §16.
@@ -1483,16 +1543,14 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 **Candidates ưu tiên** (chọn 1 sau khi anh decide):
 
-1. **M-Cleanup-1 — Wizard files cleanup** (target 2026-05-11): Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 6 wizard files. Cost ~30 phút.
-2. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor. Cost ~3-5 commits.
-3. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
-4. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes. Cost ~30 phút (verify trigger trước).
+1. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor. Cost ~3-5 commits.
+2. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
+3. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
 
-**Em chưa recommend** vì M-Hoshin-7 surface mismatched assumption — anh nên audit HANDOFF entries khác trước khi M-Hoshin-8 decide.
+**Em recommend M-Hoshin-8 = TBD chờ Vũ Hải decide**. M-Cleanup-1 đã ship → cleanup tech debt nhỏ done. Next milestone tùy ưu tiên design rollout (M-Design-3) hoặc gemba bottom-up scaling (M-Member-POV-1).
 
 ### Future milestones (TBD priority)
 
-- **M-Cleanup-1**: Bỏ feature flag NEXT_PUBLIC_XMATRIX_CANVAS + xóa wizard files (sau 2 tuần stable từ M-Hoshin-1 = 2026-05-11). **Priority: MEDIUM**.
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
 - **~~M-Cleanup-2 (CRITICAL)~~ REMOVED**: Original scope dựa trên assumption sai. Diagnose M-Hoshin-7 phát hiện 9 orgs là multi-tenant production users với owner khác nhau, KHÔNG phải pollution. KHÔNG cleanup. See §17 Architecture Decision 2026-04-30 + L8.
 - **M-Cleanup-5 (NEW from M-Hoshin-7)**: 2 LOW risk hits — admin SQL views `010_admin_views.sql` lines 60-61 + 89-90 dùng `LIMIT 1` cho CEO pick. Trigger condition: support team có >1 CEO per org. Currently rare → defer. Plus 2 orphan routes candidate cleanup (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller, có thể dead from refactor). Trigger condition: confirm Vũ Hải 2 routes dead. Cost ~30 phút.
