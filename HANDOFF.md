@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-04-30 — post M-Hoshin-7 (close-out + 7 pattern lessons L10-L16)
+> **Last verified**: 2026-05-01 — post M-OrgUX-1 (duplicate org detection: DB index 034 + API + UI + 2 smoke test scripts, 6 commits 6ccd776→d57c7f1)
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -571,6 +571,30 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
 
 15. **Sticky bug Tailwind + Next.js layout shells multi-cause**: `position: sticky` không stick có thể có MULTI-CAUSE combined: ancestor `overflow: hidden | auto`, ancestor flex container thiếu `min-h-0`, ancestor `transform | filter | perspective`, sticky element height = parent height. Static code review (Cursor diagnose) HIGH confidence vẫn có thể miss khi multi-cause. Pattern: nếu fix HIGH confidence không work → DON'T pivot sang MEDIUM/LOW option, defer/kill feature thay vì sunk-cost. Mini-map sticky bug đã defer 2 lần trong Hoshin Kanri OS (M-Hoshin-1 → M-Mobile-1) → killed indefinitely.
 
+16. **PowerShell 5.1 + modern web tooling quirks** (learned M-OrgUX-1 smoke test).
+    - `curl -I <url>` không hoạt động — `curl` alias → `Invoke-WebRequest`, không nhận flag Unix style. Dùng `Invoke-WebRequest <url> -Method Head -UseBasicParsing | Select-Object StatusCode`, hoặc gọi explicit `C:\Windows\System32\curl.exe` (Windows builtin từ Win 10 1804+).
+    - `Invoke-WebRequest` / `Invoke-RestMethod` **silently strip `Authorization` headers** trong một số cấu hình khi gọi Supabase admin API. Workaround: wrap bằng `[System.Net.HttpWebRequest]::Create($uri)` direct, set headers + body manually.
+    - `Join-Path` chỉ nhận 2 args trong PS 5.1 (3-arg form chỉ có ở PS 7+). Nest 2 calls hoặc dùng `[System.IO.Path]::Combine($a, $b, $c)`.
+    - TLS 1.2 phải set explicit cho HTTPS requests: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`. Default trên PS 5.1 là TLS 1.0/1.1 → Supabase reject.
+    - `Invoke-WebRequest` parse Vietnamese response có thể crash session silent (PID exit, no output). Pattern fallback: dùng `curl.exe` Windows builtin, parse ở step riêng (xem L18 M-Cleanup-1 entry).
+    - Pre-cleanup of test data: smoke test scripts (M-OrgUX-1 cả 2 scripts) intentionally KHÔNG auto-delete test users. Cleanup SQL printed at end of stdout cho rerun-friendly. Pattern: ephemeral test data + idempotent setup > teardown automation.
+
+17. **Playwright + modern web app testing — selector pitfalls** (learned M-OrgUX-1 UI smoke test).
+    - **shadcn `<CardTitle>` renders `<div>`, NOT native heading**. `getByRole('heading', { name: ... })` fail. Dùng `getByText('...', { exact: true }).first()` hoặc test ID. Áp dụng cho mọi shadcn component: `Card*`, `Dialog*`, `Sheet*` không guarantee semantic heading roles.
+    - **Sonner Toaster mounts a hidden global `[role="alert"]` announcer region**. `page.locator('[role="alert"]').count()` always returns ≥1 even on empty form. Hidden filter `:visible` alone KHÔNG đủ vì Next 16 dev indicator + analytics overlays (PostHog) cũng có visible role=alert nodes.
+    - **Best practice: scope assertions by intent, not by DOM role**. Use specific text or `data-testid`:
+      ```ts
+      page.locator('[role="alert"]:visible:has-text("specific text")')
+      ```
+      This avoids false positives from libraries that legitimately mount alert regions for a11y. Pattern lock: every alert/toast assertion in Playwright tests MUST include text or testid filter.
+    - **Auth via Supabase session injection**: routes use `@supabase/ssr` `createServerClient` parsing cookies — KHÔNG support Bearer header. Cookie format: name `sb-{projectRef}-auth-token`, value `base64-` prefix + `base64url(JSON {access_token, refresh_token, expires_at, ...})`. Reuse forge helper from `scripts/smoke-test-orgs-check-similar.ps1` + `scripts/smoke-test-orgs-setup-org-ui.ts`.
+    - **Radix Select trigger** (used by shadcn Select) renders as `<button role="combobox">`, options as `<div role="option">`. Click trigger → wait for option → click. Don't try `selectOption` (only works on native `<select>`).
+
+18. **Next 16 dev server stability with smoke tests** (observed M-OrgUX-1 UI smoke test).
+    - Dev server (`npm run dev`) recurring crashes when Playwright Chromium connects + script edit triggers Fast Refresh during a test run. Symptom: probe to `http://localhost:3000` returns connection refused mid-suite.
+    - **Workaround for UI smoke tests**: use `npm run build && npm run start` (production-style server). Production server has no Fast Refresh → stable under Playwright load. Add 30-60s startup cost but eliminates flake.
+    - Don't auto-start dev server from agent scripts (orphaned process risk). Print "Run `npm run dev` first" pre-check failure with clear actionable message instead.
+
 ---
 
 ## 11. Dev Workflow
@@ -812,20 +836,20 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-05-01 — post M-Public-1)
+## 16. Current State Snapshot (2026-05-01 — post M-OrgUX-1)
 
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-01 — post M-Public-1 (repo public + HANDOFF auto-sync + 4 pattern lessons L21-L24)
-- **Last migration applied**: `032_weekly_hansei.sql`
-- **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
+- **Last verified**: 2026-05-01 — post M-OrgUX-1 (duplicate org detection on onboarding: DB functional index + API + UI + 2 smoke tests). Preceded by mini-milestone `6ccd776` (docs: align MASTER_BUILD_SPEC with canvas reality post M-Cleanup-1 — 6 stale refs updated, 1 SWOT wizard kept as live separate feature).
+- **Last migration applied**: `034` — functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`). Index size ~16 KB at 9 orgs; scales linearly ~10 MB / 100k orgs.
+- **API routes count**: 48 (47 + `/api/orgs/check-similar`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Cleanup-1 (Wizard Files Cleanup) — 1 commit `558a471` (-1184 lines, 8 files: 7 deleted + 1 modified). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files. Canvas single source of truth. 4-source verification (Vercel runtime logs + curl + web_fetch_vercel_url + reference screenshot Task 1).
-- **Previous feature work**: M-Hoshin-7 (Anti-pattern Audit + Fix multi-org lookup) — 1 commit `3e29a66`. Original M-Cleanup-2 ABORTED sau diagnose: 9 Ladysfit orgs là multi-tenant production users (NOT pollution). Rescoped → audit `.limit(1).single()` pattern → fix 2 SWOT routes.
+- **Latest feature work**: M-OrgUX-1 (Duplicate Org Detection on Onboarding) — 6 commits `6ccd776`→`d57c7f1`, 8 files changed across 3 layers (DB index 034 applied via dashboard / API `/api/orgs/check-similar` / UI debounced check trên `/onboarding/setup-org` + acknowledgement gate / 2 smoke test scripts: PowerShell API 6/6 PASS + Playwright UI 5/5 PASS). Pivoted from original M-Cleanup-2 mass-delete plan after audit revealed 9 Ladysfit orgs là multi-tenant production users (xem M-Hoshin-7 entry).
+- **Previous feature work**: M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1259,12 +1283,84 @@ Khi Claude mới vào session:
       - KHÔNG hardcode PII trong code/docs (audit pattern L21 trước flip). Email/phone/JWT/API key MUST go through env var hoặc psql variable.
       - KHÔNG re-flip repo private→public→private để "test" propagation. Fastly cache state phức tạp, defer verify sau 15 phút (L22).
       - KHI tạo route mới có default email/credential cho dev mode, follow pattern `query param ?? ENV_DEFAULT ?? generic-fallback` (precedent `app/api/auth/dev-login/route.ts`).
+  - **M-OrgUX-1 — Duplicate Org Detection on Onboarding (2026-05-01)**: ✅ shipped (6 commits `6ccd776`→`d57c7f1`, 8 files changed across 3 layers). Mục tiêu: prevent-future-duplicate UX (warn user) thay vì hard delete past duplicates. Trigger: M-Cleanup-2 audit phát hiện không thể mass-delete 9 Ladysfit orgs (multi-tenant production reality, xem M-Hoshin-7 entry).
+    - **Pre-cursor mini-milestone (commit `6ccd776`)**: docs align — `MASTER_BUILD_SPEC.md` 7 stale references vs canvas reality post-M-Cleanup-1 → 6 updated, 1 (SWOT wizard) giữ lại vì là feature riêng còn live. Quick housekeeping commit không phải part of M-OrgUX-1 scope nhưng bundled trong session.
+    - **DB layer (migration 034)**: functional index `idx_organizations_lower_name_city` ON `organizations(lower(name), lower(city))`. Migration version `20260501061239` (Supabase CLI internal stamp). Index size 16 KB tại 9 orgs hiện tại; scale tuyến tính ~10 MB cho 100k orgs. Áp dụng qua dashboard SQL editor — `.sql` file CHƯA commit vào `supabase/migrations/` (DEBT minor — backfill khi tiện cho rollback safety).
+    - **API layer (commit `1bbd7d5`)**: POST `/api/orgs/check-similar` — `app/api/orgs/check-similar/route.ts`:
+      - **Auth**: cookie session via `@supabase/ssr` `createClient`, KHÔNG support Bearer header (pitfall đã learn — xem §10 mới).
+      - **Validation**: Zod inline schema (`name` 2-200 chars, `city` 1-100 chars). Inline thay vì `lib/validation/schemas.ts` vì single-route domain.
+      - **Rate limit**: 10 req/phút/user, key `orgs:check-similar:${userId}`. Dùng `checkRateLimit` direct (KHÔNG via `requireAiRateLimit` helper — helper hardcode prefix `ai:` → tech debt MEDIUM cho refactor `requireRateLimit(bucket, opts)` chung).
+      - **Query**: `createAdminClient()` bypass RLS (user chưa có `org_members` row tại pre-onboarding state), `ilike` exact match (no wildcards) trên cùng `city`, `LIMIT 5`.
+      - **Response shape**: `{ hasMatches: boolean, matches: Array<{name, city, industry}> }` — **KHÔNG có `id` field** (security: tránh enumerate orgs cross-tenant qua duplicate-detection vector).
+      - **Audit log**: `console.log` với prefix `[audit:check-similar]` + structured JSON (`user_id`, `name_query` truncated 50 chars, `city_query`, `match_count`, `timestamp`). Bảng `audit_logs` chưa tồn tại — fallback acceptable, migrate to table later khi volume warrant.
+    - **UI layer (commit `6b4d3b5`)**: `app/onboarding/setup-org/page.tsx` (+111/-2):
+      - Debounce 600ms watching `[name, city]` deps trong `useEffect`. Skip check nếu `name.trim().length < 2` hoặc `city` empty.
+      - Race condition guard: `cancelled = true` flag drop stale fetches khi user keep typing.
+      - Submit gate: `if (similarOrgs.length > 0 && !acknowledgedDuplicate) toast.error(...)` block + Vietnamese toast "Đã có công ty trùng tên trong cùng thành phố. Hãy xác nhận trước khi tiếp tục."
+      - Alert block dùng NB v3.2 tokens (`var(--accent-yellow)`, `var(--shadow-md)`) — KHÔNG hex hardcode.
+      - Native `<input type="checkbox">` thay shadcn `Checkbox` (chưa adopted trong codebase — không create component mới chỉ cho 1 use case).
+      - A11y: `role="alert"` + `aria-live="polite"` trên warning div, `role="status"` cho spinner.
+    - **Test layer**:
+      - `scripts/smoke-test-orgs-check-similar.ps1` (commit `f5a4bd0`): API smoke test PowerShell 5.1 compatible, 6/6 PASS — Auth (401 no cookie), Validation (400 too_small), Match (200 + no id leak), NoMatch (200 hasMatches=false), RateLimit (429 + Retry-After), AuditLog (REST query audit_logs absent → fallback console.log per spec acceptable).
+      - `scripts/smoke-test-orgs-setup-org-ui.ts` (commit `73766ec`): UI smoke test Playwright TS, 5/5 PASS — FormLoad, NoApiCallShortInput, WarningRender, SubmitBlocked, SubmitAllowed. Cookie forge pattern reused từ PowerShell script (base64- prefix + base64url JSON session).
+      - `chore` commit `d57c7f1`: thêm `playwright` + `tsx` vào devDeps cho UI smoke test.
+    - **Critical decisions M-OrgUX-1**:
+      1. **Pivot M-Cleanup-2 → M-OrgUX-1**: Audit DB phát hiện 9 Ladysfit orgs thuộc 9 `user_id` KHÁC NHAU (không phải duplicate cùng user). Mass cleanup = vi phạm trust + xóa data user khác (FK CASCADE). Pivot sang prevent-future-duplicate UX. Pattern lesson L8 (M-Hoshin-7) áp dụng đúng.
+      2. **Schema constraint discovery**: `organizations` table KHÔNG có cột soft-delete (`is_active`, `deleted_at`, `archived_at`). Mọi DELETE = irreversible. Future M-Cleanup-2 nếu reactivate sẽ cần migration thêm cột soft-delete trước.
+      3. **MVP scope**: exact match same city only (KHÔNG trigram/`pg_trgm`) — overkill cho 9 orgs hiện tại. Trigger upgrade khi ≥3 user thật phàn nàn miss duplicate vì typo.
+      4. **Security: ID không trả về** — admin client bypass RLS expose org metadata cho mọi authenticated user. Mitigation: rate limit 10 req/phút + chỉ trả `{name, city, industry}`, không trả `id` để tránh enumerate.
+    - **Tech debt MEDIUM phát sinh**:
+      - Refactor `requireAiRateLimit` (`lib/ai/rate-limit-helper.ts`) thành generic `requireRateLimit(bucket, opts)` để các route khác (như `/api/orgs/check-similar` đây) không phải call `checkRateLimit` direct. Pattern lesson: Cursor đã có deviation hợp lý ở M-OrgUX-1 Task 2 — generalize sau khi pattern proven 2-3 lần.
+      - Test users `smoke-test-orgs@hoshin-test.local` + `smoke-test-orgs-ui@hoshin-test.local` còn trong DB (script không auto-delete để rerun-friendly). Cleanup SQL có sẵn ở cuối stdout mỗi script run.
+      - Migration 034 `.sql` file chưa commit vào `supabase/migrations/` — applied via Supabase dashboard. Backfill khi tiện để rollback safety qua git revert.
+    - **Constraints cho future AI sessions**:
+      - KHÔNG mass-delete duplicate orgs by name. Pattern is prevent-at-onboarding, không retroactive cleanup. M-Hoshin-7 L8 + M-OrgUX-1 reinforce.
+      - KHÔNG return `id` field từ `/api/orgs/check-similar` — security mitigation cho admin-client bypass RLS expose. Pattern: response shape minimal (chỉ data đủ để user đưa quyết định, không đủ để enumerate).
+      - KHI thêm route public-ish (authenticated user chưa có `org_members` row), MUST rate-limit + minimize response shape + audit log. Precedent: `/api/orgs/check-similar` (M-OrgUX-1).
+      - KHI Cursor/Claude write smoke test PowerShell cho Supabase REST, MUST tránh `Invoke-WebRequest` (silent header strip), dùng `[System.Net.HttpWebRequest]` direct (xem §10 pitfall mới).
+      - KHI write Playwright UI smoke test, scope alert assertions với specific text via `:has-text(...)` thay vì global `[role="alert"]` (Sonner Toaster + Next 16 dev indicator + analytics overlays đều render hidden alert region) — xem §10 pitfall mới.
 
 ---
 
 ## 17. Architecture Decisions
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
+
+### 2026-05-01 — Duplicate org detection on onboarding (M-OrgUX-1)
+
+**Milestone**: M-OrgUX-1 — Duplicate Org Detection on Onboarding.
+
+**Scope**: 6 commits `6ccd776`→`d57c7f1` (8 files changed across 3 layers + 1 docs precursor):
+- Migration 034 — functional index `idx_organizations_lower_name_city` ON `organizations(lower(name), lower(city))` (applied via Supabase dashboard, version `20260501061239`, `.sql` file not yet committed)
+- API: POST `/api/orgs/check-similar` (`app/api/orgs/check-similar/route.ts`)
+- UI: `app/onboarding/setup-org/page.tsx` (+111/-2) — debounced check + acknowledgement gate
+- Tests: `scripts/smoke-test-orgs-check-similar.ps1` (API 6/6 PASS) + `scripts/smoke-test-orgs-setup-org-ui.ts` (UI 5/5 PASS)
+- Chore: `playwright` + `tsx` devDeps for UI smoke test
+- Pre-cursor (`6ccd776`): docs/align `MASTER_BUILD_SPEC.md` with canvas reality post M-Cleanup-1 (6 stale refs updated)
+
+**Driving need**: M-Cleanup-2 originally scoped to mass-delete 9 duplicate "Ladysfit" orgs. Audit (M-Hoshin-7) discovered they are 9 multi-tenant production users with distinct owners — hard delete = 8 user data loss + trust violation. Pivot from retroactive cleanup → prevent-at-onboarding UX. Schema constraint discovery (no soft-delete column on `organizations`) reinforced "prevent > cleanup" decision.
+
+**Decisions**:
+
+- **Audit-driven pivot pattern**: Before destructive milestone, MUST query data + ownership counts to validate HANDOFF prose assumption. M-Cleanup-2 → M-OrgUX-1 pivot is the second pattern instance after M-Hoshin-7 fix (`.limit(1).single()` audit). Pattern lesson L8 reinforced.
+- **3-layer separation (DB index + API + UI)**: Each layer testable independently. DB index makes `lower(name)+lower(city)` lookup ~O(log n) instead of seq scan. API enforces auth + rate limit + minimal response. UI debounces + gates submit on acknowledgement.
+- **Security: response shape minimal — NO `id` field**. Admin client bypass RLS to query across all orgs (necessary because pre-onboarding user has no `org_members` row → user-context query returns empty). Mitigation: rate limit 10/min/user + only return `{name, city, industry}` so a malicious user cannot enumerate org IDs via duplicate-detection vector.
+- **Exact match same city only (NOT trigram/`pg_trgm`)** for MVP. 9 orgs current scale doesn't warrant fuzzy matching. Trigger upgrade only if ≥3 production users complain "missed duplicate due to typo".
+- **Inline Zod schema (NOT in `lib/validation/schemas.ts`)**: Schema is single-route domain (only `/api/orgs/check-similar` uses it). If future route shares it, promote then. Avoid premature centralization.
+- **Direct `checkRateLimit` (NOT `requireAiRateLimit` helper)**: Helper hardcodes `ai:` key prefix, doesn't fit non-AI route. DEBT: refactor to generic `requireRateLimit(bucket, opts)` after 2-3 more non-AI routes need rate limiting.
+- **Audit log via `console.log` with `[audit:check-similar]` prefix**: Vercel runtime logs sufficient for current volume. Migrate to `audit_logs` table when query patterns warrant (filter by user, time range, match count). Pattern matches `[audit:dev-login]` precedent.
+- **Smoke test pattern: API PowerShell + UI Playwright TS**: API smoke = `.ps1` (matches `smoke-test-orgs-check-similar.ps1` precedent + Windows-native, no Node deps). UI smoke = `.ts` via `tsx` (Playwright is Node-native, TS strict for type safety). Both reuse cookie forge pattern (base64- prefix + base64url JSON session).
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG mass-delete duplicate orgs by name. Pattern is prevent-at-onboarding (M-OrgUX-1) + audit-driven pivot (M-Hoshin-7 L8). Retroactive cleanup requires soft-delete migration first + per-row owner verification.
+- KHÔNG return `id` field từ `/api/orgs/check-similar` (or any future "check across orgs" endpoint). Security mitigation: admin-client bypass RLS exposes data — minimize response shape to avoid enumeration vector.
+- KHÔNG add `pg_trgm` / fuzzy matching vào `/api/orgs/check-similar` mà không có user complaint baseline (≥3 production users miss duplicate due to typo). YAGNI.
+- KHI add route public-ish (authenticated user chưa có `org_members` row, vd onboarding flow), MUST: (a) rate-limit per-user, (b) audit log với `[audit:<route>]` prefix, (c) minimize response shape (no IDs unless needed for ownership-scoped action).
+- KHI write smoke test cho new authenticated route, follow 2-script pattern: `.ps1` for API (PowerShell-native, no Node deps) + `.ts` Playwright for UI. Reuse cookie forge helper from `smoke-test-orgs-check-similar.ps1` and `smoke-test-orgs-setup-org-ui.ts`.
+- KHI commit migration applied via dashboard, MUST also commit `.sql` file to `supabase/migrations/` for git-revert safety. M-OrgUX-1 migration 034 currently in DEBT — backfill when convenient.
+
+---
 
 ### 2026-05-01 — Repository public + HANDOFF auto-sync (M-Public-1)
 
@@ -1586,6 +1682,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-OrgUX-1 — Duplicate Org Detection on Onboarding** ✅ SHIPPED 2026-05-01 (6 commits `6ccd776`→`d57c7f1`, 8 files across 3 layers). DB functional index 034 (applied via dashboard, `.sql` not yet committed — DEBT) + API `/api/orgs/check-similar` (auth + Zod + rate limit 10/min/user + admin-bypass query + audit log + NO id in response) + UI `/onboarding/setup-org` (debounced check + acknowledgement gate + Vietnamese alert) + 2 smoke tests (PowerShell API 6/6 PASS + Playwright UI 5/5 PASS). Pivoted from M-Cleanup-2 mass-delete plan after multi-tenant audit. Pre-cursor docs commit `6ccd776` aligned MASTER_BUILD_SPEC. New pitfalls: §10 #16 PowerShell quirks, #17 Playwright shadcn/Sonner selectors, #18 Next 16 dev server stability. See §16 + §17.
 - **M-Public-1 — Repository Public + HANDOFF Auto-sync** ✅ SHIPPED 2026-05-01 (2 commits: `e305e61` sanitize PII + `aabedce` LICENSE notice). Repo flipped GitHub private→public sau pre-flight 5-step audit (hardcoded secrets HEAD + git history + .env files + .gitignore coverage + PII grep). 5 sanitize changes (dev-login env var fallback, cleanup_users.sql psql variable, 6 docs PII → `<owner-email>` placeholder, .gitignore hardened 8 dotenv variants, README LICENSE section "All rights reserved"). Post-flip curl HTTP 200 verified. HANDOFF auto-sync URL: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md`. 4 pattern lessons L21-L24 (pre-public audit, Fastly propagation, web_fetch constraint, PowerShell here-string). See §16 + §17.
 - **M-Cleanup-1 — Wizard Files Cleanup** ✅ SHIPPED 2026-05-01 (1 commit `558a471`, -1184 lines across 8 files). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files. Canvas single source of truth `/dashboard/x-matrix/new`. 4-source verification chain G3 (Vercel runtime logs + curl + web_fetch_vercel_url + reference screenshot). 4 pattern lessons L17-L20 (Playwright idle, PowerShell crash, static audit imports, verify branding). Production verified `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY. See §16 + §17.
 - **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ SHIPPED 2026-04-30 (3 commits: `3e29a66` fix + `5501c7d` HANDOFF L7-L9 + `b12c919` close-out L10-L16). Production verified `chienluoc.org` 5/5 PASS. Security incident handled: 5 keys rotated. SMOKE_TEST.md Phase 1.4 hardened. Total 10 pattern lessons (L7-L16). See §16 + §17.
@@ -1601,15 +1698,20 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 1. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor. Cost ~3-5 commits.
 2. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
-3. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
+3. **M-OrgInvite-1 — Request-to-join flow** (NEW from M-OrgUX-1): Feature complement của duplicate detection. Khi user thấy warning "đã có công ty tương tự", currently chỉ có path là acknowledge + tạo mới. Add path "Yêu cầu CEO mời tôi vào org đó" — gửi notification CEO target org, CEO approve/reject. Cost ~5-7 commits (DB notifications table + 2 API + UI request modal + email digest).
+4. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
+5. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
 
-**Em recommend M-Hoshin-8 = TBD chờ Vũ Hải decide**. M-Cleanup-1 + M-Public-1 đã ship → cleanup tech debt + repo public auto-sync done. Next milestone tùy ưu tiên design rollout (M-Design-3) hoặc gemba bottom-up scaling (M-Member-POV-1).
+**Em recommend M-Hoshin-8 = TBD chờ Vũ Hải decide**. Strong candidates by sequencing: M-OrgInvite-1 (closes UX loop opened by M-OrgUX-1) hoặc M-Design-3 (design rollout continuation). M-Member-POV-1 valuable nhưng cần Member primary writer route precedent (đã có từ M-Hoshin-5).
 
 ### Future milestones (TBD priority)
 
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
 - **~~M-Cleanup-2 (CRITICAL)~~ REMOVED**: Original scope dựa trên assumption sai. Diagnose M-Hoshin-7 phát hiện 9 orgs là multi-tenant production users với owner khác nhau, KHÔNG phải pollution. KHÔNG cleanup. See §17 Architecture Decision 2026-04-30 + L8.
 - **M-Cleanup-5 (NEW from M-Hoshin-7)**: 2 LOW risk hits — admin SQL views `010_admin_views.sql` lines 60-61 + 89-90 dùng `LIMIT 1` cho CEO pick. Trigger condition: support team có >1 CEO per org. Currently rare → defer. Plus 2 orphan routes candidate cleanup (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller, có thể dead from refactor). Trigger condition: confirm Vũ Hải 2 routes dead. Cost ~30 phút.
+- **M-RateLimit-Generic-1 (NEW from M-OrgUX-1, MEDIUM)**: Refactor `requireAiRateLimit` (`lib/ai/rate-limit-helper.ts`) thành generic `requireRateLimit(bucket, opts)` để route non-AI (vd `/api/orgs/check-similar`) không phải call `checkRateLimit` direct. Trigger condition: 2-3 more non-AI routes need rate limiting (currently just 1 — orgs/check-similar). Cost ~1 commit (move file `lib/ai/` → `lib/http/` + rename + update 13+ call sites). DEBT MEDIUM.
+- **Migration 034 backfill (NEW from M-OrgUX-1, LOW)**: Commit `.sql` file cho migration 034 (`idx_organizations_lower_name_city`) vào `supabase/migrations/`. Currently applied via dashboard, not in repo — git revert can't roll back the index. Trigger condition: any future schema change touches `organizations` table → backfill 034 cùng commit. Cost ~5 phút.
+- **M-OrgInvite-1 (NEW from M-OrgUX-1)**: Complete UX loop opened by M-OrgUX-1 — request-to-join flow when user lands on duplicate warning. CEO approve/reject path. See candidates list above.
 - **M-Auto-Persist-1**: Auto-save Hoshin draft khi user thao tác create/edit (tránh recurrence draft orphan kiểu M-Hoshin-6.1). Trigger condition: user thật phàn nàn lần 2 — hiện UI gate `!isPersisted` đã đủ defensive cho edge case này.
 - **M-Cleanup-3**: ✅ shipped inline trong M-Hoshin-4 cleanup phase — deactivate 56 duplicate KPIs Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, soft delete reversible). 65 active → 9 unique. KHÔNG cần milestone formal.
 - **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu). **Priority: MEDIUM**, design system rollout continuation.
