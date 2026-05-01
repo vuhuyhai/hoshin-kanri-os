@@ -812,10 +812,12 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-05-01 — post M-Cleanup-1)
+## 16. Current State Snapshot (2026-05-01 — post M-Public-1)
 
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
-- **Last verified**: 2026-05-01 — post M-Cleanup-1 (wizard files cleanup + 4 pattern lessons L17-L20)
+- **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
+- **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
+- **Last verified**: 2026-05-01 — post M-Public-1 (repo public + HANDOFF auto-sync + 4 pattern lessons L21-L24)
 - **Last migration applied**: `032_weekly_hansei.sql`
 - **API routes count**: 47 (45 + `/api/hansei/create` + `/api/hansei/list`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
@@ -1230,12 +1232,65 @@ Khi Claude mới vào session:
       - KHÔNG re-add `NEXT_PUBLIC_XMATRIX_CANVAS` env var. Wizard rollback path dead — regression handle qua `git revert 558a471` nếu cần resurrect (commit chứa toàn bộ wizard code intact).
       - KHÔNG re-create wizard 5-step pattern cho X-Matrix create flow. Canvas Density Mode là decision lock từ M-Hoshin-1 (xem §17 entry 2026-04-27 X-Matrix Canvas).
       - KHÔNG re-create files `XMatrixWizard.tsx`, `Step[1-4]*.tsx`, `WizardProgress.tsx`, `XMatrixReview.tsx` ở `components/x-matrix/` top-level. Path đó dành cho canvas-related shared utilities tương lai (hiện trống).
+  - **M-Public-1 — Repository Public + HANDOFF Auto-sync (2026-05-01)**: ✅ shipped (2 commits: `e305e61` sanitize PII + `aabedce` LICENSE notice, push 2026-05-01, branch master). Trigger: M-Cleanup-1 close-out raised question về HANDOFF auto-sync giữa Cursor → Claude.ai. Phương án B chosen: GitHub raw URL fetch thay vì manual re-upload Project knowledge. Repo flipped private→public 2026-05-01 sau pre-flight audit + sanitize PII.
+    - **Pre-flight audit (5-step pattern, xem L21)**:
+      1. Hardcoded secrets HEAD scan: 0 real secrets, 9 false positives (env var refs)
+      2. Secrets git history scan (`--all` branches, `--pretty=format`): 0 matches
+      3. `.env` files history check: only `.env.example` tracked
+      4. `.gitignore` coverage verify: hardened 8 dotenv variants + `!.env.example` whitelist
+      5. PII grep: 14 instances `fitnessviet@gmail.com` flagged (1 critical route + 7 SQL + 6 docs)
+    - **Remediation (5 changes pre-public, commit `e305e61`, +43/-16 across 6 files)**:
+      1. `app/api/auth/dev-login/route.ts`: hardcoded email → env var fallback. Pattern: `query param ?? DEV_LOGIN_DEFAULT_EMAIL ?? 'admin@example.com'`
+      2. `supabase/cleanup_users.sql`: 7 hardcoded → psql `:'keep_email'` variable + USAGE comment
+      3. `HANDOFF.md` + `plans/M-Cleanup-2-design-audit.md`: 6 PII → `<owner-email>` placeholder
+      4. `.gitignore`: hardening 8 dotenv variants
+      5. `README.md` (commit `aabedce`): add LICENSE section "All rights reserved"
+    - **Post-flip verification**:
+      - `curl` HTTP 200 từ máy Vũ Hải (HANDOFF.md raw URL working)
+      - Fastly CDN propagation ~5-15 min sau flip public, từ Claude.ai web_fetch initial 404 đến 200 stable (xem L22)
+      - License default: All rights reserved (Option A) — repo public for transparency, no license granted
+    - **Pattern lessons M-Public-1 (4 mới L21-L24)**:
+      1. **L21 (Pre-public audit pattern, 5-step)**: TRƯỚC mọi private→public visibility flip MUST chạy 5-step audit: (1) hardcoded secrets HEAD scan, (2) secrets git history scan `--all` branches, (3) `.env` files history check (kể cả nếu `rm` sau này — git history vẫn giữ), (4) `.gitignore` coverage verify (test `git check-ignore` mọi pattern), (5) PII grep (emails, phones, JWTs, API key formats). Áp dụng cho mọi visibility flip future. Anti-pattern: flip public dựa trên "I think it's clean" — must mechanical audit.
+      2. **L22 (GitHub raw URL Fastly CDN propagation delay)**: Sau flip private→public, raw URL có thể trả 404 trong ~5-15 min do Fastly cache. `curl` direct (User-Agent fresh) đôi khi hit cache MISS → 200 stable. Web_fetch từ AI tool có thể stuck ở stale 404 của cache POP khác. Pattern: defer verify retry sau 15 phút thay vì panic. KHÔNG re-flip private→public lần thứ 2 để "fix" — chỉ làm cache state phức tạp hơn.
+      3. **L23 (Claude.ai web_fetch permission constraint)**: Web_fetch chỉ fetch URL đã xuất hiện trong conversation context (user paste hoặc previous tool output). KHÔNG hỗ trợ arbitrary URL fetch như Claude Desktop. Workaround: đầu mỗi chat mới về Hoshin Kanri, Vũ Hải paste 1 dòng `HANDOFF: https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` → em fetch → đọc HANDOFF mới nhất → confirm milestone hiện tại. Anti-pattern: assume web_fetch arbitrary giống Claude Desktop.
+      4. **L24 (PowerShell here-string single-quote escape)**: Khi commit message dùng PowerShell here-string `@'...'@`, single-quote escape `''` (double single-quote) thực ra render thành 2 chars `''` trong message body, KHÔNG phải 1 single quote. Cosmetic issue cho commit có inline code references. Workaround: dùng double-quote here-string `@"..."@` với escape backtick `` ` ``, hoặc chấp nhận cosmetic cho long commit messages. Pattern: nếu commit message body có nhiều inline code/quotes, write file tạm rồi `git commit -F` thay vì here-string.
+    - **Constraints cho future AI sessions**:
+      - KHÔNG add LICENSE permissive (MIT/Apache/BSD) without explicit Vũ Hải decision. License default "All rights reserved" preserve commercial IP.
+      - KHÔNG hardcode PII trong code/docs (audit pattern L21 trước flip). Email/phone/JWT/API key MUST go through env var hoặc psql variable.
+      - KHÔNG re-flip repo private→public→private để "test" propagation. Fastly cache state phức tạp, defer verify sau 15 phút (L22).
+      - KHI tạo route mới có default email/credential cho dev mode, follow pattern `query param ?? ENV_DEFAULT ?? generic-fallback` (precedent `app/api/auth/dev-login/route.ts`).
 
 ---
 
 ## 17. Architecture Decisions
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
+
+### 2026-05-01 — Repository public + HANDOFF auto-sync (M-Public-1)
+
+**Milestone**: M-Public-1 — Repository Public + HANDOFF Auto-sync.
+
+**Scope**: 2 commits (`e305e61` sanitize PII +43/-16 across 6 files, `aabedce` LICENSE notice in README). Repo visibility flipped GitHub private→public 2026-05-01. License chosen: "All rights reserved" (no permissive license).
+
+**Driving need**: M-Cleanup-1 close-out raised question về HANDOFF auto-sync giữa Cursor (local edits) → Claude.ai web (read latest state). Phương án A (manual re-upload Project knowledge mỗi session) high-friction. Phương án B (GitHub raw URL fetch) requires public repo. Phương án B chosen vì friction-free + transparency value.
+
+**Decisions**:
+
+- **Repo public, license restrictive**. Repo published cho transparency + AI auto-sync, KHÔNG cấp quyền commercial use, redistribution, modification, or derivative works without written permission. README License section [README.md:25](README.md#L25).
+- **HANDOFF auto-sync via GitHub raw URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` là canonical source. Em (AI Claude.ai web) tự fetch URL này đầu mỗi chat mới — KHÔNG cần Vũ Hải re-upload Project knowledge.
+- **Pre-flight audit pattern locked-in**: 5-step audit (hardcoded secrets HEAD + git history + .env files history + .gitignore coverage + PII grep) MUST chạy trước mọi visibility flip future. Pattern lesson L21.
+- **PII sanitization standard**: 14 instances `fitnessviet@gmail.com` (Vũ Hải personal email) sanitized → `<owner-email>` placeholder trong docs, env var fallback trong code, psql variable trong SQL. Pattern: code/docs không reference Vũ Hải's personal email — production user identity stays in DB only.
+- **`.gitignore` hardened cho dotenv**: 8 dotenv variants ignored (`.env`, `.env.local`, `.env.*.local`, `.env.production`, etc.) + `!.env.example` whitelist. Future env var sample files MUST follow `.env.example` naming.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG add LICENSE permissive (MIT/Apache/BSD) without explicit Vũ Hải decision. License "All rights reserved" preserve commercial IP — đây là decision lock, không phải oversight.
+- KHÔNG hardcode PII trong code/docs/SQL. Email/phone/JWT/API key MUST go through env var hoặc psql variable. Pattern precedent: `app/api/auth/dev-login/route.ts` (env var fallback), `supabase/cleanup_users.sql` (psql `:'keep_email'`).
+- KHÔNG re-flip repo private→public→private để test propagation. Fastly CDN cache state phức tạp, defer verify retry sau 15 phút (L22).
+- KHI flip visibility (private→public hoặc ngược lại) trong tương lai, MUST chạy 5-step pre-flight audit (L21) trước. Anti-pattern: flip dựa trên "I think it's clean" — must mechanical audit.
+- KHI Claude.ai web session bắt đầu, em fetch HANDOFF raw URL trước khi answer (xem §16 auto-fetch URL block). Anti-pattern: trust stale Project knowledge upload từ session trước.
+
+---
 
 ### 2026-05-01 — Wizard files removed, canvas single source of truth (M-Cleanup-1)
 
@@ -1531,6 +1586,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Public-1 — Repository Public + HANDOFF Auto-sync** ✅ SHIPPED 2026-05-01 (2 commits: `e305e61` sanitize PII + `aabedce` LICENSE notice). Repo flipped GitHub private→public sau pre-flight 5-step audit (hardcoded secrets HEAD + git history + .env files + .gitignore coverage + PII grep). 5 sanitize changes (dev-login env var fallback, cleanup_users.sql psql variable, 6 docs PII → `<owner-email>` placeholder, .gitignore hardened 8 dotenv variants, README LICENSE section "All rights reserved"). Post-flip curl HTTP 200 verified. HANDOFF auto-sync URL: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md`. 4 pattern lessons L21-L24 (pre-public audit, Fastly propagation, web_fetch constraint, PowerShell here-string). See §16 + §17.
 - **M-Cleanup-1 — Wizard Files Cleanup** ✅ SHIPPED 2026-05-01 (1 commit `558a471`, -1184 lines across 8 files). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files. Canvas single source of truth `/dashboard/x-matrix/new`. 4-source verification chain G3 (Vercel runtime logs + curl + web_fetch_vercel_url + reference screenshot). 4 pattern lessons L17-L20 (Playwright idle, PowerShell crash, static audit imports, verify branding). Production verified `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY. See §16 + §17.
 - **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup** ✅ SHIPPED 2026-04-30 (3 commits: `3e29a66` fix + `5501c7d` HANDOFF L7-L9 + `b12c919` close-out L10-L16). Production verified `chienluoc.org` 5/5 PASS. Security incident handled: 5 keys rotated. SMOKE_TEST.md Phase 1.4 hardened. Total 10 pattern lessons (L7-L16). See §16 + §17.
 - **M-Hoshin-6 — Hoshin Gemba Integration** ✅ shipped 2026-04-30 (4 commits). Wire `gemba_comments` table M-Hoshin-5 (target_type='hoshin') vào X-Matrix canvas. CEO+Manager badge + modal trên HoshinCard, canvas role-gate Member redirect `/dashboard`. 0 migration, 0 API mới. Detail xem §16 + §17.
@@ -1547,7 +1603,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 2. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
 3. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
 
-**Em recommend M-Hoshin-8 = TBD chờ Vũ Hải decide**. M-Cleanup-1 đã ship → cleanup tech debt nhỏ done. Next milestone tùy ưu tiên design rollout (M-Design-3) hoặc gemba bottom-up scaling (M-Member-POV-1).
+**Em recommend M-Hoshin-8 = TBD chờ Vũ Hải decide**. M-Cleanup-1 + M-Public-1 đã ship → cleanup tech debt + repo public auto-sync done. Next milestone tùy ưu tiên design rollout (M-Design-3) hoặc gemba bottom-up scaling (M-Member-POV-1).
 
 ### Future milestones (TBD priority)
 
