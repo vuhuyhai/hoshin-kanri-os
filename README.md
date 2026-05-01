@@ -21,3 +21,15 @@ npm run dev
 ```
 
 Open http://localhost:3000 and hit `/x-ray` as the first smoke test.
+
+## License
+
+© 2026 Vũ Hải. All rights reserved.
+
+This codebase is published for transparency and reference purposes.
+No license is granted for commercial use, redistribution, modification,
+or derivative works without explicit written permission from the author.
+
+For inquiries about licensing, partnerships, or consulting:
+- Production: https://chienluoc.org
+- Repository: https://github.com/vuhuyhai/hoshin-kanri-os
