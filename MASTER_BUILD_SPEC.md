@@ -2,7 +2,10 @@
 
 > **Architectural reference only.** For dev setup see `DEVELOPMENT.md`. For AI agent onboarding (conventions, pitfalls, don'ts) see `AGENTS.md`. This file documents *what* the system is — the other two cover *how to work on it*.
 >
-> Last verified: 2026-04-15. Sections below reflect the state after the `chore: consolidate pending refactors` + `feat(blog)` commits. The directory tree and migrations list can still drift — `ls supabase/migrations/` and `find app lib -type d` are authoritative when in doubt.
+> **Last verified**: 2026-05-01 (post M-Cleanup-1 + M-Public-1).
+> **Architecture authority**: HANDOFF.md §16-17 cho canvas decisions sau ngày 2026-04-27.
+>
+> Sections below reflect the state after M-Cleanup-1 (`558a471`, wizard removal) + M-Public-1 (repo public). The directory tree and migrations list can still drift — `ls supabase/migrations/` and `find app lib -type d` are authoritative when in doubt.
 
 ---
 
@@ -81,7 +84,7 @@ hoshin-kanri-os/
 │   │   │   ├── pain-mapper/, vision-workshop/, synthesis/
 │   │   │   ├── benchmark/
 │   │   │   └── xray-history/
-│   │   ├── x-matrix/new/         # X-Matrix Wizard (5-step)
+│   │   ├── x-matrix/new/         # X-Matrix Canvas (Density Mode, Toyota A3 pattern) — single-page, 4 edges + center correlation matrix
 │   │   ├── kpi/                  # KPI dashboard + tracker
 │   │   ├── report/               # AI monthly report
 │   │   └── settings/
@@ -105,7 +108,7 @@ hoshin-kanri-os/
 │   ├── providers/                # auth-listener, posthog-provider, theme-provider
 │   ├── swot/                     # SWOT-specific UI (wizard, matrix, cells, chat)
 │   ├── ui/                       # shadcn/ui primitives
-│   └── x-matrix/                 # X-Matrix wizard steps + review
+│   └── x-matrix/                 # X-Matrix Canvas — `canvas/` subfolder (4 edges, modals, cards, state, edges, validation)
 │
 ├── lib/
 │   ├── utils.ts
@@ -298,18 +301,33 @@ Dashboard → Discovery Hub → 4 steps (any order):
 
 ### Flow C: X-Matrix Creation (Auth Required)
 ```
-Discovery complete → X-Matrix Wizard (5 steps):
-  Step 1: Vision & Year Goals (max 3 goals)
-  Step 2: Annual Hoshins (max 5, AI-suggested or manual)
-  Step 3: Initiatives per Hoshin (max 3 each, timeframe: 30d/60d/90d)
-  Step 4: KPIs per Hoshin (max 2 each, assign owner)
-  Step 5: Review & Save
+Discovery complete → X-Matrix Canvas (Density Mode, Toyota A3 pattern):
+  Single-page edit, all 4 edges visible cùng lúc — không có step gating.
 
-Limits (Hoshin discipline):
+  North edge:  3-Year Vision (textarea) + Year Goals (max 3, modal edit)
+  South edge:  Annual Hoshins (max 5, modal edit — title + owner_name + max 3 initiatives + max 2 KPIs all-in-one)
+  West edge:   Owners auto-derived from each Hoshin's owner_name (1 owner per Hoshin, free-text)
+  East edge:   KPIs auto-aggregated từ Hoshin modals
+  Center:      Correlation matrix 5×3 (Hoshins × YearGoals) — click cell cycle ●◐○-
+               (strong → medium → weak → none, Toyota A3 idiom)
+
+Edit pattern:
+  - Modal Dialog (`@base-ui/react/dialog`, NOT Radix) cho YearGoal + Hoshin
+  - Click correlation cell cycle 4 strengths
+  - AI Coach popover ON-DEMAND khi click strong cell (sensei questions)
+  - Auto-save localStorage 500ms debounce, key `xmatrix-canvas-draft-${orgId}-${year}`
+  - SubmitBar inline validation (warnings không block save — Hoshin guideline, không hard rule)
+
+Smart `/new` route: 1 URL serves create + edit (server queries existing active matrix → load nếu có,
+blank nếu không). API `/api/x-matrix/create` atomic dedupe — archive existing active trước khi save mới.
+
+Limits (Hoshin discipline, từ `lib/x-matrix/utils.ts` LIMITS):
   - MAX_YEAR_GOALS: 3
   - MAX_HOSHINS: 5
   - MAX_INITIATIVES_PER_HOSHIN: 3
   - MAX_KPIS_PER_HOSHIN: 2
+
+Architecture detail: HANDOFF.md §17 entry "2026-04-27 — X-Matrix Canvas (Density Mode)" + "2026-04-28 — Correlation Matrix Engine (M-Hoshin-2)".
 ```
 
 ### Flow D: KPI Tracking (Auth Required)
@@ -375,7 +393,7 @@ Admin:   /admin/blog → list (drafts + published)
 | Pain Mapper | `/api/discovery/pain-mapper` | reasoning (streamed) | Pain points → Hoshin candidates, streamed via `streamClaudeJson` |
 | Vision Draft | `/api/discovery/vision-draft` | reasoning (streamed) | Workshop answers → vision + year goals, streamed |
 | Discovery Synthesis | `/api/discovery/synthesis` | reasoning (streamed) | Aggregate all discovery data → X-Matrix prefill, streamed |
-| X-Matrix Prefill | `/api/x-matrix/prefill` | reasoning | Wizard pre-fill from discovery data |
+| X-Matrix Prefill | `/api/x-matrix/prefill` | reasoning | Canvas pre-fill from discovery data (binary accept-all-or-cancel) |
 | Monthly Report | `/api/report/monthly` | reasoning | KPI data → exec-style monthly report |
 | Hoshin Explorer (admin) | `/api/admin/hoshin-explorer` | reasoning | Super-admin research tool — concept breakdown w/ Vietnamese examples |
 
@@ -505,7 +523,7 @@ The app enforces strict limits based on Hoshin Kanri methodology:
 /dashboard/discovery/benchmark      → KPI Benchmark Library
 /dashboard/discovery/xray-history   → X-Ray Assessment History
 /dashboard/discovery/xray-history/[id] → View past X-Ray assessment
-/dashboard/x-matrix/new            → X-Matrix Wizard
+/dashboard/x-matrix/new            → X-Matrix Canvas (Density Mode) — smart route, create + edit
 /dashboard/kpi                      → KPI Dashboard
 /dashboard/report                   → Monthly Report
 /dashboard/settings                 → Org Settings
@@ -535,7 +553,7 @@ POST /api/discovery/vision-save       → Save vision
 POST /api/discovery/synthesis         → Full AI synthesis
 
 POST /api/x-matrix/create            → Save X-Matrix
-POST /api/x-matrix/prefill           → AI prefill X-Matrix wizard
+POST /api/x-matrix/prefill           → AI prefill X-Matrix canvas (binary accept-all-or-cancel)
 GET  /api/x-matrix/share?slug=xxx    → Get shared X-Matrix data
 
 POST /api/kpi/entry                   → Add KPI entry
