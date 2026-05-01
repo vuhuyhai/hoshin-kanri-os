@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-05-01 — post M-OrgUX-1 (duplicate org detection: DB index 034 + API + UI + 2 smoke test scripts, 6 commits 6ccd776→d57c7f1)
+> **Last verified**: 2026-05-01 — post M-Design-3a (KPI status tokens foundation + chart-tokens runtime resolver + first dashboard hex refactor, 3 commits d7fdb6d→b3ff123). Preceded by M-OrgUX-1 (duplicate org detection: DB index 034 + API + UI + 2 smoke test scripts, 6 commits 6ccd776→d57c7f1).
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -595,6 +595,22 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
     - **Workaround for UI smoke tests**: use `npm run build && npm run start` (production-style server). Production server has no Fast Refresh → stable under Playwright load. Add 30-60s startup cost but eliminates flake.
     - Don't auto-start dev server from agent scripts (orphaned process risk). Print "Run `npm run dev` first" pre-check failure with clear actionable message instead.
 
+19. **Tailwind v4 + CSS vars + Recharts integration — 3-layer awareness** (learned M-Design-3a). Khi shipping design tokens cho data-viz, có 3 consumption layers cần aware, mỗi cái khác cú pháp:
+    - **Layer 1 — Tailwind class** (`@theme inline` block trong `globals.css`): `<div className="bg-kpi-healthy" />` works tự nhiên. Tailwind v4 emit on-demand → token chỉ xuất hiện trong compiled CSS khi component reference. Foundation defs alone KHÔNG trigger generation. Verify by build success + zero CSS errors, KHÔNG bằng grep compiled CSS.
+    - **Layer 2 — Inline style** (`:root` block): `style={{ background: 'var(--kpi-healthy)' }}` works trong inline style + CSS class custom. Token resolve runtime qua browser cascade.
+    - **Layer 3 — Recharts props**: KHÔNG accept `var()` syntax — `<Line stroke="var(--kpi-healthy)" />` fail silent (renders no color). Cần runtime resolver: `lib/design/chart-tokens.ts` `resolveToken('kpi-healthy')` đọc `getComputedStyle(document.documentElement).getPropertyValue(...)`. SSR-safe via `typeof window === 'undefined'` guard. Khi shipping chart component, default to Layer 3 helper, KHÔNG mix với Layer 2 inline style cho chart-specific props.
+
+20. **Token aliasing vs duplicate hex** (learned M-Design-3a). Khi add semantic tokens (status, role-based) reuse existing palette:
+    - **Pattern correct**: alias trong `:root` → `--kpi-healthy: var(--accent-lime);` (single source of truth — nếu accent-lime đổi, kpi-healthy auto-update).
+    - **Pattern wrong**: duplicate hex → `--kpi-healthy: #DDE4C5;` trong `:root` (drift risk).
+    - **Exception**: `@theme inline` Tailwind v4 block YÊU CẦU hex literal cho class generation (vd `--color-kpi-healthy: #DDE4C5;`). Cả 2 đều ship — `:root` aliases + `@theme` literals — đây là design constraint Tailwind v4, KHÔNG phải duplication bug. Khi update palette hex, update ở 2 nơi: source token (vd `--accent-lime`) trong `:root` + mirror trong `@theme` (vd `--color-accent-lime` + `--color-kpi-healthy`). Grep cả 2 blocks trước khi commit.
+
+21. **Audit-first hex replacement — semantic ambiguity** (learned M-Design-3a). Hardcoded hex như `#c73937` có thể là **brand emphasis** HOẶC **KPI critical state** — cùng visual, khác semantic. Replace không suy nghĩ → token usage scattered (vài chỗ `var(--brand)`, vài chỗ `var(--kpi-critical)` cho cùng pixel). Pattern correct: GREP context (component name, prop name, neighboring text, parent semantic) trước khi pick token:
+    - Brand identity (logo, CTA primary, badge "Nguyên liệu SWOT" emphasis label) → `var(--brand)` hoặc `bg-accent-brand`.
+    - KPI/status (red traffic light, threshold violation, error state) → `var(--kpi-critical)` hoặc `bg-kpi-critical`.
+    - Generic alert/error toast → shadcn `var(--destructive)` (saturated, không phải NB pastel).
+    - Nếu ambiguous → STOP, hỏi Vũ Hải. Don't auto-apply.
+
 ---
 
 ## 11. Dev Workflow
@@ -836,20 +852,25 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-05-01 — post M-OrgUX-1)
+## 16. Current State Snapshot (2026-05-01 — post M-Design-3a)
 
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-01 — post M-OrgUX-1 (duplicate org detection on onboarding: DB functional index + API + UI + 2 smoke tests). Preceded by mini-milestone `6ccd776` (docs: align MASTER_BUILD_SPEC with canvas reality post M-Cleanup-1 — 6 stale refs updated, 1 SWOT wizard kept as live separate feature).
+- **Last verified**: 2026-05-01 — post M-Design-3a (KPI status tokens foundation: 8 `--kpi-*` tokens in `globals.css` + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `#c73937` → `var(--brand)` in `app/dashboard/page.tsx`). 3 commits `d7fdb6d`→`b3ff123`. Preceded by M-OrgUX-1 (duplicate org detection: DB functional index + API + UI + 2 smoke tests, 6 commits `6ccd776`→`d57c7f1`).
 - **Last migration applied**: `034` — functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`). Index size ~16 KB at 9 orgs; scales linearly ~10 MB / 100k orgs.
 - **API routes count**: 48 (47 + `/api/orgs/check-similar`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-OrgUX-1 (Duplicate Org Detection on Onboarding) — 6 commits `6ccd776`→`d57c7f1`, 8 files changed across 3 layers (DB index 034 applied via dashboard / API `/api/orgs/check-similar` / UI debounced check trên `/onboarding/setup-org` + acknowledgement gate / 2 smoke test scripts: PowerShell API 6/6 PASS + Playwright UI 5/5 PASS). Pivoted from original M-Cleanup-2 mass-delete plan after audit revealed 9 Ladysfit orgs là multi-tenant production users (xem M-Hoshin-7 entry).
-- **Previous feature work**: M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
+- **Latest feature work**: M-Design-3a (KPI status tokens foundation) — 3 commits `d7fdb6d`→`b3ff123`, 3 files changed:
+  - `d7fdb6d` feat(design): add 8 `--kpi-*` status tokens (healthy/attention/warning/critical + `-fg` foreground pairs) trong `app/globals.css` `:root` (line 185-192) + mirror trong `@theme inline` (line 64-71). Aliases existing accent palette (lime/yellow/pink + brand red), KHÔNG hex mới. AA-compliant contrast 11:1 → 4.8:1. `.dark` block UNTOUCHED (defer M-Design-3b).
+  - `11b7ff7` feat(design): add `lib/design/chart-tokens.ts` (99 LOC) runtime resolver cho Recharts integration. Exports: `resolveToken(name, fallback?)` SSR-safe + `kpiStatusColor(status)` higher-level API + `getKpiSeriesColors()` 4-color array + `KpiStatus` type + `KPI_TOKEN_NAMES` const + `clearTokenCache()` (unused, ready cho dark mode toggle). Module-level Map cache, fallback default `#000000` (loud failure principle).
+  - `b3ff123` refactor(dashboard): replace hardcoded `bg-[#c73937]` → `bg-[var(--brand)]` ở `app/dashboard/page.tsx:224` (pill "Nguyên liệu SWOT" — semantic decision: brand emphasis label, KHÔNG phải KPI critical). 1 line changed, visual identity preserved.
+  - Verified clean (no commits): `app/dashboard/settings/page.tsx` + `app/dashboard/x-matrix/page.tsx` (23-line redirect) — 0 hardcoded hex.
+  - Foundation ready for M-Design-3b: xray-history pages + KpiSparkline + discovery hub (high-impact files với hardcoded chart colors, defer per scope decision).
+- **Previous feature work**: M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1326,6 +1347,40 @@ Khi Claude mới vào session:
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
 
+### 2026-05-01 — KPI status tokens foundation (M-Design-3a)
+
+**Milestone**: M-Design-3a — KPI Status Tokens Foundation (split from original M-Design-3 dashboard refactor).
+
+**Scope**: 3 commits `d7fdb6d`→`b3ff123` (3 files changed):
+- `d7fdb6d` feat(design): 8 `--kpi-*` tokens trong `app/globals.css` (`:root` line 185-192 + `@theme inline` line 64-71)
+- `11b7ff7` feat(design): `lib/design/chart-tokens.ts` (99 LOC, 6 exports) runtime resolver cho Recharts
+- `b3ff123` refactor(dashboard): `app/dashboard/page.tsx:224` 1-line hex → token swap
+
+**Driving need**: Pre-Audit của dashboard route (M-Design-3 prep) discovered 41+ hardcoded hex across 13 files, primary anti-pattern là chart colors (xray-history Recharts configs, KpiSparkline thresholds, discovery hub inline backgrounds). Zero semantic tokens cho KPI status — every file invents own #16A34A / #D97706 / #c73937 traffic light. Need foundation tokens trước khi mass-refactor.
+
+**Decisions**:
+
+- **MVP split (4 files) vs Cursor's Option A (6-7 files)**: Sustain pace sau 3.5h M-OrgUX-1 burn. Ship token foundation + first refactor proving the pattern, defer high-impact files (xray-history + KpiSparkline + discovery hub) → M-Design-3b. Pattern: when pace risk > scope risk, ship foundation + 1 reference refactor, document rest in HANDOFF cho next session pickup.
+- **4-tier KPI scale (healthy/attention/warning/critical)**: Phân tầng 2 mức "bad" — pastel pink `#F0DCDD` cho warning (ink readable, fits NB v3.2 muted aesthetic, used in dashboard density) vs brand red `#c73937` cho critical (white text, exception cases system-blocking/fatal). Default UI uses 3-tier (healthy/attention/warning); critical reserved sparingly. 3-tier alone insufficient — dashboard có cả "below threshold" (attention to user) lẫn "system-critical error" (force escalation). 5-tier overkill.
+- **Token aliasing strategy (NOT duplicate hex)**: `:root --kpi-healthy: var(--accent-lime);` aliases existing palette. Single source of truth — palette change auto-propagates. `@theme inline --color-kpi-healthy: #DDE4C5;` ships hex literal vì Tailwind v4 class generation requirement (NOT a dup bug, design constraint). New pitfall §10 #20.
+- **Recharts 3-layer integration pattern**: 3 consumption layers (Tailwind class | inline `var()` | runtime resolver). Recharts props KHÔNG accept `var()` → cần dedicated `lib/design/chart-tokens.ts` resolver. Pattern lock: when shipping chart component, default Layer 3 helper, KHÔNG mix Layer 2 inline style for chart-specific props. New pitfall §10 #19.
+- **Loud failure fallback (`#000000`, NOT "nice" gray)**: chart-tokens resolver returns `#000000` on token miss / SSR. Black is loud-but-safe — broken-looking chart surfaces bug, không silent wrong colors. Don't change to "nicer" fallback — that masks regressions.
+- **`clearTokenCache()` exported but unused**: Wired ready cho dark mode toggle handler future. Until M-Design-3b adds dark variants, dead code by design — better than re-architecting later. Pattern: build extension point khi obvious từ requirement, NHƯNG don't implement scenario chưa exist.
+- **`.dark` block UNTOUCHED**: 8 KPI tokens light-mode only. Adding dark values without visual context (xray chart in dark mode) = guessing. Defer to M-Design-3b khi có component refactor để A/B compare.
+- **Audit-first hex replacement**: GREP context (component, prop, neighboring text) trước khi pick token. `#c73937` ambiguous (brand vs critical) — 1-line refactor in `page.tsx:224` shipped chỉ sau semantic context check (pill là positive marker "X-Ray done", brand emphasis NOT critical state). New pitfall §10 #21.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG add new hex literals trong component code khi semantic match existing token. Grep `globals.css` `:root` block trước. Nếu token miss → propose new token in `globals.css` (separate commit), NOT inline `bg-[#hex]`.
+- KHÔNG dùng `var(--kpi-*)` cho generic alerts/toasts/error states. Dùng shadcn `var(--destructive)` (saturated, semantic alert). KPI tokens reserved cho KPI/x-ray traffic light states ONLY.
+- KHÔNG mix Recharts `stroke="var(--kpi-healthy)"` (silent fail). Import `resolveToken` từ `lib/design/chart-tokens.ts` cho mọi Recharts color prop. Pattern §10 #19.
+- KHÔNG duplicate hex trong `:root` khi alias possible. Pattern §10 #20.
+- KHÔNG modify `clearTokenCache()` semantics — ready hook cho dark mode toggle. Wire vào theme switcher khi M-Design-3b/Dark adds variant tokens.
+- KHI ship M-Design-3b chart refactors, MUST add `.dark` variants cho 8 `--kpi-*` tokens cùng commit + visual test (xray history chart side-by-side light/dark) trước khi merge.
+- KHI hex có ambiguous semantic (brand vs critical vs accent), STOP + ask user before applying token. Pattern §10 #21.
+
+---
+
 ### 2026-05-01 — Duplicate org detection on onboarding (M-OrgUX-1)
 
 **Milestone**: M-OrgUX-1 — Duplicate Org Detection on Onboarding.
@@ -1682,6 +1737,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Design-3a — KPI Status Tokens Foundation** ✅ SHIPPED 2026-05-01 (3 commits `d7fdb6d`→`b3ff123`, 3 files changed). 8 `--kpi-*` semantic tokens trong `app/globals.css` (healthy/attention/warning/critical + `-fg` foreground pairs, AA-compliant 11:1 → 4.8:1) aliasing existing accent palette + `lib/design/chart-tokens.ts` (99 LOC) runtime resolver cho Recharts integration (Recharts props KHÔNG accept `var()` — cần `resolveToken()` helper) + first refactor proving pattern (`app/dashboard/page.tsx:224` `#c73937` → `var(--brand)` semantic decision: brand emphasis NOT KPI critical). MVP split scope decision: defer xray-history + KpiSparkline + discovery hub → M-Design-3b. `.dark` block UNTOUCHED. New pitfalls §10 #19 (Tailwind v4 + Recharts 3-layer), #20 (token aliasing vs dup hex), #21 (audit-first hex replacement). See §16 + §17.
 - **M-OrgUX-1 — Duplicate Org Detection on Onboarding** ✅ SHIPPED 2026-05-01 (6 commits `6ccd776`→`d57c7f1`, 8 files across 3 layers). DB functional index 034 (applied via dashboard, `.sql` not yet committed — DEBT) + API `/api/orgs/check-similar` (auth + Zod + rate limit 10/min/user + admin-bypass query + audit log + NO id in response) + UI `/onboarding/setup-org` (debounced check + acknowledgement gate + Vietnamese alert) + 2 smoke tests (PowerShell API 6/6 PASS + Playwright UI 5/5 PASS). Pivoted from M-Cleanup-2 mass-delete plan after multi-tenant audit. Pre-cursor docs commit `6ccd776` aligned MASTER_BUILD_SPEC. New pitfalls: §10 #16 PowerShell quirks, #17 Playwright shadcn/Sonner selectors, #18 Next 16 dev server stability. See §16 + §17.
 - **M-Public-1 — Repository Public + HANDOFF Auto-sync** ✅ SHIPPED 2026-05-01 (2 commits: `e305e61` sanitize PII + `aabedce` LICENSE notice). Repo flipped GitHub private→public sau pre-flight 5-step audit (hardcoded secrets HEAD + git history + .env files + .gitignore coverage + PII grep). 5 sanitize changes (dev-login env var fallback, cleanup_users.sql psql variable, 6 docs PII → `<owner-email>` placeholder, .gitignore hardened 8 dotenv variants, README LICENSE section "All rights reserved"). Post-flip curl HTTP 200 verified. HANDOFF auto-sync URL: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md`. 4 pattern lessons L21-L24 (pre-public audit, Fastly propagation, web_fetch constraint, PowerShell here-string). See §16 + §17.
 - **M-Cleanup-1 — Wizard Files Cleanup** ✅ SHIPPED 2026-05-01 (1 commit `558a471`, -1184 lines across 8 files). Bỏ feature flag `NEXT_PUBLIC_XMATRIX_CANVAS` + xóa 7 wizard files. Canvas single source of truth `/dashboard/x-matrix/new`. 4-source verification chain G3 (Vercel runtime logs + curl + web_fetch_vercel_url + reference screenshot). 4 pattern lessons L17-L20 (Playwright idle, PowerShell crash, static audit imports, verify branding). Production verified `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY. See §16 + §17.
@@ -1692,17 +1748,18 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - **M-Hoshin-4 — Hansei Auto-prompt khi KPI red 2+ tuần** ✅ shipped 2026-04-29 (6 commits). Weekly PDCA loop closed: detection 2+ red weeks streak, 2-field hansei form, history list per KPI, optimistic banner update, re-prompt sau streak extend. Detail xem §16 known open items + §17 architecture decision.
 - **M-Hoshin-5 — Gemba Feedback (Member comment trên Hoshin/KPI)** ✅ shipped 2026-04-30 (8 commits). Bottom-up signal Member→CEO closed: 1 schema 2 target_type (Hoshin+KPI), status lifecycle (open→ack→resolved), Member primary writer (route đầu tiên `requireOrgRole(ALL_ROLES)`), CEO moderate delete strict. Detail xem §16 + §17.
 
-### Milestone tiếp theo: M-Hoshin-8 — TBD scope (chờ Vũ Hải decision)
+### Milestone tiếp theo: TBD scope (chờ Vũ Hải decision)
 
 **Candidates ưu tiên** (chọn 1 sau khi anh decide):
 
-1. **M-Design-3 — Dashboard refactor NB v3.2**: Sidebar collapse + header user menu + dashboard cards refactor. Cost ~3-5 commits.
-2. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
-3. **M-OrgInvite-1 — Request-to-join flow** (NEW from M-OrgUX-1): Feature complement của duplicate detection. Khi user thấy warning "đã có công ty tương tự", currently chỉ có path là acknowledge + tạo mới. Add path "Yêu cầu CEO mời tôi vào org đó" — gửi notification CEO target org, CEO approve/reject. Cost ~5-7 commits (DB notifications table + 2 API + UI request modal + email digest).
-4. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
-5. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
+1. **M-Design-3b — Dashboard chart refactor** (NEW from M-Design-3a foundation): Apply `lib/design/chart-tokens.ts` resolver vào high-impact files: `xray-history/page.tsx` + `XRayHistoryChart.tsx` (8 hardcoded Recharts hex) + `kpi/components/KpiSparkline.tsx` (4 hardcoded chart hex) + `discovery/page.tsx` (7 inline bg colors). Add `.dark` variants cho 8 `--kpi-*` tokens cùng commit + visual A/B test side-by-side light/dark. Cost ~5-7 commits, 2-3h. **STRONG sequencing**: foundation đã ship M-Design-3a, defer = bitrot risk.
+2. **M-OrgInvite-1 — Request-to-join flow** (NEW from M-OrgUX-1): Feature complement của duplicate detection. Khi user thấy warning "đã có công ty tương tự", currently chỉ có path là acknowledge + tạo mới. Add path "Yêu cầu CEO mời tôi vào org đó" — gửi notification CEO target org, CEO approve/reject. Cost ~5-7 commits (DB notifications table + 2 API + UI request modal + email digest).
+3. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
+4. **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt): `--brand`/`--accent` collision cleanup. `globals.css` line 159 reassigns `--accent: var(--brand)`, override shadcn neutral `--accent: #ECEAE6` used cho menu/sidebar hover patterns. Audit components dùng `var(--accent)` to determine if brand-coloring is intentional or accidental. Cost ~1-2 commits + visual regression check.
+5. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
+6. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
 
-**Em recommend M-Hoshin-8 = TBD chờ Vũ Hải decide**. Strong candidates by sequencing: M-OrgInvite-1 (closes UX loop opened by M-OrgUX-1) hoặc M-Design-3 (design rollout continuation). M-Member-POV-1 valuable nhưng cần Member primary writer route precedent (đã có từ M-Hoshin-5).
+**Em recommend M-Design-3b** — foundation từ M-Design-3a sẵn dùng (`lib/design/chart-tokens.ts` resolver, 4-tier KPI tokens), high-visibility refactor (xray traffic light + KPI sparkline trong dashboard), strong sequencing (defer = foundation bitrot risk). M-OrgInvite-1 là alternative tốt nếu Vũ Hải prioritize UX loop closure. M-Member-POV-1 valuable nhưng cần Member primary writer route precedent (đã có từ M-Hoshin-5).
 
 ### Future milestones (TBD priority)
 
@@ -1714,7 +1771,9 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - **M-OrgInvite-1 (NEW from M-OrgUX-1)**: Complete UX loop opened by M-OrgUX-1 — request-to-join flow when user lands on duplicate warning. CEO approve/reject path. See candidates list above.
 - **M-Auto-Persist-1**: Auto-save Hoshin draft khi user thao tác create/edit (tránh recurrence draft orphan kiểu M-Hoshin-6.1). Trigger condition: user thật phàn nàn lần 2 — hiện UI gate `!isPersisted` đã đủ defensive cho edge case này.
 - **M-Cleanup-3**: ✅ shipped inline trong M-Hoshin-4 cleanup phase — deactivate 56 duplicate KPIs Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, soft delete reversible). 65 active → 9 unique. KHÔNG cần milestone formal.
-- **M-Design-3**: Dashboard refactor NB v3.2 (sidebar collapse, header user menu). **Priority: MEDIUM**, design system rollout continuation.
+- **M-Design-3b** (NEW from M-Design-3a, HIGH priority sequencing): Dashboard chart refactor consuming foundation tokens. Apply `lib/design/chart-tokens.ts` resolver vào xray-history + KpiSparkline + discovery hub. Add `.dark` KPI token variants. See candidates list above.
+- **M-Design-3-rest** (renamed from M-Design-3): Sidebar collapse + header user menu + dashboard cards refactor (non-chart UI surfaces). **Priority: MEDIUM**, defer until M-Design-3b ships chart layer.
+- **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt, MEDIUM): `--brand`/`--accent` collision in `globals.css` line 159 may conflict với shadcn neutral hover patterns. See candidates list above.
 
 ---
 
