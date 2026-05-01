@@ -30,9 +30,18 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# dotenv files (ALL variants — prevent accidental commit)
+.env
 .env.local
 .env*.local
+.env.production
+.env.development
+.env.staging
+.env.test
+.env.test.local
+
+# Allow .env.example template (committed for setup reference)
+!.env.example
 
 # vercel
 .vercel

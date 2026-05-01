@@ -1163,7 +1163,7 @@ Khi Claude mới vào session:
       Expected: 0 orphan rows. Nếu > 0 → trigger M-Auto-Persist-1 priority bump (UI gate `!isPersisted` không đủ defensive, cần auto-save backend).
   - **M-Hoshin-7 — Anti-pattern Audit + Fix multi-org lookup (2026-04-30)**: ✅ shipped (1 commit `3e29a66`). Original scope (M-Cleanup-2 CRITICAL — hard DELETE 8 duplicate Ladysfit orgs) ABORTED sau diagnose phát hiện 9 orgs là **multi-tenant production users** với owner email khác nhau, KHÔNG phải pollution. Rescoped → static audit `name ILIKE LIMIT 1` anti-pattern (0 hit production code) → fix 2 SWOT routes có pattern `.limit(1).single()` cho user→org lookup (silent pick khi multi-row).
     - **Diagnose findings**: 9 Ladysfit orgs cấu trúc thực tế:
-      - 1 canonical (Vũ Hải `fitnessviet@gmail.com`, CEO, 89 KPIs + 19 xmatrix)
+      - 1 canonical (Vũ Hải `<owner-email>`, CEO, 89 KPIs + 19 xmatrix)
       - 8 user thật khác chủ với data thật (4 xmatrix + ~110 SWOT + ~20 discovery)
       - 9 emails khác nhau, 9 owners độc lập
       - Nếu execute hard DELETE plan ban đầu → mất 8 user thật + data (CRITICAL data loss avoided)
@@ -1265,7 +1265,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 ### 2026-04-30 — Multi-tenant production reality (M-Hoshin-7)
 
 **Discovery**: M-Cleanup-2 diagnose phát hiện 9 organizations với name chứa "Ladysfit" KHÔNG phải duplicate test pollution như HANDOFF cũ giả định. Đây là 9 multi-tenant production users:
-- 1 canonical (Vũ Hải `fitnessviet@gmail.com`, CEO, 89 KPIs + 19 xmatrix + data đầy đủ)
+- 1 canonical (Vũ Hải `<owner-email>`, CEO, 89 KPIs + 19 xmatrix + data đầy đủ)
 - 8 user thật khác chủ với data thật (4 xmatrix + ~110 SWOT + ~20 discovery)
 - 9 emails khác nhau, 9 owners độc lập
 

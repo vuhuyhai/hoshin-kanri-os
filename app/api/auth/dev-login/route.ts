@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
 
-  const email = request.nextUrl.searchParams.get('email') ?? 'fitnessviet@gmail.com'
+  const email =
+    request.nextUrl.searchParams.get('email') ??
+    process.env.DEV_LOGIN_DEFAULT_EMAIL ??
+    'admin@example.com'
 
   // Use admin client to get/create user and generate session
   const adminClient = createClient(

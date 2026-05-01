@@ -97,7 +97,7 @@ ORDER BY o.created_at ASC, om.role ASC;
 ### A4. Identify CANONICAL org
 
 **Criteria**:
-- Có member `email='fitnessviet@gmail.com'` với `role='CEO'`
+- Có member `email='<owner-email>'` với `role='CEO'`
 - Nhiều related rows nhất (xmatrices_active=1, kpis_active>0, gemba>0, hansei>0)
 - Created_at lớn nhất hoặc nhỏ nhất tùy data thật (Vũ Hải xác nhận từ DB)
 
@@ -296,7 +296,7 @@ Nếu A2 output show **8 duplicates đều zero data** → simplify thành Optio
 Trước khi run SQL cleanup, MUST verify:
 
 - [ ] **Backup DB snapshot**: Supabase Dashboard → Database → Backups → trigger manual backup. Confirm backup completed + timestamp recorded.
-- [ ] **Confirm canonical org_id**: query `SELECT om.org_id, o.name FROM org_members om JOIN organizations o ON o.id=om.org_id JOIN auth.users u ON u.id=om.user_id WHERE u.email='fitnessviet@gmail.com' AND om.role='CEO' AND o.name ILIKE '%ladysfit%';`
+- [ ] **Confirm canonical org_id**: query `SELECT om.org_id, o.name FROM org_members om JOIN organizations o ON o.id=om.org_id JOIN auth.users u ON u.id=om.user_id WHERE u.email='<owner-email>' AND om.role='CEO' AND o.name ILIKE '%ladysfit%';`
 - [ ] **Confirm 8 duplicate org_ids zero overlap với canonical**: list 8 UUIDs explicitly, verify canonical UUID NOT in list.
 - [ ] **Dry-run COUNT queries**: capture before-numbers cho mỗi affected table:
   ```sql
@@ -308,7 +308,7 @@ Trước khi run SQL cleanup, MUST verify:
   ;
   ```
 - [ ] **Smoke test plan post-cleanup**:
-  1. Login `fitnessviet@gmail.com` → `/dashboard` render bình thường
+  1. Login `<owner-email>` → `/dashboard` render bình thường
   2. `/dashboard/x-matrix/new` load canonical x_matrix active (M-Hoshin-2 smart route)
   3. `/dashboard/kpi` show Hansei banner nếu có streak (M-Hoshin-4)
   4. `/dashboard/kpi` show Gemba banner nếu có open comment (M-Hoshin-5)
@@ -356,7 +356,7 @@ Trước khi run SQL cleanup, MUST verify:
 
 ## F. Open questions for Vũ Hải
 
-1. **Confirm canonical criteria priority**: nếu Vũ Hải CEO email `fitnessviet@gmail.com` xuất hiện trong > 1 org (vd 2-3 orgs đều CEO) → tiebreaker là gì? Most data? Created_at? Em recommend: **most active data** (xmatrices_active + kpis_active + gemba + hansei tổng cao nhất).
+1. **Confirm canonical criteria priority**: nếu Vũ Hải CEO email `<owner-email>` xuất hiện trong > 1 org (vd 2-3 orgs đều CEO) → tiebreaker là gì? Most data? Created_at? Em recommend: **most active data** (xmatrices_active + kpis_active + gemba + hansei tổng cao nhất).
 
 2. **Backup trigger timing**: anh muốn em viết SQL cleanup script để run ngay sau khi anh paste output A1-A4, hay anh muốn em pause + verify với anh từng step?
 
