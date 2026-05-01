@@ -221,7 +221,7 @@ export default async function DashboardPage() {
                     >
                       {step.label}
                       {isXRay && done && (
-                        <span className="text-xs bg-[#c73937] text-white px-1 ml-2 normal-case tracking-normal">Nguyên liệu SWOT</span>
+                        <span className="text-xs bg-[var(--brand)] text-white px-1 ml-2 normal-case tracking-normal">Nguyên liệu SWOT</span>
                       )}
                     </span>
                   </div>
