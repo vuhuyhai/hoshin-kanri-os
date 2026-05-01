@@ -60,6 +60,16 @@
   --color-accent-peach: #F0DCC0;
   --color-accent-lavender: #DDD3EE;
 
+  /* KPI status tokens — M-Design-3a (mirrors :root --kpi-*) */
+  --color-kpi-healthy: #DDE4C5;
+  --color-kpi-attention: #F5E4B8;
+  --color-kpi-warning: #F0DCDD;
+  --color-kpi-critical: #c73937;
+  --color-kpi-healthy-fg: #1A1A1A;
+  --color-kpi-attention-fg: #1A1A1A;
+  --color-kpi-warning-fg: #1A1A1A;
+  --color-kpi-critical-fg: #FFFFFF;
+
   /* Fonts */
   --font-display: "Space Grotesk", "Inter", sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
@@ -164,6 +174,22 @@
   --accent-pink: #F0DCDD;
   --accent-peach: #F0DCC0;
   --accent-lavender: #DDD3EE;
+
+  /* KPI status tokens — M-Design-3a foundation
+     Reserved for KPI/x-ray traffic-light states.
+     For generic alerts/toasts, use shadcn --destructive (saturated) instead.
+     Tier scale: healthy → attention → warning → critical (escalation).
+     Default UI uses 3-tier (healthy/attention/warning).
+     Critical reserved for system-blocking/fatal cases (use sparingly).
+     Foreground tokens explicit to avoid contrast guessing in components. */
+  --kpi-healthy: var(--accent-lime);     /* #DDE4C5 — on-track, trend up */
+  --kpi-attention: var(--accent-yellow); /* #F5E4B8 — watch, off-track nhẹ */
+  --kpi-warning: var(--accent-pink);     /* #F0DCDD — below threshold, needs action */
+  --kpi-critical: var(--brand);          /* #c73937 — severe/blocking, urgent */
+  --kpi-healthy-fg: var(--ink);          /* 11:1 contrast on lime */
+  --kpi-attention-fg: var(--ink);        /* 13:1 contrast on yellow */
+  --kpi-warning-fg: var(--ink);          /* 12:1 contrast on pink */
+  --kpi-critical-fg: var(--white);       /* 4.8:1 contrast on brand red */
 
   /* Composite borders */
   --border-heavy: 3px solid #1A1A1A;
