@@ -474,6 +474,45 @@ export type Database = {
           },
         ]
       }
+      org_invites: {
+        Row: {
+          id: string
+          org_id: string
+          invited_by: string
+          email: string
+          role: 'Manager' | 'Member'
+          token: string
+          expires_at: string
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          invited_by: string
+          email: string
+          role?: 'Manager' | 'Member'
+          token?: string
+          expires_at?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           created_at: string | null

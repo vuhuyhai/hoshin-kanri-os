@@ -9,13 +9,18 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from('org_members')
     .select('org_id, role')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
 
-  if (!membership) redirect('/onboarding/setup-org')
+  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
+
+  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
+  const membership = lastOrgId
+    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
+    : memberships[0]
 
   const { data: org } = await supabase
     .from('organizations')
@@ -42,6 +47,26 @@ export default async function SettingsPage() {
     }
   })
 
+  const { data: invitesData } =
+    membership.role !== 'Member'
+      ? await supabase
+          .from('org_invites')
+          .select('id, email, role, token, expires_at, created_at')
+          .eq('org_id', membership.org_id)
+          .is('accepted_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+      : { data: [] }
+
+  const invites = (invitesData ?? []).map((i) => ({
+    id: i.id,
+    email: i.email,
+    role: i.role,
+    token: i.token,
+    expiresAt: i.expires_at,
+    createdAt: i.created_at,
+  }))
+
   return (
     <div className="w-full min-h-full p-6 lg:p-8">
       {/* Page header */}
@@ -59,6 +84,7 @@ export default async function SettingsPage() {
           <SettingsClient
             org={org}
             members={members}
+            invites={invites}
             currentUserId={user.id}
             isCeo={membership.role === 'CEO'}
           />

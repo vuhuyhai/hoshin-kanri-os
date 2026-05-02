@@ -24,13 +24,19 @@ export default async function DashboardLayout({
 
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from('org_members')
     .select('*')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
 
-  if (!membership) redirect('/onboarding/setup-org')
+  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
+
+  // Multi-org: prefer org matching user metadata, fallback to most recently joined
+  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
+  const membership = lastOrgId
+    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
+    : memberships[0]
 
   const [{ data: org }, { data: profile }] = await Promise.all([
     supabase

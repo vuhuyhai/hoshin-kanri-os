@@ -36,13 +36,18 @@ export default async function XRayHistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from('org_members')
     .select('org_id')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
 
-  if (!membership) return null
+  if (!memberships || memberships.length === 0) return null
+
+  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
+  const membership = lastOrgId
+    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
+    : memberships[0]
 
   const { data: rawHistory, count } = await supabase
     .from('xray_results')

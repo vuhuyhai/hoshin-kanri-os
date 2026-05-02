@@ -150,6 +150,37 @@ export function xRayReportEmailTemplate(data: {
   return { subject, html }
 }
 
+export function inviteEmailTemplate(data: {
+  orgName: string
+  inviterName: string
+  role: 'Manager' | 'Member'
+  inviteLink: string
+}) {
+  const safe = safeHref(data.inviteLink)
+  const subject = `Bạn được mời tham gia ${data.orgName} trên Chiến Lược OS`
+  const html = baseLayout(`
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#1a1a1a">
+      Lời mời tham gia tổ chức
+    </h2>
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#444">
+      <strong>${data.inviterName}</strong> đã mời bạn tham gia
+      <strong>${data.orgName}</strong> trên Chiến Lược OS với vai trò
+      <strong>${data.role}</strong>.
+    </p>
+    <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#444">
+      Nhấn nút bên dưới để chấp nhận lời mời và bắt đầu cộng tác.
+    </p>
+    ${ctaButton(data.inviteLink, 'Chấp nhận lời mời')}
+    <p style="margin:16px 0 0;font-size:12px;color:#888">
+      Lời mời có hiệu lực trong 7 ngày. Nếu bạn không biết người gửi, hãy bỏ qua email này.
+    </p>
+    <p style="margin:12px 0 0;font-size:11px;color:#aaa;word-break:break-all">
+      Nếu nút không hoạt động, sao chép link sau:<br>${safe}
+    </p>
+  `)
+  return { subject, html }
+}
+
 export function resetPasswordEmailTemplate(link: string) {
   const safe = safeHref(link)
   const subject = 'Đặt lại mật khẩu — Hoshin Kanri OS'

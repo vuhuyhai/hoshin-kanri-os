@@ -9,13 +9,18 @@ export default async function SwotStrategyPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from('org_members')
     .select('org_id')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
 
-  if (!membership) redirect('/onboarding/setup-org')
+  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
+
+  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
+  const membership = lastOrgId
+    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
+    : memberships[0]
 
   const { data: existingAnalysis } = await supabase
     .from('swot_analyses')

@@ -12,11 +12,18 @@ export default async function KpiPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from('org_members')
     .select('org_id, role')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
+
+  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
+  const membership = memberships?.length
+    ? (lastOrgId
+        ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
+        : memberships[0])
+    : null
 
   const orgId = membership?.org_id ?? ''
   const role = (membership?.role ?? 'Member') as 'CEO' | 'Manager' | 'Member'

@@ -1,13 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { postJson, FetchJsonError } from '@/lib/http/fetch-json'
+
+// Whitelist redirect targets to prevent open-redirect attacks via ?redirect=.
+// Anything outside the allowlist falls back to /dashboard.
+function safeRedirect(redirectParam: string | null): string {
+  if (!redirectParam) return '/dashboard'
+  const inviteUuidPattern = /^\/invite\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (inviteUuidPattern.test(redirectParam)) return redirectParam
+  if (redirectParam === '/dashboard' || redirectParam.startsWith('/dashboard/')) return redirectParam
+  return '/dashboard'
+}
+
+function loginHref(redirect: string): string {
+  if (redirect === '/dashboard') return '/login'
+  return `/login?redirect=${encodeURIComponent(redirect)}`
+}
 
 interface FormErrors {
   full_name?: string
@@ -28,6 +44,16 @@ function validate(full_name: string, email: string, phone: string, password: str
 }
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  )
+}
+
+function RegisterForm() {
+  const searchParams = useSearchParams()
+  const redirect = safeRedirect(searchParams.get('redirect'))
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -85,7 +111,7 @@ export default function RegisterPage() {
               <br />Nhấn vào link trong email để kích hoạt tài khoản.
             </p>
             <Link
-              href="/login"
+              href={loginHref(redirect)}
               className="inline-block font-display text-xs font-semibold uppercase tracking-wider text-accent-brand hover:underline min-h-[44px] leading-[44px]"
             >
               Quay về đăng nhập
@@ -139,7 +165,7 @@ export default function RegisterPage() {
 
         <p className="mt-6 text-center font-body text-xs text-text-3">
           Đã có tài khoản?{' '}
-          <Link href="/login" className="font-display font-semibold text-accent-brand hover:underline">
+          <Link href={loginHref(redirect)} className="font-display font-semibold text-accent-brand hover:underline">
             Đăng nhập ngay
           </Link>
         </p>

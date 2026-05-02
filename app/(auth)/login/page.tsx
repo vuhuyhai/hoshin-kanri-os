@@ -13,6 +13,22 @@ import { Check, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 const ERROR_MESSAGES: Record<string, string> = { auth_failed: 'Đăng nhập thất bại. Vui lòng thử lại.', invalid_credentials: 'Email hoặc mật khẩu không đúng.' }
 
+// Whitelist redirect targets to prevent open-redirect attacks via ?redirect=.
+// Anything outside the allowlist falls back to /dashboard.
+function safeRedirect(redirectParam: string | null): string {
+  if (!redirectParam) return '/dashboard'
+  const inviteUuidPattern = /^\/invite\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (inviteUuidPattern.test(redirectParam)) return redirectParam
+  if (redirectParam === '/dashboard' || redirectParam.startsWith('/dashboard/')) return redirectParam
+  return '/dashboard'
+}
+
+function registerHref(redirectParam: string | null): string {
+  const target = safeRedirect(redirectParam)
+  if (target === '/dashboard') return '/register'
+  return `/register?redirect=${encodeURIComponent(target)}`
+}
+
 function LoginForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -50,7 +66,7 @@ function LoginForm() {
       }
       return
     }
-    router.push('/dashboard')
+    router.push(safeRedirect(searchParams.get('redirect')))
   }
 
   const handleGoogleLogin = async () => {
@@ -120,7 +136,7 @@ function LoginForm() {
 
       <p className="mt-6 text-center font-body text-xs text-text-3">
         Chưa có tài khoản?{' '}
-        <Link href="/register" className="font-display font-semibold text-accent-brand hover:underline">Đăng ký ngay</Link>
+        <Link href={registerHref(searchParams.get('redirect'))} className="font-display font-semibold text-accent-brand hover:underline">Đăng ký ngay</Link>
       </p>
     </div>
   )
