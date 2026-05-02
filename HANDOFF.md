@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-05-01 — post M-Design-3a (KPI status tokens foundation + chart-tokens runtime resolver + first dashboard hex refactor, 3 commits d7fdb6d→b3ff123). Preceded by M-OrgUX-1 (duplicate org detection: DB index 034 + API + UI + 2 smoke test scripts, 6 commits 6ccd776→d57c7f1).
+> **Last verified**: 2026-05-02 — post M-Design-3b (Dashboard hex-to-token refactor: score-tier + kpi-strong tokens foundation + 4 files refactored to consume them, 6 commits 868fa34→ed27932, HEAD ed27932). Preceded by M-Design-3a (KPI status tokens foundation + chart-tokens runtime resolver + first dashboard hex refactor, 3 commits d7fdb6d→b3ff123).
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -611,6 +611,19 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
     - Generic alert/error toast → shadcn `var(--destructive)` (saturated, không phải NB pastel).
     - Nếu ambiguous → STOP, hỏi Vũ Hải. Don't auto-apply.
 
+22. **`--border-subtle` shorthand không assignable cho `borderColor`** (learned M-Design-3b). Token `--border-subtle: 1px solid var(--bg-muted)` trong `globals.css :root` là CSS shorthand (full border declaration: width + style + color), KHÔNG phải pure color value. Hệ quả: `style={{ borderColor: 'var(--border-subtle)' }}` fail — browser không parse `1px solid #...` như color. Workarounds:
+    - **Option 1 — color-mix() inline cho subtle muted border**: `style={{ borderColor: 'color-mix(in srgb, var(--text-3) 30%, transparent)' }}`. Native CSS, supported Chrome 111+ / Safari 16.2+ / Firefox 113+ (M-Design-3b target browsers all OK). Pattern dùng cho LOCKED state badge `app/dashboard/discovery/page.tsx`.
+    - **Option 2 — Assign full shorthand qua `border` prop**: `style={{ border: 'var(--border-subtle)' }}` (override default `border-2` className etc.). Dùng khi cần style đồng bộ với utility class.
+    - Convention: cần tweak weight/style border → Option 1 (color-mix). Cần đồng bộ với utility → Option 2.
+    - Pattern lesson: token shorthand khác token color value — kiểm tra value structure (`grep '<token-name>:' globals.css`) trước khi consume trong inline style.
+
+23. **Recharts không nhận `var(--token)` + Server Component không safe call `resolveToken`** (learned M-Design-3b, extends pitfall #19). Hai constraint kết hợp ép pattern "server return tier name, client resolve color":
+    - **Recharts limit**: props (stroke, fill, dot.stroke, dot.fill, ReferenceLine.stroke...) parse qua `react-smooth` library → KHÔNG resolve CSS var. `<Line stroke="var(--kpi-healthy)" />` fail silent (no color render). Cần runtime resolver `resolveToken(name, fallback)` đọc `getComputedStyle(documentElement)` → trả concrete hex string. Helper memoized module-level Map.
+    - **Server boundary limit**: `resolveToken` check `typeof window === 'undefined'` → SSR returns hardcoded fallback. Server Component (vd `app/dashboard/discovery/xray-history/page.tsx`) gọi `resolveToken` → luôn ra fallback hex, KHÔNG đọc theme runtime → black-flash hoặc visual lệch nếu fallback không match `:root`. Pattern: server compute tier name (`getScoreTier(score)` pure function trả `'critical' | 'weak' | 'fair' | 'good'`) → pass tier prop xuống client component → client (`'use client'`) call `resolveScoreToken(tier)`.
+    - **Data contract pattern**: nếu data flow server → Recharts qua serialized props, ChartDataPoint shape carry tier name (`tier: ScoreTier`), KHÔNG carry pre-baked hex (`color: string`). Client unwrap tier → token. Đã apply trong `XRayHistoryChart.tsx` Phase 3 M-Design-3b.
+    - **HTML elements khác Recharts**: `<span style={{ color: 'var(--score-good)' }}>` work fine trên server hoặc client component vì browser cascade resolve var() runtime. Chỉ Recharts mới cần resolver bridge.
+    - **Recharts alpha pattern**: dùng `withAlpha(hexColor, '20')` helper từ `lib/design/chart-tokens.ts` (KHÔNG dùng `color-mix()` trong Recharts props — react-smooth parse fail trên một số browsers + SSR-unreliable).
+
 ---
 
 ## 11. Dev Workflow
@@ -852,25 +865,27 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-05-01 — post M-Design-3a)
+## 16. Current State Snapshot (2026-05-02 — post M-Design-3b)
 
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-01 — post M-Design-3a (KPI status tokens foundation: 8 `--kpi-*` tokens in `globals.css` + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `#c73937` → `var(--brand)` in `app/dashboard/page.tsx`). 3 commits `d7fdb6d`→`b3ff123`. Preceded by M-OrgUX-1 (duplicate org detection: DB functional index + API + UI + 2 smoke tests, 6 commits `6ccd776`→`d57c7f1`).
+- **Last verified**: 2026-05-02 — post M-Design-3b (Dashboard hex-to-token refactor: 6 commits `868fa34`→`ed27932`, HEAD `ed27932`, 4 files refactored, 0 raw hex còn trong logic). Foundation extended (`--score-{critical,weak,fair,good}` saturated 4-tier + `--kpi-{healthy,attention}-strong` saturated variants + `withAlpha()` helper) + 4 consumer refactors (xray-history page + chart, KpiSparkline, discovery hub badges + checkmarks). Preceded by M-Design-3a (KPI tokens foundation, 3 commits `d7fdb6d`→`b3ff123`).
 - **Last migration applied**: `034` — functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`). Index size ~16 KB at 9 orgs; scales linearly ~10 MB / 100k orgs.
 - **API routes count**: 48 (47 + `/api/orgs/check-similar`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Design-3a (KPI status tokens foundation) — 3 commits `d7fdb6d`→`b3ff123`, 3 files changed:
-  - `d7fdb6d` feat(design): add 8 `--kpi-*` status tokens (healthy/attention/warning/critical + `-fg` foreground pairs) trong `app/globals.css` `:root` (line 185-192) + mirror trong `@theme inline` (line 64-71). Aliases existing accent palette (lime/yellow/pink + brand red), KHÔNG hex mới. AA-compliant contrast 11:1 → 4.8:1. `.dark` block UNTOUCHED (defer M-Design-3b).
-  - `11b7ff7` feat(design): add `lib/design/chart-tokens.ts` (99 LOC) runtime resolver cho Recharts integration. Exports: `resolveToken(name, fallback?)` SSR-safe + `kpiStatusColor(status)` higher-level API + `getKpiSeriesColors()` 4-color array + `KpiStatus` type + `KPI_TOKEN_NAMES` const + `clearTokenCache()` (unused, ready cho dark mode toggle). Module-level Map cache, fallback default `#000000` (loud failure principle).
-  - `b3ff123` refactor(dashboard): replace hardcoded `bg-[#c73937]` → `bg-[var(--brand)]` ở `app/dashboard/page.tsx:224` (pill "Nguyên liệu SWOT" — semantic decision: brand emphasis label, KHÔNG phải KPI critical). 1 line changed, visual identity preserved.
-  - Verified clean (no commits): `app/dashboard/settings/page.tsx` + `app/dashboard/x-matrix/page.tsx` (23-line redirect) — 0 hardcoded hex.
-  - Foundation ready for M-Design-3b: xray-history pages + KpiSparkline + discovery hub (high-impact files với hardcoded chart colors, defer per scope decision).
-- **Previous feature work**: M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
+- **Latest feature work**: M-Design-3b (Dashboard hex-to-token refactor) — 6 commits `868fa34`→`ed27932`, 5 files changed (1 foundation + 4 consumers):
+  - `868fa34` feat(design): add score tier + kpi-strong tokens for M-Design-3b foundation. Add 6 new tokens trong `app/globals.css :root`: `--kpi-healthy-strong: #16A34A` + `--kpi-attention-strong: #D97706` (saturated companions cho pastel `--kpi-*`) + `--score-{critical,weak,fair,good}` 4-tier saturated cho X-Ray health score. Extend `lib/design/chart-tokens.ts`: `ScoreTier` type, `getScoreTier(score)` server-safe classifier, `resolveScoreToken(tier)` client resolver, `SCORE_TOKEN_NAMES` Record map, extend `KPI_TOKEN_NAMES` thêm `healthyStrong`/`attentionStrong`. `--kpi-warning-strong` deliberately KHÔNG ship — reuse shadcn `--destructive` cho red strokes. `.dark` block UNTOUCHED.
+  - `8121194` refactor(xray): replace hardcoded hex with design tokens. `app/dashboard/discovery/xray-history/XRayHistoryChart.tsx` (client component) — 10 hex sites → `resolveToken('ink')` + `resolveToken('chart-4')` + `resolveScoreToken({critical,weak,fair})`. Stray `#2C2B2B` legacy color normalized → `--ink` (#1A1A1A) tại 4 sites. Move `CustomDot` inside main component closure để share resolved `ink` ref. 2 SSR fallback hex còn lại (`'#1A1A1A'`, `'#8A8787'`) trong `resolveToken(...)` args là intentional defaults — prevent black-flash khi SSR.
+  - `8d875d7` refactor(xray-history): replace hardcoded hex with score tier tokens. `app/dashboard/discovery/xray-history/page.tsx` (server) delete `getScoreColor()`, import `getScoreTier`. Score number span dùng `style={{ color: \`var(--score-${getScoreTier(score)})\` }}` (Pattern C — var() resolve client-side trên HTML element). `chartData.color: string` → `chartData.tier: ScoreTier` data contract change. Client `XRayHistoryChart` consume `payload.tier` → `resolveScoreToken(payload.tier)` cho `<Dot fill>`. Locks in "server return tier name, client resolve color" pattern (decision §3).
+  - `6eea631` refactor(kpi): replace hardcoded hex with strong tokens + add withAlpha helper. `app/dashboard/kpi/components/KpiSparkline.tsx` — 3 hardcoded hex strokes → `resolveToken('kpi-healthy-strong'/'kpi-attention-strong'/'destructive')`. Area fills (alpha 12.5%) dùng `withAlpha(color, '20')` helper mới — defensive regex check, returns `'transparent'` cho non-hex-6 input. Shape collapse `{ line, fill, dot }` → `{ stroke, fill }` (dot fill = stroke color, same hue). Visual diff intent: green deeper (`#22c55e` → `#16A34A`), amber deeper (`#eab308` → `#D97706`); red unchanged.
+  - `792e43c` refactor(discovery): replace badge hex with KPI pastel tokens. `app/dashboard/discovery/page.tsx` — 3 module-level const `BADGE_STYLE_{DONE,NEXT,LOCKED}` để dedupe 4 inline-style sites (DONE used 2x). Map Tailwind palette → KPI tokens với intentional hue shift (emerald → kpi-healthy lime, amber → kpi-attention warm yellow). LOCKED border dùng `color-mix(in srgb, var(--text-3) 30%, transparent)` mirror visual weight gốc.
+  - `ed27932` refactor(discovery): replace checkmark hex with score-good token. 2 sites `#059669` (emerald-600) → `var(--score-good)` (#16A34A green-600) ở step-list checkmark + "Hoàn thành!" overline. Align success indicator hue với X-Ray "Tốt" tier + chart success ReferenceLine. `discovery/page.tsx` hex-clean (0 matches).
+  - **Files deferred**: `app/dashboard/kpi/components/KpiCard.tsx` Tailwind utility classes (`bg-green-100`, `text-red-600`, etc.) — KHÔNG phải inline hex → out of scope M-Design-3b. Defer M-Design-Tailwind-Cleanup-1.
+- **Previous feature work**: M-Design-3a (KPI status tokens foundation, 3 commits `d7fdb6d`→`b3ff123`, 3 files: 8 `--kpi-*` tokens + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `app/dashboard/page.tsx:224`) → M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
 - **Known open items**:
   - Check `plans/` folder cho WIP notes
   - **X-Ray production hotfix 2026-04-26**: ✅ Public X-Ray (`/x-ray`) was failing to render report after 21-question submission on production. Root cause: `max_tokens=2500` in `/api/x-ray/score` too low for 7-pillar Vietnamese output → JSON truncated → strict validator returned null → silent 502. Fix commit: `c5a915e`. Changes:
@@ -1347,6 +1362,55 @@ Khi Claude mới vào session:
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
 
+### 2026-05-02 — Score scale tách biệt KPI scale (M-Design-3b)
+
+**Milestone**: M-Design-3b — Dashboard hex-to-token refactor (consume M-Design-3a foundation + extend với saturated variants + new score scale).
+
+**Scope**: 6 commits `868fa34`→`ed27932` (5 files: 1 foundation + 4 consumer refactors). 0 raw hex còn trong logic của 4 files refactored.
+
+**Driving need**: M-Design-3a ship 4-tier pastel `--kpi-*` (background fills) + chart-tokens resolver. M-Design-3b refactor 4 high-impact files (xray-history page + chart, KpiSparkline, discovery hub) phát hiện 5 blockers trong audit Task 1: scale alignment xray (red/amber/blue/green) ≠ KPI pastel (red/pink/yellow/lime), saturated stroke variants thiếu, server/client boundary cho `resolveToken`, KpiCard 3-tier vs KPI 4-tier mismatch, dark mode scope.
+
+**Decisions** (5 locked):
+
+- **Tách 2 scales (Option C của 3 candidates)**: `--score-{critical|weak|fair|good}` saturated 4-tier cho X-Ray health score (assessment one-time, hue affordances red/amber/blue/green) + giữ `--kpi-{healthy|attention|warning|critical}` pastel (M-Design-3a foundation, ongoing tracking với escalation scale). 2 mental models khác nhau (one-time assessment vs ongoing) → 2 visual scales. Reject Option A (đổi xray sang red/pink/yellow/green đồng bộ KPI — mất "blue=trung bình" affordance) + Option B (extend KPI thêm saturated variants tier-by-tier — hue mismatch giữa names).
+- **Saturated KPI variants reuse `--destructive` cho red**: Add `--kpi-healthy-strong: #16A34A` + `--kpi-attention-strong: #D97706` (saturated companions cho pastel `--kpi-{healthy,attention}` — needed cho line strokes / dot fills / borders trên white card surface). KHÔNG ship `--kpi-warning-strong` — reuse shadcn `--destructive` (#ef4444) cho red strokes. KPI critical tier đã saturated (`--kpi-critical = --brand`).
+- **Server/client boundary cho color resolution**: Server Component compute tier name string (pure `getScoreTier(score) → 'critical' | 'weak' | 'fair' | 'good'`) → pass tier prop xuống client component → client (`'use client'`) call `resolveScoreToken(tier)`. Data contract: ChartDataPoint carry `tier: ScoreTier` thay vì `color: string`. Tránh SSR hardcode hex fallback flash. HTML elements bypass — `style={{ color: \`var(--score-${tier})\` }}` work cả server lẫn client (browser cascade resolve var() runtime).
+- **KpiCard 3-tier giữ nguyên (KHÔNG sync 4-tier)**: M-Design-3b scope = "thay hex bằng token" KHÔNG đổi behavior. KpiCard logic `<70% / 70-90% / ≥90%` independent từ KPI 4-tier escalation scale. Đồng bộ scale là semantic redesign — defer khi có user request.
+- **Dark mode OUT OF SCOPE**: `.dark` block UNTOUCHED. Reason: M-Design-3a foundation cũng skip dark; adding dark variants without visual A/B context (dashboard side-by-side) = guessing. Defer M-Design-Dark-1 khi có user request explicit.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG dùng `var(--score-*)` cho Recharts props (stroke, fill, dot.fill, ReferenceLine.stroke...) — Recharts không resolve var(), phải qua `resolveScoreToken(tier)` trả concrete hex string. HTML elements (span, div, p, button) NHẬN `var()` qua inline style hoặc className.
+- KHÔNG mix `--score-*` (saturated) với `--kpi-*` pastel cho cùng UI element. Pairing rule: `bg = --kpi-{tier}` + `text = --kpi-{tier}-fg` + `border = --kpi-{tier}-strong` (3 tokens cùng nhóm). Score scale là standalone — text color trên white bg, không có pastel bg paired.
+- KHI add chart mới cần status colors: dùng `--score-*` cho assessment-style (one-time score, fixed band scale), dùng `--kpi-*-strong` cho tracking-style (ongoing KPI, escalation scale). Đừng tự tạo token mới — extend existing scale qua proposal commit (foundation independent từ consumer refactor).
+- KHÔNG add tier thứ 5 cho score scale (4-tier locked: critical/weak/fair/good ↔ ≤25/26-50/51-75/>75). Nếu cần granularity hơn → propose redesign milestone, không bolt-on.
+- Recharts alpha pattern: dùng `withAlpha(color, hexSuffix)` từ `lib/design/chart-tokens.ts`. Defensive regex check, returns `'transparent'` cho non-hex-6 input. KHÔNG dùng `color-mix()` trong Recharts props (parse fail trên một số browsers + SSR-unreliable). HTML elements OK với color-mix.
+- KHI thay `style={{ color: '#xxx' }}` cho HTML element → pattern là `style={{ color: 'var(--token-name)' }}`. Server component có thể compute tier name động: `style={{ color: \`var(--score-${getScoreTier(score)})\` }}`. KHÔNG hardcode hex fallback inline (defeat the purpose).
+- KHI Server Component cần data input cho client chart, pass MINIMAL tier name (`'critical' | ...`), KHÔNG pre-resolve hex. Client unwrap → token.
+- KHI ship dark mode (M-Design-Dark-1 future), MUST add dark variants cho `--score-{critical,weak,fair,good}` + `--kpi-{healthy,attention}-strong` cùng commit + visual A/B test trước khi merge. Don't drift.
+
+**Pattern lessons** (đáng generalize):
+
+1. **Foundation commit ship riêng** (proven 6 milestones liên tiếp). Commit `868fa34` (tokens + helpers) ship ĐỘC LẬP trước 5 refactor commits. Phase boundary discipline §17 lesson #2 (M-Hoshin-3 archive). Lý do: nếu lỗi token → rollback 1 commit, không touch consumers. Apply universally cho mọi design system extension.
+2. **Audit-before-refactor mandatory cho design refactor >3 files**. Cursor audit Task 1 phát hiện 5 blockers trước refactor → tránh rollback 2-3h. Audit cost ~15 phút. Saved factor 8-10x. Áp dụng universally cho mọi design refactor đa file.
+3. **Token shorthand pitfall**: token `--border-subtle: 1px solid var(--bg-muted)` là CSS shorthand (full border declaration), KHÔNG assignable cho `borderColor` prop. Khi consume trong inline style cần `borderColor` thuần color → dùng color-mix() hoặc assign full `border` shorthand. Pattern lesson: token shorthand không universal, kiểm tra value structure (grep `:root`) trước khi consume. New pitfall §10 #22.
+4. **Hue shift acceptance pattern**: Refactor `#22c55e` → `#16A34A` (Tailwind 500→600) + `#eab308` → `#D97706` (yellow-500→amber-600) + Tailwind emerald-100 → `--kpi-healthy` lime tạo visual delta NHẸ (~5-10° hue, ~1 step lightness). User-facing recognition vẫn đúng (green=healthy, amber=attention). Pattern brand consistency > pixel-perfect Tailwind match acceptable. Apply: design system rollout chấp nhận hue delta nhẹ thay vì giữ bug-compatibility với palette cũ.
+5. **`SCORE_TOKEN_NAMES` Record vs array**: Cursor decision Task 2 dùng `Record<ScoreTier, string>` thay vì `as const` array (Vũ Hải prompt sai). Object an toàn hơn — type-safe lookup không bị off-by-one, match precedent `KPI_TOKEN_NAMES`. Lesson: trust Cursor judgment cho code shape decisions, em focus on semantic + flow.
+6. **Out-of-scope discipline**: KpiCard.tsx Tailwind utility classes flagged audit nhưng SKIP M-Design-3b vì scope = "inline hex → token only". Defer riêng M-Design-Tailwind-Cleanup-1. Tránh scope creep cuối milestone (4 files refactor đã đủ work, thêm KpiCard = +1h debate Tailwind palette decisions).
+
+**Pairing rule reference card**:
+
+| Use case | bg | text | border / stroke |
+|---|---|---|---|
+| KPI status badge | `--kpi-{tier}` | `--kpi-{tier}-fg` | `--kpi-{tier}-strong` (or `--destructive` cho warning) |
+| KPI sparkline / chart | — | — | `--kpi-{healthy,attention}-strong` + `--destructive` (red) |
+| KPI area fill (12.5% alpha) | `withAlpha(stroke, '20')` | — | (same stroke) |
+| Score number text | (transparent) | `var(--score-{tier})` | — |
+| Score chart ReferenceLine | — | — | `resolveScoreToken(tier)` (Recharts) |
+| Generic alert/toast | — | `--destructive-foreground` | `--destructive` |
+
+---
+
 ### 2026-05-01 — KPI status tokens foundation (M-Design-3a)
 
 **Milestone**: M-Design-3a — KPI Status Tokens Foundation (split from original M-Design-3 dashboard refactor).
@@ -1737,6 +1801,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Design-3b — Dashboard hex-to-token refactor** ✅ SHIPPED 2026-05-02 (6 commits `868fa34`→`ed27932`, 5 files changed: 1 foundation extend + 4 consumer refactors). 0 raw hex còn trong logic của 4 files. Foundation: `--kpi-{healthy,attention}-strong` saturated variants + `--score-{critical,weak,fair,good}` 4-tier scale + `withAlpha()` helper + `ScoreTier` type + `getScoreTier()` server-safe classifier + `resolveScoreToken()` client resolver. Consumers: XRayHistoryChart (10 sites + CustomDot closure), xray-history page (server tier-passing pattern), KpiSparkline (3 sites + alpha pattern), discovery hub (5 sites: 3 badges + 2 checkmarks). 5 decisions locked (tách 2 scales, reuse `--destructive`, server/client boundary, KpiCard 3-tier giữ nguyên, dark mode out-of-scope). KpiCard.tsx Tailwind utility classes deferred → M-Design-Tailwind-Cleanup-1. New pitfalls §10 #22 (border-subtle shorthand), #23 (Recharts var() + server boundary). See §16 + §17.
 - **M-Design-3a — KPI Status Tokens Foundation** ✅ SHIPPED 2026-05-01 (3 commits `d7fdb6d`→`b3ff123`, 3 files changed). 8 `--kpi-*` semantic tokens trong `app/globals.css` (healthy/attention/warning/critical + `-fg` foreground pairs, AA-compliant 11:1 → 4.8:1) aliasing existing accent palette + `lib/design/chart-tokens.ts` (99 LOC) runtime resolver cho Recharts integration (Recharts props KHÔNG accept `var()` — cần `resolveToken()` helper) + first refactor proving pattern (`app/dashboard/page.tsx:224` `#c73937` → `var(--brand)` semantic decision: brand emphasis NOT KPI critical). MVP split scope decision: defer xray-history + KpiSparkline + discovery hub → M-Design-3b. `.dark` block UNTOUCHED. New pitfalls §10 #19 (Tailwind v4 + Recharts 3-layer), #20 (token aliasing vs dup hex), #21 (audit-first hex replacement). See §16 + §17.
 - **M-OrgUX-1 — Duplicate Org Detection on Onboarding** ✅ SHIPPED 2026-05-01 (6 commits `6ccd776`→`d57c7f1`, 8 files across 3 layers). DB functional index 034 (applied via dashboard, `.sql` not yet committed — DEBT) + API `/api/orgs/check-similar` (auth + Zod + rate limit 10/min/user + admin-bypass query + audit log + NO id in response) + UI `/onboarding/setup-org` (debounced check + acknowledgement gate + Vietnamese alert) + 2 smoke tests (PowerShell API 6/6 PASS + Playwright UI 5/5 PASS). Pivoted from M-Cleanup-2 mass-delete plan after multi-tenant audit. Pre-cursor docs commit `6ccd776` aligned MASTER_BUILD_SPEC. New pitfalls: §10 #16 PowerShell quirks, #17 Playwright shadcn/Sonner selectors, #18 Next 16 dev server stability. See §16 + §17.
 - **M-Public-1 — Repository Public + HANDOFF Auto-sync** ✅ SHIPPED 2026-05-01 (2 commits: `e305e61` sanitize PII + `aabedce` LICENSE notice). Repo flipped GitHub private→public sau pre-flight 5-step audit (hardcoded secrets HEAD + git history + .env files + .gitignore coverage + PII grep). 5 sanitize changes (dev-login env var fallback, cleanup_users.sql psql variable, 6 docs PII → `<owner-email>` placeholder, .gitignore hardened 8 dotenv variants, README LICENSE section "All rights reserved"). Post-flip curl HTTP 200 verified. HANDOFF auto-sync URL: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md`. 4 pattern lessons L21-L24 (pre-public audit, Fastly propagation, web_fetch constraint, PowerShell here-string). See §16 + §17.
@@ -1752,14 +1817,15 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 **Candidates ưu tiên** (chọn 1 sau khi anh decide):
 
-1. **M-Design-3b — Dashboard chart refactor** (NEW from M-Design-3a foundation): Apply `lib/design/chart-tokens.ts` resolver vào high-impact files: `xray-history/page.tsx` + `XRayHistoryChart.tsx` (8 hardcoded Recharts hex) + `kpi/components/KpiSparkline.tsx` (4 hardcoded chart hex) + `discovery/page.tsx` (7 inline bg colors). Add `.dark` variants cho 8 `--kpi-*` tokens cùng commit + visual A/B test side-by-side light/dark. Cost ~5-7 commits, 2-3h. **STRONG sequencing**: foundation đã ship M-Design-3a, defer = bitrot risk.
-2. **M-OrgInvite-1 — Request-to-join flow** (NEW from M-OrgUX-1): Feature complement của duplicate detection. Khi user thấy warning "đã có công ty tương tự", currently chỉ có path là acknowledge + tạo mới. Add path "Yêu cầu CEO mời tôi vào org đó" — gửi notification CEO target org, CEO approve/reject. Cost ~5-7 commits (DB notifications table + 2 API + UI request modal + email digest).
-3. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
-4. **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt): `--brand`/`--accent` collision cleanup. `globals.css` line 159 reassigns `--accent: var(--brand)`, override shadcn neutral `--accent: #ECEAE6` used cho menu/sidebar hover patterns. Audit components dùng `var(--accent)` to determine if brand-coloring is intentional or accidental. Cost ~1-2 commits + visual regression check.
-5. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
-6. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
+1. **M-OrgInvite-1 — Request-to-join flow** (NEW from M-OrgUX-1): Feature complement của duplicate detection. Khi user thấy warning "đã có công ty tương tự", currently chỉ có path là acknowledge + tạo mới. Add path "Yêu cầu CEO mời tôi vào org đó" — gửi notification CEO target org, CEO approve/reject. Cost ~5-7 commits (DB notifications table + 2 API + UI request modal + email digest).
+2. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
+3. **M-Design-Tailwind-Cleanup-1** (NEW from M-Design-3b deferred scope): KpiCard.tsx Tailwind utility classes (`bg-green-100`, `text-red-600`, `border-red-200`, `dark:bg-green-950`, etc.) + tangential utilities trong `discovery/page.tsx` (`border-red-300`, `text-amber-600`, `bg-gray-900`, etc.) không khớp NB palette / KPI tokens. Cần decision: tạo utility classes mới (`.kpi-healthy-bg` etc.) hay convert sang inline style với CSS vars. Cost ~2-3h. **Trigger**: design audit khám phá hue mismatch user-visible HOẶC milestone refactor dashboard sang dark mode (M-Design-Dark-1).
+4. **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt): `--brand`/`--accent` collision cleanup. `globals.css` line 169 reassigns `--accent: var(--brand)` (#c73937), override shadcn neutral `--accent: #ECEAE6` used cho menu/sidebar hover patterns. Audit components dùng `var(--accent)` to determine if brand-coloring is intentional or accidental. Cost ~1-2 commits + visual regression check.
+5. **M-Design-Dark-1** (NEW from M-Design-3b deferred): Add `.dark` variants cho `--kpi-*` (M-Design-3a foundation) + `--kpi-*-strong` + `--score-*` (M-Design-3b foundation). Visual A/B test side-by-side light/dark cho xray history chart + KpiSparkline + dashboard cards. Trigger: user request explicit, currently no signal. Cost ~3-4 commits, 2-3h.
+6. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
+7. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
 
-**Em recommend M-Design-3b** — foundation từ M-Design-3a sẵn dùng (`lib/design/chart-tokens.ts` resolver, 4-tier KPI tokens), high-visibility refactor (xray traffic light + KPI sparkline trong dashboard), strong sequencing (defer = foundation bitrot risk). M-OrgInvite-1 là alternative tốt nếu Vũ Hải prioritize UX loop closure. M-Member-POV-1 valuable nhưng cần Member primary writer route precedent (đã có từ M-Hoshin-5).
+**Em recommend M-OrgInvite-1** — UX loop closure cho M-OrgUX-1 (duplicate detection) là gap visible khi user gặp warning. Member-POV-1 valuable second nhưng scope rộng hơn. Tailwind/Tokens cleanup là tech debt, defer until trigger thật. M-Design-Dark-1 không có signal user, defer đến request.
 
 ### Future milestones (TBD priority)
 
@@ -1771,9 +1837,10 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - **M-OrgInvite-1 (NEW from M-OrgUX-1)**: Complete UX loop opened by M-OrgUX-1 — request-to-join flow when user lands on duplicate warning. CEO approve/reject path. See candidates list above.
 - **M-Auto-Persist-1**: Auto-save Hoshin draft khi user thao tác create/edit (tránh recurrence draft orphan kiểu M-Hoshin-6.1). Trigger condition: user thật phàn nàn lần 2 — hiện UI gate `!isPersisted` đã đủ defensive cho edge case này.
 - **M-Cleanup-3**: ✅ shipped inline trong M-Hoshin-4 cleanup phase — deactivate 56 duplicate KPIs Ladysfit org qua SQL ROW_NUMBER strategy (giữ oldest, soft delete reversible). 65 active → 9 unique. KHÔNG cần milestone formal.
-- **M-Design-3b** (NEW from M-Design-3a, HIGH priority sequencing): Dashboard chart refactor consuming foundation tokens. Apply `lib/design/chart-tokens.ts` resolver vào xray-history + KpiSparkline + discovery hub. Add `.dark` KPI token variants. See candidates list above.
-- **M-Design-3-rest** (renamed from M-Design-3): Sidebar collapse + header user menu + dashboard cards refactor (non-chart UI surfaces). **Priority: MEDIUM**, defer until M-Design-3b ships chart layer.
-- **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt, MEDIUM): `--brand`/`--accent` collision in `globals.css` line 159 may conflict với shadcn neutral hover patterns. See candidates list above.
+- **M-Design-Tailwind-Cleanup-1** (NEW from M-Design-3b deferred scope, TBD priority): KpiCard.tsx + tangential Tailwind utility classes trong discovery/page.tsx không khớp NB palette / KPI tokens. See candidates list above.
+- **M-Design-3-rest** (renamed from M-Design-3): Sidebar collapse + header user menu + dashboard cards refactor (non-chart UI surfaces). **Priority: MEDIUM**, defer until đụng vào sidebar/header redesign.
+- **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt, MEDIUM): `--brand`/`--accent` collision in `globals.css` line 169 may conflict với shadcn neutral hover patterns. See candidates list above.
+- **M-Design-Dark-1** (NEW from M-Design-3b deferred, LOW priority — no user signal): Add `.dark` variants cho M-Design-3a + M-Design-3b tokens. See candidates list above.
 
 ---
 
