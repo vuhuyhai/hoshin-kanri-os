@@ -300,7 +300,7 @@ export default async function DiscoveryPage() {
                     className="flex items-center gap-2 font-body text-sm"
                   >
                     {done ? (
-                      <span style={{ color: '#059669' }}>✓</span>
+                      <span style={{ color: 'var(--score-good)' }}>✓</span>
                     ) : isLocked ? (
                       <span className="text-gray-300">○</span>
                     ) : (
@@ -344,7 +344,7 @@ export default async function DiscoveryPage() {
 
             {completedCount === DISCOVERY_STEPS.length && (
               <div className="border-t border-gray-200 pt-4">
-                <p className="font-display text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#059669' }}>
+                <p className="font-display text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--score-good)' }}>
                   Hoàn thành!
                 </p>
                 <Link href="/dashboard/x-matrix/new">
