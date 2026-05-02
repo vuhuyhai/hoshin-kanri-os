@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 
 export interface MonthlyReportKpi {
   id: string
@@ -54,17 +55,18 @@ export async function GET(request: NextRequest) {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('org_id, organizations(name)')
-      .eq('user_id', user.id)
-      .single()
+    const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+    const membership = await getActiveMembership(supabase, user.id, lastOrgId)
 
     if (!membership)
       return NextResponse.json({ error: 'Org not found' }, { status: 404 })
 
-    const orgName =
-      (membership.organizations as { name: string } | null)?.name ?? ''
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', membership.org_id)
+      .single()
+    const orgName = orgData?.name ?? ''
 
     const { data: kpis } = await supabase
       .from('kpis')

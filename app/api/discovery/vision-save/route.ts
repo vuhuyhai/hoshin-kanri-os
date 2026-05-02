@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { toJson } from '@/lib/utils'
 import { parseBody, visionSaveSchema } from '@/lib/validation'
 
@@ -16,11 +17,8 @@ export async function POST(request: NextRequest) {
     if (!parsed.ok) return parsed.response
     const body = parsed.data
 
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
+    const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+    const membership = await getActiveMembership(supabase, user.id, lastOrgId)
 
     if (!membership) {
       return NextResponse.json({ error: 'Org not found' }, { status: 404 })

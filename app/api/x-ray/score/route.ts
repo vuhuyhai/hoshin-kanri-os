@@ -4,6 +4,7 @@ import { OPEX_PILLARS, PILLAR_ORDER, X_RAY_QUESTIONS, getQuestionsForPillar, cal
 import type { OpexPillar, PillarScore, ScoreLevel, XRayResult } from '@/lib/x-ray/types'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { sendEmail } from '@/lib/email/send'
 import { xRayReportEmailTemplate } from '@/lib/email/templates'
 import { AI_MODELS } from '@/lib/ai/models'
@@ -182,11 +183,8 @@ LƯU Ý:
     // xray_results enforces NOT NULL owner via xray_results_ownership_check.
     let savedResultId: string | null = null
     if (user) {
-      const { data: membership } = await supabase
-        .from('org_members')
-        .select('org_id')
-        .eq('user_id', user.id)
-        .single()
+      const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+      const membership = await getActiveMembership(supabase, user.id, lastOrgId)
       const orgId = membership?.org_id ?? null
 
       savedResultId = await saveXRayResult(orgId, user.id, answers, result)

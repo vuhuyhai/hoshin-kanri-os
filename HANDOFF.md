@@ -890,20 +890,29 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-05-02 — post M-OrgInvite-1)
+## 16. Current State Snapshot (2026-05-02 — post M-Cleanup-6 Phase 1)
 
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-02 — post M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions). HEAD `735c132`. Multi-tenant invite system shipped: 1 table + 4 API + 2 UI + auth redirect fix + 12 dashboard pages multi-org `.maybeSingle()` → array pattern fix. Previous: hotfix `df3c1ef` (AI Coach SWOT JSON parser 3-tier fallback chain, `max_tokens` bump 800→4096) on top of M-Design-3b (Dashboard hex-to-token refactor: 6 commits `868fa34`→`ed27932`, 4 files refactored, 0 raw hex còn trong logic).
+- **Last verified**: 2026-05-02 — post M-Cleanup-6 Phase 1 (`.single()` anti-pattern fix in 7 API routes + extract `lib/auth/getActiveMembership.ts` helper, 1 commit, 8 files). HEAD: M-Cleanup-6 Phase 1 commit (TBD post-Cursor-commit). Previous: M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions) — multi-tenant invite system shipped: 1 table + 4 API + 2 UI + auth redirect fix + 12 dashboard pages multi-org `.maybeSingle()` → array pattern fix. Earlier: hotfix `df3c1ef` (AI Coach SWOT JSON parser 3-tier fallback chain, `max_tokens` bump 800→4096) on top of M-Design-3b (Dashboard hex-to-token refactor: 6 commits `868fa34`→`ed27932`, 4 files refactored, 0 raw hex còn trong logic).
 - **Last migration applied**: `035_org_invites.sql` — table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (M-OrgInvite-1, committed). Previous: `034` functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`).
 - **API routes count**: 52 (48 + 4 mới M-OrgInvite-1: POST/GET `/api/invites`, DELETE `/api/invites/[token]`, GET `/api/invites/[token]/info`, POST `/api/invites/[token]/accept`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions). DB: table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (migration 035). API: 4 routes (POST/GET `/api/invites` create+list, DELETE `/api/invites/[token]` revoke, GET `/api/invites/[token]/info` public, POST `/api/invites/[token]/accept` authed). UI: `/invite/[token]` public accept page + Settings Members section replace fake `handleCopyInvite`. Auth: login + register honor `?redirect=` param với whitelist. Multi-org systemic fix: 12 dashboard pages + layout `.maybeSingle()` → array + find/fallback pattern (settings, kpi, x-matrix index/new/[year]/review, dashboard, discovery/{benchmark,xray-history,vision-workshop,swot,swot/strategy,synthesis}). Deferred: OAuth Google + email-confirmation invite flow gaps (workaround MVP — user click invite link lại sau confirm).
-- **Previous feature work**: M-Design-3b (Dashboard hex-to-token refactor) — 6 commits `868fa34`→`ed27932`, 5 files changed (1 foundation + 4 consumers):
+- **Latest feature work**: M-Cleanup-6 Phase 1 (`.single()` anti-pattern fix in 7 API routes + extract helper, 1 commit, 8 files, ~30 phút work). New `lib/auth/getActiveMembership.ts` helper với typed shape `{ org_id: string; role: string } | null` — caller pass `lastOrgId` explicit (NOT helper tự fetch from `auth.getUser()` để tránh round-trip thừa). 7 API routes refactored:
+  - [app/api/x-matrix/prefill/route.ts](app/api/x-matrix/prefill/route.ts)
+  - [app/api/kpi/list/route.ts](app/api/kpi/list/route.ts)
+  - [app/api/report/monthly/route.ts](app/api/report/monthly/route.ts) — split `organizations(name)` JOIN → 2 queries cho type clarity (helper return flat shape)
+  - [app/api/discovery/vision-save/route.ts](app/api/discovery/vision-save/route.ts)
+  - [app/api/discovery/pain-mapper/route.ts](app/api/discovery/pain-mapper/route.ts) — trong finalize callback
+  - [app/api/x-ray/history/route.ts](app/api/x-ray/history/route.ts)
+  - [app/api/x-ray/score/route.ts](app/api/x-ray/score/route.ts) — trong `if (user)` block
+  - **Phase 2 deferred**: 12 dashboard inline call sites (`find(lastOrgId) ?? memberships[0]` pattern) chưa refactor sang helper. M-Cleanup-6 Phase 2 milestone riêng — KHÔNG block release nào khác.
+- **Previous feature work**: M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions). DB: table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (migration 035). API: 4 routes (POST/GET `/api/invites` create+list, DELETE `/api/invites/[token]` revoke, GET `/api/invites/[token]/info` public, POST `/api/invites/[token]/accept` authed). UI: `/invite/[token]` public accept page + Settings Members section replace fake `handleCopyInvite`. Auth: login + register honor `?redirect=` param với whitelist. Multi-org systemic fix: 12 dashboard pages + layout `.maybeSingle()` → array + find/fallback pattern (settings, kpi, x-matrix index/new/[year]/review, dashboard, discovery/{benchmark,xray-history,vision-workshop,swot,swot/strategy,synthesis}). Deferred: OAuth Google + email-confirmation invite flow gaps (workaround MVP — user click invite link lại sau confirm).
+- **Earlier feature work**: M-Design-3b (Dashboard hex-to-token refactor) — 6 commits `868fa34`→`ed27932`, 5 files changed (1 foundation + 4 consumers):
   - `868fa34` feat(design): add score tier + kpi-strong tokens for M-Design-3b foundation. Add 6 new tokens trong `app/globals.css :root`: `--kpi-healthy-strong: #16A34A` + `--kpi-attention-strong: #D97706` (saturated companions cho pastel `--kpi-*`) + `--score-{critical,weak,fair,good}` 4-tier saturated cho X-Ray health score. Extend `lib/design/chart-tokens.ts`: `ScoreTier` type, `getScoreTier(score)` server-safe classifier, `resolveScoreToken(tier)` client resolver, `SCORE_TOKEN_NAMES` Record map, extend `KPI_TOKEN_NAMES` thêm `healthyStrong`/`attentionStrong`. `--kpi-warning-strong` deliberately KHÔNG ship — reuse shadcn `--destructive` cho red strokes. `.dark` block UNTOUCHED.
   - `8121194` refactor(xray): replace hardcoded hex with design tokens. `app/dashboard/discovery/xray-history/XRayHistoryChart.tsx` (client component) — 10 hex sites → `resolveToken('ink')` + `resolveToken('chart-4')` + `resolveScoreToken({critical,weak,fair})`. Stray `#2C2B2B` legacy color normalized → `--ink` (#1A1A1A) tại 4 sites. Move `CustomDot` inside main component closure để share resolved `ink` ref. 2 SSR fallback hex còn lại (`'#1A1A1A'`, `'#8A8787'`) trong `resolveToken(...)` args là intentional defaults — prevent black-flash khi SSR.
   - `8d875d7` refactor(xray-history): replace hardcoded hex with score tier tokens. `app/dashboard/discovery/xray-history/page.tsx` (server) delete `getScoreColor()`, import `getScoreTier`. Score number span dùng `style={{ color: \`var(--score-${getScoreTier(score)})\` }}` (Pattern C — var() resolve client-side trên HTML element). `chartData.color: string` → `chartData.tier: ScoreTier` data contract change. Client `XRayHistoryChart` consume `payload.tier` → `resolveScoreToken(payload.tier)` cho `<Dot fill>`. Locks in "server return tier name, client resolve color" pattern (decision §3).
@@ -911,12 +920,12 @@ Khi Claude mới vào session:
   - `792e43c` refactor(discovery): replace badge hex with KPI pastel tokens. `app/dashboard/discovery/page.tsx` — 3 module-level const `BADGE_STYLE_{DONE,NEXT,LOCKED}` để dedupe 4 inline-style sites (DONE used 2x). Map Tailwind palette → KPI tokens với intentional hue shift (emerald → kpi-healthy lime, amber → kpi-attention warm yellow). LOCKED border dùng `color-mix(in srgb, var(--text-3) 30%, transparent)` mirror visual weight gốc.
   - `ed27932` refactor(discovery): replace checkmark hex with score-good token. 2 sites `#059669` (emerald-600) → `var(--score-good)` (#16A34A green-600) ở step-list checkmark + "Hoàn thành!" overline. Align success indicator hue với X-Ray "Tốt" tier + chart success ReferenceLine. `discovery/page.tsx` hex-clean (0 matches).
   - **Files deferred**: `app/dashboard/kpi/components/KpiCard.tsx` Tailwind utility classes (`bg-green-100`, `text-red-600`, etc.) — KHÔNG phải inline hex → out of scope M-Design-3b. Defer M-Design-Tailwind-Cleanup-1.
-- **Earlier feature work**: M-Design-3a (KPI status tokens foundation, 3 commits `d7fdb6d`→`b3ff123`, 3 files: 8 `--kpi-*` tokens + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `app/dashboard/page.tsx:224`) → M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
+- **Older feature work**: M-Design-3a (KPI status tokens foundation, 3 commits `d7fdb6d`→`b3ff123`, 3 files: 8 `--kpi-*` tokens + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `app/dashboard/page.tsx:224`) → M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
 - **Known open items**:
   - **M-OrgInvite-1 deferred items (2026-05-02)**:
     - `idx_org_invites_token` redundant với auto-generated `org_invites_token_key` UNIQUE index — drop trong migration patch khi tiện
-    - API routes `/api/` chưa quét hết `.maybeSingle()` trên `org_members` — scan + fix trong M-Cleanup-6 (post-M-OrgInvite-1 fix chỉ cover 12 dashboard pages, không cover API routes)
-    - Helper `lib/auth/getActiveMembership.ts` chưa extract — 12 files inline cùng pattern `find(lastOrgId) ?? memberships[0]`, refactor khi tiện (DEBT MEDIUM, 12 call sites)
+    - ~~API routes `/api/` chưa quét hết `.maybeSingle()` trên `org_members`~~ ✅ shipped M-Cleanup-6 Phase 1 — 7 routes fixed (`.single()` → helper), Phase 2 (12 dashboard inline sites refactor) deferred
+    - ~~Helper `lib/auth/getActiveMembership.ts` chưa extract~~ ✅ shipped M-Cleanup-6 Phase 1 — typed shape `{ org_id, role } | null`. Phase 2 còn 12 dashboard inline call sites cùng pattern `find(lastOrgId) ?? memberships[0]` chưa migrate sang helper (DEBT MEDIUM)
     - OAuth Google invite flow gap: `/auth/callback` hard-redirect `/dashboard`, không honor `?redirect=` param. Fix cần pass token qua OAuth `state` param — defer đến có user complaint
     - Email confirmation invite gap: register → email confirm → `/auth/callback` hard-redirect, không carry invite token. Workaround MVP: user click invite link lại sau confirm — acceptable cho beta
   - Check `plans/` folder cho WIP notes
@@ -1394,6 +1403,47 @@ Khi Claude mới vào session:
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
 
+### 2026-05-02 — Helper extract for org membership lookup (M-Cleanup-6 Phase 1)
+
+**Milestone**: M-Cleanup-6 Phase 1 — Fix `.single()` anti-pattern + extract helper.
+
+**Scope**: 1 commit, 8 files changed. New `lib/auth/getActiveMembership.ts` helper + 7 API routes refactor:
+
+- `app/api/x-matrix/prefill/route.ts`
+- `app/api/kpi/list/route.ts`
+- `app/api/report/monthly/route.ts` (split `organizations(name)` JOIN → 2 queries cho type clarity)
+- `app/api/discovery/vision-save/route.ts`
+- `app/api/discovery/pain-mapper/route.ts` (trong finalize callback)
+- `app/api/x-ray/history/route.ts`
+- `app/api/x-ray/score/route.ts` (trong `if (user)` block)
+
+**Driving need**: M-OrgInvite-1 fix 12 dashboard pages dùng pattern `.maybeSingle()` → array + `find(lastOrgId) ?? memberships[0]` cho multi-org users. API routes chưa quét. 7 API routes vẫn dùng `.single()` (throw PGRST116 khi multi-row, swallow ambiguity khi 1 row đúng) → silent wrong-org pick cho multi-org users hoặc 500 error.
+
+**Decisions**:
+
+- **Helper signature typed shape `{ org_id: string; role: string } | null`** (NOT generic `<S extends string>` returning `Record<string, unknown>`). Lý do: caller dùng `membership.org_id` thẳng, không phải `membership['org_id'] as string` — type safety + clean ergonomics.
+- **Caller pass `lastOrgId` explicit** (NOT helper tự fetch from `auth.getUser()`). Lý do: tránh round-trip thứ 2 trong helper, caller đã có user object từ outer auth check.
+- **`order('created_at', desc)` cho fallback**: khi `lastOrgId` null hoặc không match, lấy newest membership. `created_at` verified exists ở `org_members` schema (migration 001).
+- **`report/monthly`: split JOIN query thành 2 queries** thay vì keep `.select('org_id, organizations(name)')`. Lý do: helper return flat shape — adding nested field cho 1 route làm helper API leak. Cost ~5-10ms thêm acceptable cho type safety.
+- **Phase 1 only** — defer Phase 2 (12 dashboard inline call sites refactor sang helper) tách milestone riêng. Lý do: Phase 1 fix bug critical (silent wrong-org picks); Phase 2 là DRY refactor không thay behavior. Tách commit dễ rollback.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG dùng `.single()` cho `org_members` query khi user có thể multi-org. Pattern: `getActiveMembership(supabase, userId, lastOrgId)`.
+- KHÔNG modify helper signature trở lại generic shape — typed flat shape là decision lock.
+- KHI add route mới có `org_members` lookup, MUST gọi `getActiveMembership` helper. Anti-pattern: copy `.single()` từ HANDOFF cũ.
+- KHI cần fields ngoài `org_id` + `role` (vd `organizations(name)`, `created_at`), fetch query thứ 2 với `membership.org_id` thay vì extend helper shape.
+- Phase 2 sẽ refactor 12 dashboard inline sites. Triển khai khi tiện — KHÔNG block release nào khác.
+
+**Pattern lessons** (đáng generalize):
+
+1. **Markdown auto-link corruption trong chat AI tools**: Vũ Hải paste prompt vào Claude.ai và bot hiển thị `m.org_id` thành `[m.org](http://m.org)_id` (markdown auto-link rule). Lúc paste lệnh PowerShell với content này từ chat → file ghi sai bytes. Fix: dùng Cursor Chat (không có auto-link) HOẶC verify với `Format-Hex` sau khi tạo file.
+2. **PowerShell here-string với content `[...]` đầu**: Block code có dòng đầu `[POWERSHELL]` hoặc `[PASTE VÀO FILE: ...]` — PowerShell parse `[...]` như attribute syntax, fail. Mitigation: KHÔNG copy markers `[POWERSHELL]` vào terminal, chỉ copy content bên dưới.
+3. **Cursor Chat vs Cursor Composer/Background Agent**: Prompt edit nhiều file paste vào Cursor Chat (Ctrl+L) đôi khi không trigger edit (Cursor reply text mà không apply). Khi Cursor không edit, fallback qua Composer mode hoặc tách prompt từng file riêng, paste từng cái một.
+4. **Smoke test minimum cost cho refactor pure**: KPI Tracker render OK + Console clean = đủ confirm helper hoạt động. Không cần test toàn 7 routes (refactor type-clean, behavior preserved).
+
+---
+
 ### 2026-05-02 — CEO Invite Link Flow (M-OrgInvite-1)
 
 **Milestone**: M-OrgInvite-1 — CEO Invite Link Flow.
@@ -1868,6 +1918,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Cleanup-6 Phase 1 — Fix `.single()` anti-pattern + extract helper** ✅ shipped 2026-05-02 (1 commit, 8 files, ~30 phút work). Helper `lib/auth/getActiveMembership.ts` (typed shape `{ org_id, role } | null`) + 7 API routes refactor (`x-matrix/prefill`, `kpi/list`, `report/monthly` split JOIN → 2 queries, `discovery/vision-save`, `discovery/pain-mapper`, `x-ray/history`, `x-ray/score`). Smoke test KPI Tracker PASS. Phase 2 (12 dashboard inline sites refactor) deferred. See §16 + §17.
 - **M-OrgInvite-1 — CEO Invite Link Flow** ✅ SHIPPED 2026-05-02 (1 commit `735c132`, 26 files, 1464 insertions). DB migration 035 (table `org_invites` + enum `invite_role` + 3 RLS + 3 indexes) + 4 API routes (POST/GET `/api/invites`, DELETE `/api/invites/[token]`, GET `/api/invites/[token]/info` public, POST `/api/invites/[token]/accept` authed) + UI public accept page `/invite/[token]` + Settings Members section replace fake handler + auth redirect fix (login + register honor `?redirect=` whitelist) + multi-org systemic fix (12 dashboard pages + layout `.maybeSingle()` → array + find/fallback). 7 decisions locked Task 1 (Option B link, separate table, `/invite/[token]` route, MVP existing-account-only, 5 max pending, Resend email, no revoke confirm). 4 bugs fixed: Next.js dynamic segment conflict ([id]+[token]), multi-org `.maybeSingle()` PGRST116, `router.push` stale cookie, `updateUser` metadata not in session. OAuth + email-confirm invite flows deferred. See §16 + §17.
 - **M-Design-3b — Dashboard hex-to-token refactor** ✅ SHIPPED 2026-05-02 (6 commits `868fa34`→`ed27932`, 5 files changed: 1 foundation extend + 4 consumer refactors). 0 raw hex còn trong logic của 4 files. Foundation: `--kpi-{healthy,attention}-strong` saturated variants + `--score-{critical,weak,fair,good}` 4-tier scale + `withAlpha()` helper + `ScoreTier` type + `getScoreTier()` server-safe classifier + `resolveScoreToken()` client resolver. Consumers: XRayHistoryChart (10 sites + CustomDot closure), xray-history page (server tier-passing pattern), KpiSparkline (3 sites + alpha pattern), discovery hub (5 sites: 3 badges + 2 checkmarks). 5 decisions locked (tách 2 scales, reuse `--destructive`, server/client boundary, KpiCard 3-tier giữ nguyên, dark mode out-of-scope). KpiCard.tsx Tailwind utility classes deferred → M-Design-Tailwind-Cleanup-1. New pitfalls §10 #22 (border-subtle shorthand), #23 (Recharts var() + server boundary). See §16 + §17.
 - **M-Design-3a — KPI Status Tokens Foundation** ✅ SHIPPED 2026-05-01 (3 commits `d7fdb6d`→`b3ff123`, 3 files changed). 8 `--kpi-*` semantic tokens trong `app/globals.css` (healthy/attention/warning/critical + `-fg` foreground pairs, AA-compliant 11:1 → 4.8:1) aliasing existing accent palette + `lib/design/chart-tokens.ts` (99 LOC) runtime resolver cho Recharts integration (Recharts props KHÔNG accept `var()` — cần `resolveToken()` helper) + first refactor proving pattern (`app/dashboard/page.tsx:224` `#c73937` → `var(--brand)` semantic decision: brand emphasis NOT KPI critical). MVP split scope decision: defer xray-history + KpiSparkline + discovery hub → M-Design-3b. `.dark` block UNTOUCHED. New pitfalls §10 #19 (Tailwind v4 + Recharts 3-layer), #20 (token aliasing vs dup hex), #21 (audit-first hex replacement). See §16 + §17.
@@ -1894,7 +1945,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Future milestones (TBD priority)
 
-- **M-Cleanup-6 (NEW from M-OrgInvite-1)**: Scan + fix `.maybeSingle()` trên `org_members` trong `app/api/` routes (chưa quét sau M-OrgInvite-1 fix 12 dashboard pages). Cost ~30 phút. Trigger: bất kỳ API route nào return 500/wrong-org khi multi-org user hit. Hoặc gộp với extract helper `lib/auth/getActiveMembership.ts` (12 inline call sites cùng pattern).
+- **M-Cleanup-6 Phase 2**: Refactor 12 dashboard inline call sites (`find(lastOrgId) ?? memberships[0]`) sang dùng `getActiveMembership` helper. Cost ~30 phút. Trigger: bất kỳ refactor cần touch dashboard pages, hoặc khi 1-2 inline sites cần modify.
 - **M-Auth-MultiOrg-1 (NEW from M-OrgInvite-1)**: Org switcher UI (sidebar dropdown) + `last_org_id` metadata write đúng khi switch. Trigger: user thật có >1 org complain nhầm org. Currently fallback `memberships[0]` (newest) là stopgap MVP — đủ cho beta nhưng UX gap khi user chủ động muốn switch giữa orgs.
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
 - **~~M-Cleanup-2 (CRITICAL)~~ REMOVED**: Original scope dựa trên assumption sai. Diagnose M-Hoshin-7 phát hiện 9 orgs là multi-tenant production users với owner khác nhau, KHÔNG phải pollution. KHÔNG cleanup. See §17 Architecture Decision 2026-04-30 + L8.
