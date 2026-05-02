@@ -61,6 +61,26 @@ function getScoreLabel(score: number): string {
   return 'Tốt'
 }
 
+// Status badge styles — KPI pastel bg + saturated strong border (M-Design-3b).
+// Hue shifts vs Tailwind emerald/amber palette are intentional (brand alignment).
+const BADGE_STYLE_DONE = {
+  backgroundColor: 'var(--kpi-healthy)',
+  color: 'var(--kpi-healthy-fg)',
+  border: '1px solid var(--kpi-healthy-strong)',
+} as const
+
+const BADGE_STYLE_NEXT = {
+  backgroundColor: 'var(--kpi-attention)',
+  color: 'var(--kpi-attention-fg)',
+  border: '1px solid var(--kpi-attention-strong)',
+} as const
+
+const BADGE_STYLE_LOCKED = {
+  backgroundColor: 'var(--bg-muted)',
+  color: 'var(--text-3)',
+  border: '1px solid color-mix(in srgb, var(--text-3) 30%, transparent)',
+} as const
+
 interface XRayData {
   latestScore?: number
   latestLevel?: string
@@ -133,7 +153,7 @@ export default async function DiscoveryPage() {
                       <span className="text-3xl">{step.icon}</span>
                       <span
                         className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
-                        style={{ backgroundColor: '#d1fae5', color: '#047857', border: '1px solid #6ee7b7' }}
+                        style={BADGE_STYLE_DONE}
                       >
                         ✓ Hoàn thành
                       </span>
@@ -187,7 +207,7 @@ export default async function DiscoveryPage() {
                     {done && (
                       <span
                         className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
-                        style={{ backgroundColor: '#d1fae5', color: '#047857', border: '1px solid #6ee7b7' }}
+                        style={BADGE_STYLE_DONE}
                       >
                         ✓ Hoàn thành
                       </span>
@@ -195,7 +215,7 @@ export default async function DiscoveryPage() {
                     {isNext && (
                       <span
                         className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
-                        style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d' }}
+                        style={BADGE_STYLE_NEXT}
                       >
                         → Tiếp theo
                       </span>
@@ -203,7 +223,7 @@ export default async function DiscoveryPage() {
                     {isLocked && (
                       <span
                         className="inline-flex items-center gap-1 font-display font-semibold text-[11px] uppercase tracking-wider px-2.5 py-0.5"
-                        style={{ backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }}
+                        style={BADGE_STYLE_LOCKED}
                       >
                         Chưa bắt đầu
                       </span>
