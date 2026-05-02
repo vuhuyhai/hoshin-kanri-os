@@ -624,6 +624,19 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
     - **HTML elements khác Recharts**: `<span style={{ color: 'var(--score-good)' }}>` work fine trên server hoặc client component vì browser cascade resolve var() runtime. Chỉ Recharts mới cần resolver bridge.
     - **Recharts alpha pattern**: dùng `withAlpha(hexColor, '20')` helper từ `lib/design/chart-tokens.ts` (KHÔNG dùng `color-mix()` trong Recharts props — react-smooth parse fail trên một số browsers + SSR-unreliable).
 
+24. **GitHub raw URL fetch asymmetric — user browser OK nhưng Anthropic web_fetch fail** (learned M-Design-3b close-out 2026-05-02 + retest end-of-session). User browser truy cập `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` OK (residential IP), NHƯNG Anthropic web_fetch tool consistently fail với 2 error patterns khác nhau tùy URL variant:
+    - `raw.githubusercontent.com/...` → `CLIENT_ERROR 404` (GitHub IP block / rate-limit subset cloud provider IPs)
+    - `github.com/.../raw/...` → `ROBOTS_DISALLOWED` (GitHub `robots.txt` explicit disallow scrapers)
+    - Verified 3 attempts liên tiếp 2026-05-02 cùng session, both URL variants tested.
+    - **Hệ quả pattern v2.4**: HANDOFF auto-sync via GitHub raw URL (instructions v2.4 ship 2026-05-01 close-out M-Cleanup-1, ref §17 M-Public-1 entry) KHÔNG reliable cho Claude.ai web_fetch. Pattern v2.4 broken KHÔNG phải bug ở repo public flag (M-Public-1 verified curl HTTP 200 2026-05-01) — issue ở Anthropic infrastructure egress (cloud provider IPs trong GitHub blocklist + robots.txt enforcement).
+    - **Workaround pattern v2.5** (commit vào Project instructions chat tới):
+      - Đầu chat về Hoshin Kanri: SILENT thử GitHub raw URL → nếu fail → SILENT fallback Project knowledge upload (giữ pattern v2.3 manual upload sau milestone).
+      - Project knowledge upload sau mỗi milestone vẫn là source of truth primary.
+      - KHÔNG cảnh báo verbose user về fallback — Vũ Hải đã verify URL public, không cần re-explain mỗi session.
+    - **Trigger condition để revive pattern v2.4**: Anthropic web_fetch infrastructure update (egress IP rotate khỏi GitHub blocklist). Out of user control, ngoài scope dự án. Có thể auto-revive sau 3-6 tháng — re-test bằng web_fetch raw URL đầu session, nếu HTTP 200 → revert sang pattern v2.4.
+    - **KHÔNG cần fix anything**: Vũ Hải paste explicit URL vào chat session là 1 workaround đơn turn (Anthropic web_fetch allowlist URL trong context window) nhưng cost cao hơn benefit — manual Project knowledge upload nhanh hơn.
+    - **Pattern lesson generalize**: web_fetch availability từ user browser ≠ availability từ AI tool egress. Khi build pipeline phụ thuộc web_fetch (auto-sync, scraping, fact-check), MUST test từ AI tool side TRƯỚC khi commit pattern; user-side curl OK không guarantee AI-side reach.
+
 ---
 
 ## 11. Dev Workflow
