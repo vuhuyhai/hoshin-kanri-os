@@ -10,13 +10,13 @@ import {
   Tooltip,
   Dot,
 } from 'recharts'
-import { resolveToken, resolveScoreToken } from '@/lib/design/chart-tokens'
+import { resolveToken, resolveScoreToken, type ScoreTier } from '@/lib/design/chart-tokens'
 
 interface ChartDataPoint {
   run: string
   score: number
   date: string
-  color: string
+  tier: ScoreTier
 }
 
 interface XRayHistoryChartProps {
@@ -34,7 +34,7 @@ export function XRayHistoryChart({ data }: XRayHistoryChartProps) {
     const { cx, cy, payload } = props
     if (!cx || !cy || !payload) return null
     return (
-      <Dot cx={cx} cy={cy} r={6} fill={payload.color} stroke={ink} strokeWidth={2} />
+      <Dot cx={cx} cy={cy} r={6} fill={resolveScoreToken(payload.tier)} stroke={ink} strokeWidth={2} />
     )
   }
 

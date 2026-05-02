@@ -3,19 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { XRayHistoryChart } from './XRayHistoryChart'
+import { getScoreTier } from '@/lib/design/chart-tokens'
 
 function getScoreLabel(score: number): string {
   if (score <= 25) return 'Nguy hiểm'
   if (score <= 50) return 'Yếu'
   if (score <= 75) return 'Trung bình'
   return 'Tốt'
-}
-
-function getScoreColor(score: number): string {
-  if (score <= 25) return '#c73937'
-  if (score <= 50) return '#D97706'
-  if (score <= 75) return '#2563EB'
-  return '#16A34A'
 }
 
 function getBadgeClass(score: number): string {
@@ -76,14 +70,16 @@ export default async function XRayHistoryPage() {
     )
   }
 
-  // Chart data: oldest → newest for progression
+  // Chart data: oldest → newest for progression.
+  // Pass score tier (not hex) so the client component resolves the actual
+  // CSS token at render time — Recharts can't consume `var(--token)`.
   const chartData = [...history]
     .reverse()
     .map((r, idx) => ({
       run: `Lần ${oldestShownRunNumber + idx}`,
       score: r.overall_score,
       date: new Date(r.created_at).toLocaleDateString('vi-VN'),
-      color: getScoreColor(r.overall_score),
+      tier: getScoreTier(r.overall_score),
     }))
 
   return (
@@ -129,7 +125,7 @@ export default async function XRayHistoryPage() {
               <div className="flex items-center gap-2">
                 <span
                   className="text-2xl font-black"
-                  style={{ color: getScoreColor(result.overall_score) }}
+                  style={{ color: `var(--score-${getScoreTier(result.overall_score)})` }}
                 >
                   {result.overall_score}
                 </span>
