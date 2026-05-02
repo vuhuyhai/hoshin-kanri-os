@@ -191,6 +191,31 @@
   --kpi-warning-fg: var(--ink);          /* 12:1 contrast on pink */
   --kpi-critical-fg: var(--white);       /* 4.8:1 contrast on brand red */
 
+  /* KPI saturated strong variants — M-Design-3b
+     Companion to pastel --kpi-* (M-Design-3a) for use as line strokes,
+     dot fills, sparkline colors — anywhere the pastel bg tokens lack
+     contrast against a white card surface.
+     Pairing rule:
+       background fills  → use --kpi-{healthy,attention,warning} (pastel)
+       chart strokes/dots → use --kpi-*-strong (saturated)
+     Red strong tier reuses shadcn --destructive (#ef4444) — do not
+     duplicate. Critical tier already saturated (--kpi-critical = brand). */
+  --kpi-healthy-strong: #16A34A;         /* saturated green — sparkline line/dot */
+  --kpi-attention-strong: #D97706;       /* saturated amber — sparkline line/dot */
+  /* --kpi-warning-strong: reuse --destructive (#ef4444) for red strokes */
+
+  /* Score scale tokens — M-Design-3b
+     Reserved for X-Ray health score visualization (4-tier band: 0–100).
+     Distinct from --kpi-* because the score scale is FIXED 4-tier with
+     hue affordances (red=danger, amber=weak, blue=fair, green=good)
+     rather than the KPI 3+1 escalation scale (healthy→attention→warning→critical).
+     Used as: number text color, ReferenceLine stroke, badge accent.
+     All saturated — meant for foreground/stroke usage, not background fills. */
+  --score-critical: #c73937;             /* ≤25 — Nguy hiểm — reuse brand */
+  --score-weak: #D97706;                 /* 26–50 — Yếu */
+  --score-fair: #2563EB;                 /* 51–75 — Trung bình */
+  --score-good: #16A34A;                 /* >75 — Tốt */
+
   /* Composite borders */
   --border-heavy: 3px solid #1A1A1A;
   --border-accent: 2px solid var(--brand);

@@ -65,13 +65,74 @@ export type KpiStatus = 'healthy' | 'attention' | 'warning' | 'critical';
 /**
  * Canonical KPI token names. Import this instead of using magic strings
  * so that renames stay type-checked.
+ *
+ * Pastel keys (healthy/attention/warning/critical) → background fills.
+ * Strong keys (healthyStrong/attentionStrong) → saturated stroke/text colors.
+ * For saturated red strokes, reuse `--destructive` instead of adding a
+ * `warningStrong` here.
  */
 export const KPI_TOKEN_NAMES = {
   healthy: 'kpi-healthy',
   attention: 'kpi-attention',
   warning: 'kpi-warning',
   critical: 'kpi-critical',
+  healthyStrong: 'kpi-healthy-strong',
+  attentionStrong: 'kpi-attention-strong',
 } as const;
+
+/**
+ * X-Ray score tier — fixed 4-band scale over 0..100.
+ * Distinct from KpiStatus (which is a 3+1 escalation scale).
+ *
+ * Thresholds:
+ *   score ≤ 25  → 'critical' (Nguy hiểm)
+ *   score ≤ 50  → 'weak'     (Yếu)
+ *   score ≤ 75  → 'fair'     (Trung bình)
+ *   score >  75 → 'good'     (Tốt)
+ */
+export type ScoreTier = 'critical' | 'weak' | 'fair' | 'good';
+
+/**
+ * Pure (server-safe) classifier — converts a numeric score to its tier.
+ * Does NOT touch the DOM; safe to call in server components & route handlers.
+ */
+export function getScoreTier(score: number): ScoreTier {
+  if (score <= 25) return 'critical';
+  if (score <= 50) return 'weak';
+  if (score <= 75) return 'fair';
+  return 'good';
+}
+
+/**
+ * Canonical score-tier token names. Mirrors KPI_TOKEN_NAMES shape so the
+ * resolver / consumers can use a uniform `Record<Tier, tokenName>` pattern.
+ */
+export const SCORE_TOKEN_NAMES = {
+  critical: 'score-critical',
+  weak: 'score-weak',
+  fair: 'score-fair',
+  good: 'score-good',
+} as const satisfies Record<ScoreTier, string>;
+
+/** Hardcoded fallbacks mirroring `:root` values — used during SSR. */
+const SCORE_FALLBACKS: Record<ScoreTier, string> = {
+  critical: '#c73937',
+  weak: '#D97706',
+  fair: '#2563EB',
+  good: '#16A34A',
+};
+
+/**
+ * Resolve a score tier to its concrete color string.
+ * Client-only effect (delegates to `resolveToken`); SSR returns fallback.
+ *
+ * @example
+ * const tier = getScoreTier(score);          // server or client
+ * const color = resolveScoreToken(tier);     // client (e.g., Recharts stroke)
+ */
+export function resolveScoreToken(tier: ScoreTier): string {
+  return resolveToken(SCORE_TOKEN_NAMES[tier], SCORE_FALLBACKS[tier]);
+}
 
 /**
  * Resolve both background and foreground colors for a KPI status.
