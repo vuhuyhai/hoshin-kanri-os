@@ -1,15 +1,11 @@
+import { resolveToken, withAlpha } from '@/lib/design/chart-tokens'
+
 interface KpiSparklineProps {
   values: number[]
   target: number
   color: 'green' | 'yellow' | 'red'
   width?: number
   height?: number
-}
-
-const COLOR_MAP = {
-  green: { line: '#22c55e', fill: '#22c55e20', dot: '#22c55e' },
-  yellow: { line: '#eab308', fill: '#eab30820', dot: '#eab308' },
-  red: { line: '#ef4444', fill: '#ef444420', dot: '#ef4444' },
 }
 
 export function KpiSparkline({
@@ -19,6 +15,16 @@ export function KpiSparkline({
   width = 120,
   height = 40,
 }: KpiSparklineProps) {
+  const greenStroke = resolveToken('kpi-healthy-strong', '#16A34A')
+  const amberStroke = resolveToken('kpi-attention-strong', '#D97706')
+  const redStroke = resolveToken('destructive', '#ef4444')
+
+  const COLORS = {
+    green: { stroke: greenStroke, fill: withAlpha(greenStroke) },
+    yellow: { stroke: amberStroke, fill: withAlpha(amberStroke) },
+    red: { stroke: redStroke, fill: withAlpha(redStroke) },
+  }
+
   if (values.length < 2) {
     return (
       <svg width={width} height={height} className="opacity-30">
@@ -35,7 +41,7 @@ export function KpiSparkline({
     )
   }
 
-  const colors = COLOR_MAP[color]
+  const colors = COLORS[color]
   const pad = 4
 
   const allVals = [...values, target]
@@ -71,7 +77,7 @@ export function KpiSparkline({
         y1={targetY}
         x2={width - pad}
         y2={targetY}
-        stroke={colors.line}
+        stroke={colors.stroke}
         strokeWidth={1}
         strokeDasharray="3 2"
         opacity={0.5}
@@ -79,7 +85,7 @@ export function KpiSparkline({
       <polyline
         points={points}
         fill="none"
-        stroke={colors.line}
+        stroke={colors.stroke}
         strokeWidth={1.5}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -88,7 +94,7 @@ export function KpiSparkline({
         cx={toX(values.length - 1)}
         cy={toY(values.at(-1)!)}
         r={3}
-        fill={colors.dot}
+        fill={colors.stroke}
       />
     </svg>
   )

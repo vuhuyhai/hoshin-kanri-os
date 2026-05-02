@@ -135,6 +135,23 @@ export function resolveScoreToken(tier: ScoreTier): string {
 }
 
 /**
+ * Append a 2-char hex alpha suffix to a 6-char hex color.
+ * Recharts-compatible alternative to `color-mix()` / `rgba()` (those
+ * are unreliable through react-smooth and may fail SSR).
+ *
+ * Returns `'transparent'` if `color` is not a valid 6-char hex string —
+ * defensive guard for resolved tokens that may be `rgb(...)` / shorthand.
+ *
+ * @example
+ * withAlpha('#16A34A')        // '#16A34A20' (12.5% alpha — default)
+ * withAlpha('#16A34A', '40')  // '#16A34A40' (25% alpha)
+ * withAlpha('rgb(0,0,0)')     // 'transparent'
+ */
+export function withAlpha(color: string, hexSuffix: string = '20'): string {
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color + hexSuffix : 'transparent';
+}
+
+/**
  * Resolve both background and foreground colors for a KPI status.
  * Higher-level API for "I have a status, give me a usable color pair".
  */
