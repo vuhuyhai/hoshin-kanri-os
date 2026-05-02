@@ -87,6 +87,20 @@ function isValidInsight(obj: unknown): obj is ExtractedInsight {
   )
 }
 
+function recoverMessage(rawText: string): string | null {
+  // Pattern handles escaped quotes \" and escaped backslashes \\
+  // [^"\\] matches any char including LF, so the dotall flag is unnecessary.
+  const match = rawText.match(/"message"\s*:\s*"((?:\\.|[^"\\])*)"/)
+  if (!match) return null
+
+  // Re-parse as a JSON string literal to unescape \n, \", \\ etc.
+  try {
+    return JSON.parse(`"${match[1]}"`) as string
+  } catch {
+    return null
+  }
+}
+
 export function parseCoachingAIOutput(rawText: string): CoachingAIOutput {
   let cleaned = rawText.trim()
 
@@ -96,6 +110,7 @@ export function parseCoachingAIOutput(rawText: string): CoachingAIOutput {
     cleaned = jsonMatch[1].trim()
   }
 
+  // Tier 1 — strict JSON.parse
   try {
     const parsed = JSON.parse(cleaned) as Record<string, unknown>
     return {
@@ -113,10 +128,31 @@ export function parseCoachingAIOutput(rawText: string): CoachingAIOutput {
           ? parsed.nextDimension
           : null,
     }
-  } catch {
-    // Fallback: entire text becomes the message, no structured data
+  } catch (parseError) {
+    // Tier 2 — regex recovery of just the "message" field. Structured data
+    // (extractedInsight, transitions) is dropped because we can't trust it
+    // when the surrounding JSON is malformed.
+    const recovered = recoverMessage(cleaned) ?? recoverMessage(rawText)
+    if (recovered) {
+      console.warn('[coaching] JSON parse failed, recovered message via regex', {
+        error: String(parseError).slice(0, 100),
+      })
+      return {
+        message: recovered,
+        extractedInsight: null,
+        shouldTransition: false,
+        nextDimension: null,
+      }
+    }
+
+    // Tier 3 — user-friendly fallback. Never ship raw JSON source to the UI.
+    console.error('[coaching] JSON parse + recovery both failed', {
+      rawTextPreview: rawText.slice(0, 200),
+      error: String(parseError).slice(0, 100),
+    })
     return {
-      message: rawText,
+      message:
+        'Xin lỗi, AI vừa trả lời lỗi format. Vui lòng thử lại hoặc rút gọn câu hỏi.',
       extractedInsight: null,
       shouldTransition: false,
       nextDimension: null,

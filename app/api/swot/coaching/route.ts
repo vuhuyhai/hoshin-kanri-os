@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     const response = await client.messages.create({
       model: AI_MODELS.reasoning,
-      max_tokens: 800,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: recentMessages.map((m) => ({
         role: m.role,
