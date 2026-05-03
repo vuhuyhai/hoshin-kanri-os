@@ -119,7 +119,10 @@ export async function POST(request: NextRequest) {
 
     const response = await client.messages.create({
       model: AI_MODELS.reasoning,
-      max_tokens: 4096,
+      // Vietnamese density 1.5 chars/token vs English 4 chars/token.
+      // Precedent: X-Ray score 2500→8000, TOWS v2 4096→8000.
+      // User paste 20+ SWOT items + memoryBlock có thể inflate prompt → bump output budget.
+      max_tokens: 8192,
       system: systemPrompt,
       messages: recentMessages.map((m) => ({
         role: m.role,
