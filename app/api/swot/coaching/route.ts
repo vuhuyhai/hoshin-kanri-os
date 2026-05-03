@@ -11,13 +11,7 @@ import {
 } from '@/lib/swot/coaching-prompts'
 import { COACHING_QUESTION_BANK } from '@/lib/swot/frameworks'
 import { AI_MODELS } from '@/lib/ai/models'
-import {
-  getNextDimension,
-  getNextFramework,
-  getFirstDimension,
-  frameworkIdToLegacy,
-  trackerToCoachingContext,
-} from '@/lib/swot/coaching-tracker'
+import { trackerToCoachingContext } from '@/lib/swot/coaching-tracker'
 import type {
   CoachingResponse,
   CoachingTrackerState,
@@ -26,6 +20,15 @@ import type {
 import { parseBody, swotCoachingSchema } from '@/lib/validation'
 import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
 
+/**
+ * SWOT Coaching - Akao Method (M-AICoach-Sensei-1)
+ *
+ * PHILOSOPHY:
+ * - User chọn entry point (S/W/O/T), AI follow user
+ * - KHÔNG enforce linear SW→OT (Hoshin Kanri Forest Ch.4)
+ * - shouldTransition là HINT, không phải command
+ * - Catchball: AI là sensei challenger, không phải decision maker
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -43,27 +46,25 @@ export async function POST(request: NextRequest) {
     const body = bodyParsed.data
     const messages = body.messages
     const orgContext = body.orgContext
-    const currentFramework = body.currentFramework
     const coachingTracker = body.coachingTracker as
       | CoachingTrackerState
       | undefined
+
+    // TRUST client's currentFramework. Default 'sw' for backward-compat
+    // clients that omit the field. Tracker no longer overrides — the client
+    // owns SW vs OT routing under the Akao method.
+    const currentFramework = body.currentFramework ?? 'sw'
 
     // Derive coaching context from tracker (if provided), for prompt injection
     const coachingContext = coachingTracker
       ? trackerToCoachingContext(coachingTracker)
       : (body.coachingContext as CoachingContext | undefined)
 
-    // Use tracker's framework if available, otherwise use request field
-    const effectiveFramework = coachingTracker
-      ? frameworkIdToLegacy(coachingTracker.currentFramework)
-      : currentFramework
-
-    // Build system prompt with coaching context + dimension selection
     const selectedDims = coachingTracker?.selectedDimensions
     const extChoice = coachingTracker?.selectedExternalFramework
 
     const basePrompt =
-      effectiveFramework === 'sw'
+      currentFramework === 'sw'
         ? getSwCoachingSystemPrompt(orgContext, coachingContext, selectedDims?.['8M'])
         : getOtCoachingSystemPrompt(orgContext, coachingContext, extChoice, selectedDims?.Porter, selectedDims?.PESTEL)
 
@@ -108,11 +109,12 @@ export async function POST(request: NextRequest) {
     // Parse structured JSON output with text fallback
     const aiOutput = parseCoachingAIOutput(rawText)
 
-    // Check completion markers
+    // Markers parsed for backward compat — flag emitted in response, but
+    // server does NOT auto-switch frameworks. Client decides next step.
     const isSwComplete =
-      effectiveFramework === 'sw' && aiOutput.message.includes('[SW_COMPLETE]')
+      currentFramework === 'sw' && aiOutput.message.includes('[SW_COMPLETE]')
     const isOtComplete =
-      effectiveFramework === 'ot' && aiOutput.message.includes('[OT_COMPLETE]')
+      currentFramework === 'ot' && aiOutput.message.includes('[OT_COMPLETE]')
     const isCoachingComplete = isSwComplete || isOtComplete
 
     // Clean markers from display message
@@ -121,15 +123,10 @@ export async function POST(request: NextRequest) {
       .replace('[OT_COMPLETE]', '')
       .trim()
 
-    // Compute updated coaching tracker state
+    // Compute updated coaching tracker — append-only, no flow forcing
     let updatedCoachingTracker: CoachingTrackerState | undefined
     if (coachingTracker) {
-      updatedCoachingTracker = computeUpdatedTracker(
-        coachingTracker,
-        aiOutput,
-        isSwComplete,
-        isOtComplete
-      )
+      updatedCoachingTracker = computeUpdatedTracker(coachingTracker, aiOutput)
     }
 
     const result: CoachingResponse = {
@@ -150,14 +147,15 @@ export async function POST(request: NextRequest) {
 }
 
 // ============================================================
-// State computation — server-side tracker update
+// State computation — append-only tracker update
 // ============================================================
+// Akao Method: server records insights but does NOT force framework
+// transitions or dimension walks. Client decides whether to act on
+// shouldTransition / [SW_COMPLETE] / [OT_COMPLETE].
 
 function computeUpdatedTracker(
   tracker: CoachingTrackerState,
   parsed: ReturnType<typeof parseCoachingAIOutput>,
-  isSwComplete: boolean,
-  isOtComplete: boolean
 ): CoachingTrackerState {
   const updated: CoachingTrackerState = {
     ...tracker,
@@ -165,7 +163,6 @@ function computeUpdatedTracker(
     lastUpdated: new Date().toISOString(),
   }
 
-  // Append extracted insight
   if (parsed.extractedInsight) {
     const fw = parsed.extractedInsight.framework
     updated.insights = {
@@ -180,48 +177,6 @@ function computeUpdatedTracker(
         },
       ],
     }
-    updated.currentPhase = 'questioning'
-  }
-
-  // Dimension transition (only when AI explicitly signals)
-  if (parsed.shouldTransition) {
-    const fw = updated.currentFramework
-    if (!updated.completedDimensions[fw].includes(updated.currentDimension)) {
-      updated.completedDimensions = {
-        ...updated.completedDimensions,
-        [fw]: [...updated.completedDimensions[fw], updated.currentDimension],
-      }
-    }
-
-    // Compute next dimension from framework sequence (authoritative)
-    const nextDim = getNextDimension(fw, updated.currentDimension)
-    if (nextDim) {
-      updated.currentDimension = nextDim
-      updated.currentPhase = 'transitioning'
-    }
-  }
-
-  // Framework completion
-  if (isSwComplete) {
-    if (!updated.completedFrameworks.includes('8M')) {
-      updated.completedFrameworks = [...updated.completedFrameworks, '8M']
-    }
-    const nextFw = getNextFramework('8M')
-    if (nextFw) {
-      updated.currentFramework = nextFw
-      updated.currentDimension = getFirstDimension(nextFw)
-      updated.currentPhase = 'intro'
-    }
-  }
-
-  if (isOtComplete) {
-    // OT covers both Porter and PESTEL
-    for (const fw of ['Porter', 'PESTEL'] as const) {
-      if (!updated.completedFrameworks.includes(fw)) {
-        updated.completedFrameworks = [...updated.completedFrameworks, fw]
-      }
-    }
-    updated.currentPhase = 'completed'
   }
 
   return updated
