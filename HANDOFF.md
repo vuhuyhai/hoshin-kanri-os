@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-05-03 — post M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 14 commits 4273d57→feb6ad3, ~13 tasks). HEAD `feb6ad3`. Touch 9 files: app/api/swot/coaching/route.ts + lib/swot/{coaching-prompts,strategic-memory,coaching-tracker,types,swot-session-store}.ts + components/swot/{SwotWorkshop,SwotWorkshopChat,SwotIngredientPanel,SwotIngredientCard}.tsx + plans/M-AICoach-Sensei-1-plan.md.
+> **Last verified**: 2026-05-03 — post M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d, ~13 tasks). HEAD `feb6ad3`. Touch 9 files: app/api/swot/coaching/route.ts + lib/swot/{coaching-prompts,strategic-memory,coaching-tracker,types,swot-session-store}.ts + components/swot/{SwotWorkshop,SwotWorkshopChat,SwotIngredientPanel,SwotIngredientCard}.tsx + plans/M-AICoach-Sensei-1-plan.md.
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -649,6 +649,13 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
       - KHÔNG `console.log` full rawText — slice 200 chars max (có thể chứa user PII).
     - **Pattern lesson generalize**: AI structured output routes có 3 risk vectors (bypass tất cả qua 3-tier chain): (1) truncation, (2) model hallucinate JSON syntax, (3) fence stripper corrupt valid JSON. Test plan minimum cho mọi route mới: short VN question, long context paste (~600+ words), edge case response chứa markdown horizontal rule `---`.
 
+26. **Windows kill parent shell không kill child process** (learned M-AICoach-Sensei-1 Task 8 deploy cleanup 2026-05-03). Khi `npm start` chạy trên Windows powershell, parent process (npm shell) spawn child (`next-server`) bind port. `kill_process pid=<parent>` chỉ kill shell wrapper, child vẫn alive và giữ port. Triệu chứng: sau khi kill PID `npm start`, port 3000 vẫn busy, HTTP localhost:3000 vẫn respond cũ.
+    - **Solution 1 (recommended)**: `taskkill /F /T /PID <parent>` — flag `/T` kill cả process tree
+    - **Solution 2**: Check port binding rồi kill PID owning port: `Get-NetTCPConnection -LocalPort 3000 | %{Stop-Process -Id $_.OwningProcess -Force}`
+    - **Solution 3**: Kill 2 PID separately — verify cả parent và child terminated
+    - Pattern: smoke test scripts/cleanup automation MUST include port verify step trước khi return success.
+    - Discovered: Smoke test cleanup PID 17472 (npm parent) terminated nhưng PID 4632 (next-server child) vẫn alive, giữ port 3000. Phát hiện qua `Get-NetTCPConnection`. Resolved bằng manual kill PID 4632.
+
 ---
 
 ## 11. Dev Workflow
@@ -902,8 +909,8 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 14 commits 4273d57→feb6ad3, ~13 hours work). Trigger: 3 user feedback về AI Coach reset + ép tuyến tính + reset context giữa session.
-  - **Tasks shipped (8 tasks → 14 commits)**:
+- **Latest feature work**: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d, ~13 hours work). Trigger: 3 user feedback về AI Coach reset + ép tuyến tính + reset context giữa session.
+  - **Tasks shipped (8 tasks → 15 commits)**:
     1. Task 1: Plan docs (commit `4273d57`)
     2. Task 2A: Server adaptive framework, no forced linear switch (`f1f4e46`)
     3. Task 2B: Cleanup `frameworkIdToLegacy` orphan + expand Task 6 scope (`32633c8`)
@@ -919,7 +926,7 @@ Khi Claude mới vào session:
     13. Task 6D-step3: Auto-fill extractedInsight + toast undo + ai_auto source (`3ae2c05`)
     14. Task 6E: Cleanup orphan `advanceDimension`/`advanceFramework` + 3 helpers (`feb6ad3`)
     15. Task 7: SKIPPED (verify-first phát hiện scope không cần thiết)
-    16. Task 8: HANDOFF update + smoke test final (this commit)
+    16. Task 8: HANDOFF update + smoke test final + post-deploy verify (commits `09b095d` + `<NEXT_HASH>`)
   - **3 Akao 4-principle architectural changes**:
     1. **Bidirectional entry**: User start anywhere (S/W/O/T). Bỏ state machine forced linear `[SW_COMPLETE]→Porter→[OT_COMPLETE]`. Server TRUST `currentFramework` từ client. Markers vẫn parse backward compat.
     2. **Strategic Memory**: Server load `swot_factors` (source_framework IN ('workshop', 'ai_synthesized')) + `xray_results` by org_id. Inject vào prompt qua `formatStrategicMemory(factors)` + `mapXRayToSwotSeed(xray)`. AI reference được context cross-session.
@@ -1472,7 +1479,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 **Milestone**: M-AICoach-Sensei-1 — SWOT Coaching Redesign theo Akao Method.
 
-**Scope**: 11 commits + 1 docs commit (Task 8 HANDOFF update). 9 files touched. ~520 LOC net delta. Driver: 3 user feedback gốc về AI Coach behavior (reset context giữa session, ép tuyến tính SW→OT, reset khi paste nhiều SWOT items).
+**Scope**: 15 commits (Task 1-8 + post-deploy correction). 9 files touched. ~520 LOC net delta. Production READY at chienluoc.org commit 09b095d (Vercel dpl_38P5r8ZSo8VHj78KxGtPQG26wHjy). Driver: 3 user feedback gốc về AI Coach behavior (reset context giữa session, ép tuyến tính SW→OT, reset khi paste nhiều SWOT items).
 
 **Methodology source**: Kesterson "Basics of Hoshin Kanri" Ch.4 + Ch.6, Vinardi "Business Strategy with Hoshin Kanri" Ch.3-6, Villalba-Diez "The Hoshin Kanri Forest" Ch.4-7. Persona review by Yoji Akao (1928-2016, "father of Hoshin Kanri") via roleplay analysis.
 
