@@ -213,12 +213,13 @@ export interface ExtractedInsight {
   dimension: string
   insight: string
   confidence: 'high' | 'medium' | 'low'
+  quadrant: SwotQuadrant
 }
 
 export interface CoachingContext {
   currentDimension: string | null
   completedDimensions: string[]
-  collectedInsights: ExtractedInsight[]
+  collectedInsights: Omit<ExtractedInsight, 'quadrant'>[]
 }
 
 // ============================================================

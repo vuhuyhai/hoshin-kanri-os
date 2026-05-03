@@ -80,11 +80,14 @@ export function buildConversationMemory(messages: ChatMessage[]): {
 function isValidInsight(obj: unknown): obj is ExtractedInsight {
   if (!obj || typeof obj !== 'object') return false
   const o = obj as Record<string, unknown>
+  const validQuadrants = ['S', 'W', 'O', 'T']
   return (
     typeof o.framework === 'string' &&
     typeof o.dimension === 'string' &&
     typeof o.insight === 'string' &&
-    typeof o.confidence === 'string'
+    typeof o.confidence === 'string' &&
+    typeof o.quadrant === 'string' &&
+    validQuadrants.includes(o.quadrant)
   )
 }
 
@@ -279,10 +282,15 @@ ${stateBlock}
 Trả về JSON duy nhất (KHÔNG thêm text ngoài JSON):
 {
   "message": "Phản hồi cho CEO (tiếng Việt có dấu, markdown OK, KHÔNG dùng tên framework)",
-  "extractedInsight": { "framework": "8M", "dimension": "Man", "insight": "tóm tắt 1 câu", "confidence": "high|medium|low" } hoặc null,
+  "extractedInsight": { "framework": "8M", "dimension": "Man", "insight": "tóm tắt 1 câu", "confidence": "high|medium|low", "quadrant": "S hoặc W" } hoặc null,
   "shouldTransition": true/false,
   "nextDimension": "Machine" hoặc null
 }
+
+## QUY TẮC PHÂN LOẠI QUADRANT (SW)
+- "quadrant": "S" — insight là Điểm Mạnh (strength: lợi thế, tài sản, năng lực vượt trội).
+- "quadrant": "W" — insight là Điểm Yếu (weakness: thiếu hụt, bottleneck, gap so với đối thủ).
+- KHÔNG emit "O" hoặc "T" trong SW (đó là phần OT, sẽ làm sau).
 
 ## VÍ DỤ
 
@@ -295,11 +303,11 @@ CEO: "Nhân sự tôi ổn"
 
 ### CEO chia sẻ insight → ghi nhận + hỏi sâu hơn (KHÔNG kết luận)
 CEO: "Core team 8 người gần 3 năm. Tuyển mới mất 2 tháng vì thiếu PT có chứng chỉ"
-{"message":"Core 8 người gần 3 năm — retention tốt. Pipeline tuyển 2 tháng vì thiếu PT chứng chỉ — anh có lo việc này sẽ chậm kế hoạch mở thêm cơ sở không? Hay anh đã có cách giải?","extractedInsight":{"framework":"8M","dimension":"Man","insight":"Core 8/15 gần >3 năm, tuyển thay thế mất 2 tháng do thiếu PT có chứng chỉ","confidence":"high"},"shouldTransition":false,"nextDimension":null}
+{"message":"Core 8 người gần 3 năm — retention tốt. Pipeline tuyển 2 tháng vì thiếu PT chứng chỉ — anh có lo việc này sẽ chậm kế hoạch mở thêm cơ sở không? Hay anh đã có cách giải?","extractedInsight":{"framework":"8M","dimension":"Man","insight":"Core 8/15 gần >3 năm, tuyển thay thế mất 2 tháng do thiếu PT có chứng chỉ","confidence":"high","quadrant":"W"},"shouldTransition":false,"nextDimension":null}
 
 ### CEO paste nhiều insight cùng lúc → NHÓM theo chủ đề, hỏi root cause
 CEO: "Đội ngũ: PT giỏi nhưng turnover cao. Hệ thống: phần mềm cũ, lịch tay. Tài chính: cashflow ổn nhưng margin thấp. Khách: retention 30%."
-{"message":"Em nhóm theo từng nhóm:\\n\\n👥 **Đội ngũ**: PT giỏi + turnover cao — anh nghĩ turnover cao vì lương, môi trường, hay đối thủ săn?\\n\\n⚙️ **Hệ thống**: phần mềm cũ + lịch tay — cái nào làm anh mất thời gian nhất mỗi tuần?\\n\\n💰 **Tài chính + Khách**: margin thấp + retention 30% — anh nghĩ 2 cái này có cùng root cause không? (vd: gói membership pricing chưa đúng, khiến khách rời sớm và margin mỏng)","extractedInsight":{"framework":"8M","dimension":"Man","insight":"PT giỏi nhưng turnover cao - cần root cause analysis","confidence":"medium"},"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
+{"message":"Em nhóm theo từng nhóm:\\n\\n👥 **Đội ngũ**: PT giỏi + turnover cao — anh nghĩ turnover cao vì lương, môi trường, hay đối thủ săn?\\n\\n⚙️ **Hệ thống**: phần mềm cũ + lịch tay — cái nào làm anh mất thời gian nhất mỗi tuần?\\n\\n💰 **Tài chính + Khách**: margin thấp + retention 30% — anh nghĩ 2 cái này có cùng root cause không? (vd: gói membership pricing chưa đúng, khiến khách rời sớm và margin mỏng)","extractedInsight":{"framework":"8M","dimension":"Man","insight":"PT giỏi nhưng turnover cao - cần root cause analysis","confidence":"medium","quadrant":"W"},"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
 }
 
 // ============================================================
@@ -381,10 +389,15 @@ ${stateBlock}
 Trả về JSON duy nhất (KHÔNG thêm text ngoài JSON):
 {
   "message": "Phản hồi cho CEO (tiếng Việt có dấu, markdown OK, KHÔNG dùng tên framework)",
-  "extractedInsight": { "framework": "Porter" hoặc "PESTEL", "dimension": "...", "insight": "tóm tắt 1 câu", "confidence": "high|medium|low" } hoặc null,
+  "extractedInsight": { "framework": "Porter" hoặc "PESTEL", "dimension": "...", "insight": "tóm tắt 1 câu", "confidence": "high|medium|low", "quadrant": "O hoặc T" } hoặc null,
   "shouldTransition": true/false,
   "nextDimension": "..." hoặc null
 }
+
+## QUY TẮC PHÂN LOẠI QUADRANT (OT)
+- "quadrant": "O" — insight là Cơ Hội (opportunity: xu hướng favorable, segment mới, gap thị trường).
+- "quadrant": "T" — insight là Thách Thức (threat: đối thủ, risk regulation, công nghệ disruptive).
+- KHÔNG emit "S" hoặc "W" trong OT (đó là phần SW, đã làm trước).
 
 ## VÍ DỤ
 
@@ -393,11 +406,11 @@ Trả về JSON duy nhất (KHÔNG thêm text ngoài JSON):
 
 ### Probe deeper
 CEO: "Có 3 gym lớn gần đây nhưng mình khác biệt bằng PT 1-1"
-{"message":"PT 1-1 là lợi thế. Nhưng đối thủ có thể copy mô hình này không? Họ cần bao lâu và bao nhiêu tiền để xây đội PT ngang bạn?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"3 đối thủ lớn gần, differentiation bằng PT 1-1","confidence":"high"},"shouldTransition":false,"nextDimension":null}
+{"message":"PT 1-1 là lợi thế. Nhưng đối thủ có thể copy mô hình này không? Họ cần bao lâu và bao nhiêu tiền để xây đội PT ngang bạn?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"3 đối thủ lớn gần, differentiation bằng PT 1-1","confidence":"high","quadrant":"T"},"shouldTransition":false,"nextDimension":null}
 
 ### CEO chia sẻ insight → ghi nhận + hỏi sâu (KHÔNG kết luận thay CEO)
 CEO: "Họ không copy được vì mình có hệ thống training PT riêng, mất 6 tháng đào tạo"
-{"message":"6 tháng đào tạo PT — anh nghĩ đối thủ có sẵn lòng đầu tư thời gian + tiền đó không? Hay họ sẽ chọn cách rẻ hơn (vd: săn PT của anh bằng lương cao)?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy nếu không sẵn đầu tư dài hạn","confidence":"high"},"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
+{"message":"6 tháng đào tạo PT — anh nghĩ đối thủ có sẵn lòng đầu tư thời gian + tiền đó không? Hay họ sẽ chọn cách rẻ hơn (vd: săn PT của anh bằng lương cao)?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy nếu không sẵn đầu tư dài hạn","confidence":"high","quadrant":"O"},"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
 }
 
 // ============================================================
