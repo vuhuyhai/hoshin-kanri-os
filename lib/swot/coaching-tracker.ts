@@ -176,10 +176,6 @@ export function findFrameworkForDimension(
 // Legacy mapping
 // ============================================================
 
-export function frameworkIdToLegacy(fw: FrameworkId): 'sw' | 'ot' {
-  return fw === '8M' ? 'sw' : 'ot'
-}
-
 export function trackerToCoachingContext(
   tracker: CoachingTrackerState
 ): {

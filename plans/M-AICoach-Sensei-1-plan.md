@@ -55,9 +55,13 @@
 | 3 | Wire xrayContext + load persistent SWOT context | feat(api) | - |
 | 4 | Bump max_tokens 4096 → 8192 + streaming SSE | feat(api) | - |
 | 5 | Rewrite system prompt theo Akao 4-principle | feat(swot) | YES |
-| 6 | Auto-fill extractedInsight + remove hardcode currentFramework | feat(swot) | - |
+| 6 | Auto-fill extractedInsight + remove hardcode currentFramework + refactor swot-session-store client state machine | feat(swot) | - |
 | 7 | UI badge Strategic Memory + framework detected | feat(swot) | - |
 | 8 | HANDOFF update + smoke test 7 phases | docs | - |
+
+## Task 6 scope expansion (added 2026-05-03 post Task 2B verify)
+
+swot-session-store.ts line 1336-1378 có client-side state machine parallel, vẫn dùng getNextFramework/getFirstDimension/getNextDimension để force linear SW→OT. Task 6 phải refactor cả store này, không chỉ SwotWorkshopChat.tsx hardcode. Nếu không, server permissive nhưng client zustand store vẫn force linear → user vẫn bị stuck.
 
 ---
 
