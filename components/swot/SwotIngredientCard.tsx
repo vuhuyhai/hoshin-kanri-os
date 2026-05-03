@@ -17,6 +17,7 @@ const SOURCE_CLS: Record<IngredientSource, { label: string; cls: string }> = {
   ai_draft: { label: 'AI', cls: 'bg-blue-100 text-blue-800 border-blue-600' },
   manual: { label: 'Manual', cls: 'bg-green-100 text-green-800 border-green-600' },
   chat_extract: { label: 'Chat', cls: 'bg-purple-100 text-purple-800 border-purple-600' },
+  ai_auto: { label: 'AI Auto', cls: 'bg-amber-100 text-amber-800 border-amber-600' },
 }
 
 export function SwotIngredientCard({

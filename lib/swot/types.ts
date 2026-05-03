@@ -449,7 +449,7 @@ export interface ItemEvidenceResponse {
 
 // ─── WORKSHOP (B1 context → B2 ingredients → B3 finalize) ────────
 
-export type IngredientSource = 'ai_draft' | 'chat_extract' | 'manual'
+export type IngredientSource = 'ai_draft' | 'chat_extract' | 'manual' | 'ai_auto'
 
 export interface SwotIngredient {
   id: string

@@ -11,7 +11,11 @@ import type { ChatMessage, CoachingResponse, SwotQuadrant } from '@/lib/swot/typ
 
 interface SwotWorkshopChatProps {
   orgId: string
-  onAddIngredient: (quadrant: SwotQuadrant, statement: string) => void
+  onAddIngredient: (
+    quadrant: SwotQuadrant,
+    statement: string,
+    source?: 'chat_extract' | 'ai_auto',
+  ) => string
 }
 
 const QUADRANT_OPTIONS: { value: SwotQuadrant; label: string }[] = [
@@ -38,6 +42,7 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
   const otMessages = useSwotStore((s) => s.otMessages)
   const setSwMessages = useSwotStore((s) => s.setSwMessages)
   const setOtMessages = useSwotStore((s) => s.setOtMessages)
+  const removeIngredient = useSwotStore((s) => s.removeIngredient)
   const [input, setInput] = useState('')
 
   // Derived: messages từ store, lazy inject INITIAL_MSG nếu empty
@@ -81,6 +86,29 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
         setSwMessages([...msgs, res.message])
       } else {
         setOtMessages([...msgs, res.message])
+      }
+
+      // Auto-fill ingredient từ extractedInsight (M-AICoach-Sensei-1 Task 6D)
+      const insight = res.extractedInsight
+      if (
+        insight &&
+        insight.confidence !== 'low' &&
+        insight.insight.trim().length >= 5
+      ) {
+        const id = onAddIngredient(insight.quadrant, insight.insight, 'ai_auto')
+        const preview = insight.insight.length > 60
+          ? insight.insight.slice(0, 60) + '...'
+          : insight.insight
+        toast.success(`✓ Đã thêm vào ${insight.quadrant}: ${preview}`, {
+          action: {
+            label: 'Hoàn tác',
+            onClick: () => {
+              removeIngredient(id)
+              toast.success('Đã hoàn tác')
+            },
+          },
+          duration: 5000,
+        })
       }
     } catch (err) {
       const errMsg = err instanceof FetchJsonError

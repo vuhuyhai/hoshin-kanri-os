@@ -102,10 +102,17 @@ export function SwotWorkshop({ orgId, onComplete }: SwotWorkshopProps) {
     onComplete()
   }
 
-  const handleChatAdd = (quadrant: SwotQuadrant, statement: string) => {
+  const handleChatAdd = (
+    quadrant: SwotQuadrant,
+    statement: string,
+    source: 'chat_extract' | 'ai_auto' = 'chat_extract',
+  ): string => {
     const id = nanoid()
-    addIngredient({ id, quadrant, statement, source: 'chat_extract' })
-    toast.success('Đã thêm từ chat')
+    addIngredient({ id, quadrant, statement, source })
+    if (source === 'chat_extract') {
+      toast.success('Đã thêm từ chat')
+    }
+    return id
   }
 
   const canFinalize = ingredients.length > 0
