@@ -454,6 +454,11 @@ interface SwotStoreState extends SwotSession {
   coachingTracker: CoachingTrackerState
   coachingMessages: ChatMessage[]
 
+  // SWOT framework toggle (M-AICoach-Sensei-1 Task 6C)
+  currentFramework: 'sw' | 'ot'
+  swMessages: Array<{ role: 'user' | 'assistant'; content: string }>
+  otMessages: Array<{ role: 'user' | 'assistant'; content: string }>
+
   updateCoachingTracker: (partial: Partial<CoachingTrackerState>) => void
   addCoachingInsight: (framework: FrameworkId, insight: DimensionInsight) => void
   advanceDimension: () => void
@@ -461,6 +466,9 @@ interface SwotStoreState extends SwotSession {
   resetCoaching: () => void
   addCoachingMessage: (msg: ChatMessage) => void
   setCoachingMessages: (msgs: ChatMessage[]) => void
+  setCurrentFramework: (fw: 'sw' | 'ot') => void
+  setSwMessages: (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => void
+  setOtMessages: (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => void
   getCoachingProgress: () => {
     totalDimensions: number
     completedCount: number
@@ -549,6 +557,11 @@ export const useSwotStore = create<SwotStoreState>()(
   // Coaching state machine
   coachingTracker: createInitialCoachingTracker(),
   coachingMessages: [] as ChatMessage[],
+
+  // SWOT framework toggle (Task 6C)
+  currentFramework: 'sw' as 'sw' | 'ot',
+  swMessages: [] as Array<{ role: 'user' | 'assistant'; content: string }>,
+  otMessages: [] as Array<{ role: 'user' | 'assistant'; content: string }>,
 
   // Coaching coverage
   coachingCoverage: createEmptyCoverage(),
@@ -1417,6 +1430,10 @@ export const useSwotStore = create<SwotStoreState>()(
     set({ coachingMessages: msgs })
   },
 
+  setCurrentFramework: (fw) => set({ currentFramework: fw }),
+  setSwMessages: (messages) => set({ swMessages: messages }),
+  setOtMessages: (messages) => set({ otMessages: messages }),
+
   getCoachingProgress: () => {
     return selectCoachingProgress(get().coachingTracker)
   },
@@ -1588,6 +1605,9 @@ export const useSwotStore = create<SwotStoreState>()(
         } satisfies CoachingWizardState,
         coachingTracker: state.coachingTracker,
         coachingMessages: state.coachingMessages.slice(-20),
+        currentFramework: state.currentFramework,
+        swMessages: state.swMessages.slice(-20),
+        otMessages: state.otMessages.slice(-20),
         coachingCoverage: state.coachingCoverage,
         contextCards: state.evidence.contextCards,
         synthesis: state.synthesis,
