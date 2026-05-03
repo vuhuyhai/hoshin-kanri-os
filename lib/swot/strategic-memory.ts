@@ -3,7 +3,7 @@ import type { Database } from '@/lib/supabase/types'
 import type { XRayResult } from '@/lib/x-ray/types'
 
 type Tables = Database['public']['Tables']
-type SwotFactorRow = Tables['swot_factors']['Row']
+export type SwotFactorRow = Tables['swot_factors']['Row']
 
 export interface XrayContextSummary {
   xrayId: string

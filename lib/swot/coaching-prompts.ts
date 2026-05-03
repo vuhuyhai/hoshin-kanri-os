@@ -7,6 +7,7 @@ import type {
 } from './types'
 import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS } from './frameworks'
 import type { XRaySeedContext } from './xray-to-swot-mapper'
+import type { SwotFactorRow } from './strategic-memory'
 
 // ============================================================
 // NEW COACHING PROMPT — no framework jargon
@@ -185,6 +186,44 @@ function formatStateBlock(ctx?: CoachingContext): string {
   return block
 }
 
+export function formatStrategicMemory(factors: SwotFactorRow[]): string {
+  if (factors.length === 0) return ''
+
+  const byQuadrant: Record<string, SwotFactorRow[]> = { S: [], W: [], O: [], T: [] }
+  for (const f of factors) {
+    if (f.quadrant in byQuadrant) {
+      byQuadrant[f.quadrant].push(f)
+    }
+  }
+
+  const QUADRANT_LABELS: Record<string, string> = {
+    S: 'Điểm mạnh đã có',
+    W: 'Điểm yếu đã ghi nhận',
+    O: 'Cơ hội đã xác định',
+    T: 'Thách thức đã nhận diện',
+  }
+
+  const sections: string[] = []
+  for (const q of ['S', 'W', 'O', 'T']) {
+    const items = byQuadrant[q].slice(0, 10)
+    if (items.length === 0) continue
+    const lines = items.map((f) => `  - [${f.code}] ${f.content}`)
+    sections.push(`${QUADRANT_LABELS[q]} (${items.length}):\n${lines.join('\n')}`)
+  }
+
+  if (sections.length === 0) return ''
+
+  return `\n\n=== BỐI CẢNH SWOT ĐÃ XÂY (TỪ SESSION TRƯỚC) ===
+${sections.join('\n\n')}
+
+GHI NHỚ:
+- Đây là dữ liệu CEO đã xây trong các session trước
+- Khi user nêu insight mới, REFERENCE bối cảnh này nếu liên quan
+- Ví dụ: "Lần trước anh đã nói về [S2], hôm nay đề cập [W1] có liên kết không?"
+- KHÔNG hỏi lại những gì đã có trong bối cảnh
+================================================`
+}
+
 // ============================================================
 // SW COACHING PROMPT — 8M Framework
 // ============================================================
@@ -194,6 +233,7 @@ export function getSwCoachingSystemPrompt(
   ctx?: CoachingContext,
   selectedDimensionNames?: string[],
   xrayContext?: XRaySeedContext,
+  memoryBlock?: string,
 ): string {
   const activeDims = selectedDimensionNames
     ? EIGHT_MS.filter((d) => selectedDimensionNames.includes(d.nameEn))
@@ -251,7 +291,7 @@ CEO: "Nhân sự tôi ổn"
 
 ### Đủ insight → chuyển chủ đề tự nhiên
 CEO: "Core team 8 người gần 3 năm. Tuyển mới mất 2 tháng vì thiếu PT có chứng chỉ"
-{"message":"Retention tốt nhưng pipeline tuyển là bottleneck — ghi nhận. Giờ mình nói về **công nghệ và hệ thống** bạn đang dùng. Phần mềm nào quản lý lịch, membership, và thu tiền?","extractedInsight":{"framework":"8M","dimension":"Man","insight":"Core 8/15 gần >3 năm, tuyển thay thế mất 2 tháng do thiếu PT có chứng chỉ","confidence":"high"},"shouldTransition":true,"nextDimension":"Machine"}${xrayBlock}`
+{"message":"Retention tốt nhưng pipeline tuyển là bottleneck — ghi nhận. Giờ mình nói về **công nghệ và hệ thống** bạn đang dùng. Phần mềm nào quản lý lịch, membership, và thu tiền?","extractedInsight":{"framework":"8M","dimension":"Man","insight":"Core 8/15 gần >3 năm, tuyển thay thế mất 2 tháng do thiếu PT có chứng chỉ","confidence":"high"},"shouldTransition":true,"nextDimension":"Machine"}${xrayBlock}${memoryBlock ?? ''}`
 }
 
 // ============================================================
@@ -265,6 +305,7 @@ export function getOtCoachingSystemPrompt(
   selectedPorter?: string[],
   selectedPestel?: string[],
   xrayContext?: XRaySeedContext,
+  memoryBlock?: string,
 ): string {
   const includePorter = externalFramework !== 'PESTEL'
   const includePestel = externalFramework !== 'Porter'
@@ -345,7 +386,7 @@ CEO: "Có 3 gym lớn gần đây nhưng mình khác biệt bằng PT 1-1"
 
 ### Chuyển sang chủ đề tiếp
 CEO: "Họ không copy được vì mình có hệ thống training PT riêng, mất 6 tháng đào tạo"
-{"message":"Moat 6 tháng đào tạo — barrier tốt. Giờ mình nói về **xu hướng khách hàng**. Thói quen tập gym ở ${orgContext.city} thay đổi thế nào gần đây — khách có chuyển sang tập ở nhà nhiều không?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy","confidence":"high"},"shouldTransition":true,"nextDimension":"Social"}${xrayBlock}`
+{"message":"Moat 6 tháng đào tạo — barrier tốt. Giờ mình nói về **xu hướng khách hàng**. Thói quen tập gym ở ${orgContext.city} thay đổi thế nào gần đây — khách có chuyển sang tập ở nhà nhiều không?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy","confidence":"high"},"shouldTransition":true,"nextDimension":"Social"}${xrayBlock}${memoryBlock ?? ''}`
 }
 
 // ============================================================
