@@ -56,12 +56,27 @@
 | 4 | Bump max_tokens 4096 → 8192 + streaming SSE | feat(api) | - |
 | 5 | Rewrite system prompt theo Akao 4-principle | feat(swot) | YES |
 | 6 | Auto-fill extractedInsight + remove hardcode currentFramework + refactor swot-session-store client state machine | feat(swot) | - |
-| 7 | UI badge Strategic Memory + framework detected | feat(swot) | - |
+| 7 | ~~UI badge Strategic Memory~~ SKIPPED — verify-first phát hiện scope không cần thiết | docs | SKIP |
 | 8 | HANDOFF update + smoke test 7 phases | docs | - |
 
 ## Task 6 scope expansion (added 2026-05-03 post Task 2B verify)
 
 swot-session-store.ts line 1336-1378 có client-side state machine parallel, vẫn dùng getNextFramework/getFirstDimension/getNextDimension để force linear SW→OT. Task 6 phải refactor cả store này, không chỉ SwotWorkshopChat.tsx hardcode. Nếu không, server permissive nhưng client zustand store vẫn force linear → user vẫn bị stuck.
+
+## Task 7 SKIP rationale (added 2026-05-03 post Task 6E close)
+
+Verify-first analysis cho Task 7 phát hiện 2 sub-features đều không nên ship:
+
+1. Strategic Memory badge ("Em nhớ N items từ session trước"):
+   - Server đã inject memory vào prompt (Task 3B-2) — benefit thực đã ship
+   - Badge chỉ visual decoration, 4 options implementation đều có cost không rõ
+   - Defer milestone riêng nếu user request explicit
+
+2. Framework detected badge ("AI đang focus: 8M"):
+   - Vi phạm Rule 9 SW prompt + Rule 9 OT prompt: "TUYỆT ĐỐI KHÔNG đề cập đến 8M / Porter / PESTEL"
+   - Lộ tên framework với CEO sẽ phá Akao 4-principle (catchball, không lecture)
+
+Pattern lesson L25: verify-first phát hiện scope = 0. M-Hoshin-7 L7 áp dụng — đôi khi conclusion verify-first là "không build". Tránh ship feature decoration không value.
 
 ---
 

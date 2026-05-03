@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-05-02 — post M-Design-3b (Dashboard hex-to-token refactor: score-tier + kpi-strong tokens foundation + 4 files refactored to consume them, 6 commits 868fa34→ed27932, HEAD ed27932). Preceded by M-Design-3a (KPI status tokens foundation + chart-tokens runtime resolver + first dashboard hex refactor, 3 commits d7fdb6d→b3ff123).
+> **Last verified**: 2026-05-03 — post M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 14 commits 4273d57→feb6ad3, ~13 tasks). HEAD `feb6ad3`. Touch 9 files: app/api/swot/coaching/route.ts + lib/swot/{coaching-prompts,strategic-memory,coaching-tracker,types,swot-session-store}.ts + components/swot/{SwotWorkshop,SwotWorkshopChat,SwotIngredientPanel,SwotIngredientCard}.tsx + plans/M-AICoach-Sensei-1-plan.md.
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -902,7 +902,72 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest feature work**: M-Cleanup-6 Phase 1 (`.single()` anti-pattern fix in 7 API routes + extract helper, 1 commit, 8 files, ~30 phút work). New `lib/auth/getActiveMembership.ts` helper với typed shape `{ org_id: string; role: string } | null` — caller pass `lastOrgId` explicit (NOT helper tự fetch from `auth.getUser()` để tránh round-trip thừa). 7 API routes refactored:
+- **Latest feature work**: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 14 commits 4273d57→feb6ad3, ~13 hours work). Trigger: 3 user feedback về AI Coach reset + ép tuyến tính + reset context giữa session.
+  - **Tasks shipped (8 tasks → 14 commits)**:
+    1. Task 1: Plan docs (commit `4273d57`)
+    2. Task 2A: Server adaptive framework, no forced linear switch (`f1f4e46`)
+    3. Task 2B: Cleanup `frameworkIdToLegacy` orphan + expand Task 6 scope (`32633c8`)
+    4. Task 3A: `loadStrategicMemory` helper (`6bacd3c`)
+    5. Task 3B-1: `formatStrategicMemory` + extend prompt signatures (`b5d88ab`)
+    6. Task 3B-2: Wire memory + xrayContext + getActiveMembership (`2eb03d3`)
+    7. Task 4: Bump max_tokens 4096→8192 cho Vietnamese density (`6d61dec`)
+    8. Task 5: Rewrite SW+OT prompts theo Akao 4-principle (`a6706c1`)
+    9. Task 6B: Add `quadrant` field vào `ExtractedInsight` (`02ce7c5`)
+    10. Task 6C-step2: Store currentFramework + dual SW/OT messages (`a0f32b4`)
+    11. Task 6C-step3: SW/OT toggle UI + dual history + INITIAL_MSG framework-aware (`c87d6f1`)
+    12. Task 6D-step2: Refactor addIngredient signature - caller pass id (`7489b21`)
+    13. Task 6D-step3: Auto-fill extractedInsight + toast undo + ai_auto source (`3ae2c05`)
+    14. Task 6E: Cleanup orphan `advanceDimension`/`advanceFramework` + 3 helpers (`feb6ad3`)
+    15. Task 7: SKIPPED (verify-first phát hiện scope không cần thiết)
+    16. Task 8: HANDOFF update + smoke test final (this commit)
+  - **3 Akao 4-principle architectural changes**:
+    1. **Bidirectional entry**: User start anywhere (S/W/O/T). Bỏ state machine forced linear `[SW_COMPLETE]→Porter→[OT_COMPLETE]`. Server TRUST `currentFramework` từ client. Markers vẫn parse backward compat.
+    2. **Strategic Memory**: Server load `swot_factors` (source_framework IN ('workshop', 'ai_synthesized')) + `xray_results` by org_id. Inject vào prompt qua `formatStrategicMemory(factors)` + `mapXRayToSwotSeed(xray)`. AI reference được context cross-session.
+    3. **Framework grouping over Pareto**: Prompts rewrite Rule 5-7 — bỏ "đi lần lượt" + "phải đi đủ", thêm "CEO chuyển chủ đề bất kỳ lúc nào" + "paste nhiều insight → NHÓM theo chủ đề, KHÔNG hỏi 'cái nào ảnh hưởng nhất'". Pareto thinking là job của catchball CEO+team, KHÔNG phải AI.
+    4. **Catchball not lecture**: Persona "Minh" thêm: "ĐẶT CÂU HỎI giúp CEO TỰ THẤY, KHÔNG đưa kết luận thay CEO". Examples rewrite từ assertive ("Retention tốt nhưng pipeline tuyển là bottleneck — ghi nhận") sang Socratic ("Pipeline tuyển 2 tháng — anh có lo cho kế hoạch năm tới không? Hay anh đã có cách giải?").
+  - **Auto-fill flow** (Task 6D, root user feedback fix):
+    - AI emit `extractedInsight.quadrant: 'S' | 'W' | 'O' | 'T'` (Task 6B added field)
+    - Client consume `extractedInsight` (was ignored), gate `confidence !== 'low'` + length ≥ 5 chars
+    - Toast undo button: `removeIngredient(id)` qua `useSwotStore` selector, 5s duration
+    - New IngredientSource value `'ai_auto'` — visual badge amber (vs `'ai_draft'` blue)
+    - Pattern Option B2: caller generate nanoid + pass vào `addIngredient(id, ...)` để biết id cho undo
+  - **Dual SW/OT history** (Task 6C):
+    - Store thêm `currentFramework: 'sw' | 'ot'` + `swMessages[]` + `otMessages[]`
+    - Toggle UI ở header `SwotWorkshop.tsx` (segmented control NB v3.2 pattern)
+    - Lazy inject `INITIAL_MSG_SW` / `INITIAL_MSG_OT` framework-aware
+    - Race condition handled: `useSwotStore.getState().currentFramework` snapshot tại request time, response commit về framework gốc dù user switch giữa chừng
+  - **Cleanup orphan** (Task 6E):
+    - Xóa actions `advanceDimension` + `advanceFramework` trong store (0 component callers)
+    - Xóa 3 helpers `getNextDimension/getNextFramework/getFirstDimension` trong coaching-tracker (chỉ dùng trong 2 orphan actions)
+    - Remove misleading `@deprecated` banner ở coaching-tracker.ts (file vẫn còn 13 active exports)
+    - -97 lines total
+  - **Pattern lessons** (đáng generalize cho future milestones):
+    1. **Verify-first phát hiện scope=0**: Task 7 verify trước khi build → conclusion "không cần build" (Strategic Memory badge duplicate work đã ship ở Task 3B-2; Framework detected badge vi phạm Rule 9 prompt). Tránh ship feature decoration không value. Pattern: verify-first không chỉ để confirm scope, đôi khi để **kill scope**.
+    2. **3-tier fallback chain xung đột streaming**: Task 4 originally plan switch streaming SSE, sau analysis phát hiện streaming break 3-tier JSON parse fallback chain (hotfix `df3c1ef`). Option A chọn: chỉ bump max_tokens, giữ non-streaming. Pattern: streaming ≠ luôn tốt cho mọi route, depend response shape (long-form generation vs chat-style short response).
+    3. **Schema mismatch cross-helpers**: `loadStrategicMemory` return `XrayContextSummary { xrayId, overallScore, overallLevel, result, capturedAt }` nhưng prompt builder expect `XRaySeedContext { ..., swotHints, summaryForAI }`. Phát hiện qua Task 3B verify, fix bằng convert qua `mapXRayToSwotSeed()`. Pattern: khi data flow qua nhiều helper, MUST verify shape contract end-to-end (M-Hoshin-7 L7 reinforce).
+    4. **TypeScript Record exhaustiveness check defensive**: Task 6D-step3 `IngredientSource` union extension forced Cursor add entry vào `SOURCE_CLS Record<IngredientSource, ...>`. TS exhaustiveness check là defensive type system — extension union → require update mọi consumer. Pattern: khi extend discriminated union hoặc enum-like type, grep `Record<TypeName, ...>` toàn repo trước commit.
+    5. **State machine claim ≠ reality**: Plan file ban đầu claim "swot-session-store force linear SW→OT". Verify Task 6A phát hiện 2 actions `advanceDimension`/`advanceFramework` ORPHAN, 0 component call. Pattern: trust verify-first hơn HANDOFF prose. Plan file là intent, code là reality. M-Hoshin-7 L8 áp dụng cross-domain.
+    6. **Race condition snapshot pattern**: Task 6C-step3 framework switch giữa API in-flight → response leak vào framework khác. Fix: capture `useSwotStore.getState().currentFramework` snapshot tại entry function, commit response về framework gốc. Decision D8: no abort, response valuable. Pattern reusable: bất kỳ async action read mutable state phải snapshot tại entry, không read state lại lúc resolve.
+  - **Files changed** (9 files, ~520 LOC delta):
+    - `app/api/swot/coaching/route.ts` — adaptive framework, server-resolved orgId, max_tokens 8192, strategic memory wire
+    - `lib/swot/coaching-prompts.ts` — Akao 4-principle rewrite, formatStrategicMemory helper, quadrant in schema, isValidInsight enum
+    - `lib/swot/strategic-memory.ts` — NEW file (~64 LOC), loadStrategicMemory + types
+    - `lib/swot/coaching-tracker.ts` — cleanup orphan helpers (-97 lines), banner removed
+    - `lib/swot/types.ts` — quadrant field on ExtractedInsight, IngredientSource ai_auto
+    - `lib/swot/swot-session-store.ts` — currentFramework + dual messages + setMessages actions, addIngredient signature refactor, orphan actions cleanup
+    - `components/swot/SwotWorkshop.tsx` — SW/OT toggle UI, handleChatAdd return id, source param
+    - `components/swot/SwotWorkshopChat.tsx` — store-derived messages, framework-aware INITIAL_MSG, race condition snapshot, auto-fill flow
+    - `components/swot/SwotIngredientPanel.tsx` — pass id to addIngredient
+    - `components/swot/SwotIngredientCard.tsx` — SOURCE_CLS amber entry for ai_auto
+  - **Constraints cho future AI sessions**:
+    - KHÔNG re-add forced linear SW→OT state machine. Bidirectional entry là decision lock.
+    - KHÔNG remove markers `[SW_COMPLETE]/[OT_COMPLETE]` parse logic — backward compat client cũ.
+    - KHÔNG modify `ExtractedInsight.quadrant` enum (lock 'S' | 'W' | 'O' | 'T').
+    - KHÔNG persist INITIAL_MSG_SW/INITIAL_MSG_OT vào store — lazy inject pattern.
+    - KHÔNG abort in-flight request khi switch framework — D8 decision.
+    - KHÔNG dùng `var(--*)` cho Recharts props (out-of-scope reminder, pitfall §10 #19).
+    - KHI AI emit insight với confidence 'low' → skip auto-fill SILENT (no toast). User có thể manual add qua "Rút ý từ chat" UI.
+- **Previous feature work**: M-Cleanup-6 Phase 1 (`.single()` anti-pattern fix in 7 API routes + extract helper, 1 commit, 8 files, ~30 phút work). New `lib/auth/getActiveMembership.ts` helper với typed shape `{ org_id: string; role: string } | null` — caller pass `lastOrgId` explicit (NOT helper tự fetch from `auth.getUser()` để tránh round-trip thừa). 7 API routes refactored:
   - [app/api/x-matrix/prefill/route.ts](app/api/x-matrix/prefill/route.ts)
   - [app/api/kpi/list/route.ts](app/api/kpi/list/route.ts)
   - [app/api/report/monthly/route.ts](app/api/report/monthly/route.ts) — split `organizations(name)` JOIN → 2 queries cho type clarity (helper return flat shape)
@@ -911,8 +976,8 @@ Khi Claude mới vào session:
   - [app/api/x-ray/history/route.ts](app/api/x-ray/history/route.ts)
   - [app/api/x-ray/score/route.ts](app/api/x-ray/score/route.ts) — trong `if (user)` block
   - **Phase 2 deferred**: 12 dashboard inline call sites (`find(lastOrgId) ?? memberships[0]` pattern) chưa refactor sang helper. M-Cleanup-6 Phase 2 milestone riêng — KHÔNG block release nào khác.
-- **Previous feature work**: M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions). DB: table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (migration 035). API: 4 routes (POST/GET `/api/invites` create+list, DELETE `/api/invites/[token]` revoke, GET `/api/invites/[token]/info` public, POST `/api/invites/[token]/accept` authed). UI: `/invite/[token]` public accept page + Settings Members section replace fake `handleCopyInvite`. Auth: login + register honor `?redirect=` param với whitelist. Multi-org systemic fix: 12 dashboard pages + layout `.maybeSingle()` → array + find/fallback pattern (settings, kpi, x-matrix index/new/[year]/review, dashboard, discovery/{benchmark,xray-history,vision-workshop,swot,swot/strategy,synthesis}). Deferred: OAuth Google + email-confirmation invite flow gaps (workaround MVP — user click invite link lại sau confirm).
-- **Earlier feature work**: M-Design-3b (Dashboard hex-to-token refactor) — 6 commits `868fa34`→`ed27932`, 5 files changed (1 foundation + 4 consumers):
+- **Earlier feature work**: M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions). DB: table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (migration 035). API: 4 routes (POST/GET `/api/invites` create+list, DELETE `/api/invites/[token]` revoke, GET `/api/invites/[token]/info` public, POST `/api/invites/[token]/accept` authed). UI: `/invite/[token]` public accept page + Settings Members section replace fake `handleCopyInvite`. Auth: login + register honor `?redirect=` param với whitelist. Multi-org systemic fix: 12 dashboard pages + layout `.maybeSingle()` → array + find/fallback pattern (settings, kpi, x-matrix index/new/[year]/review, dashboard, discovery/{benchmark,xray-history,vision-workshop,swot,swot/strategy,synthesis}). Deferred: OAuth Google + email-confirmation invite flow gaps (workaround MVP — user click invite link lại sau confirm).
+- **Older feature work**: M-Design-3b (Dashboard hex-to-token refactor) — 6 commits `868fa34`→`ed27932`, 5 files changed (1 foundation + 4 consumers):
   - `868fa34` feat(design): add score tier + kpi-strong tokens for M-Design-3b foundation. Add 6 new tokens trong `app/globals.css :root`: `--kpi-healthy-strong: #16A34A` + `--kpi-attention-strong: #D97706` (saturated companions cho pastel `--kpi-*`) + `--score-{critical,weak,fair,good}` 4-tier saturated cho X-Ray health score. Extend `lib/design/chart-tokens.ts`: `ScoreTier` type, `getScoreTier(score)` server-safe classifier, `resolveScoreToken(tier)` client resolver, `SCORE_TOKEN_NAMES` Record map, extend `KPI_TOKEN_NAMES` thêm `healthyStrong`/`attentionStrong`. `--kpi-warning-strong` deliberately KHÔNG ship — reuse shadcn `--destructive` cho red strokes. `.dark` block UNTOUCHED.
   - `8121194` refactor(xray): replace hardcoded hex with design tokens. `app/dashboard/discovery/xray-history/XRayHistoryChart.tsx` (client component) — 10 hex sites → `resolveToken('ink')` + `resolveToken('chart-4')` + `resolveScoreToken({critical,weak,fair})`. Stray `#2C2B2B` legacy color normalized → `--ink` (#1A1A1A) tại 4 sites. Move `CustomDot` inside main component closure để share resolved `ink` ref. 2 SSR fallback hex còn lại (`'#1A1A1A'`, `'#8A8787'`) trong `resolveToken(...)` args là intentional defaults — prevent black-flash khi SSR.
   - `8d875d7` refactor(xray-history): replace hardcoded hex with score tier tokens. `app/dashboard/discovery/xray-history/page.tsx` (server) delete `getScoreColor()`, import `getScoreTier`. Score number span dùng `style={{ color: \`var(--score-${getScoreTier(score)})\` }}` (Pattern C — var() resolve client-side trên HTML element). `chartData.color: string` → `chartData.tier: ScoreTier` data contract change. Client `XRayHistoryChart` consume `payload.tier` → `resolveScoreToken(payload.tier)` cho `<Dot fill>`. Locks in "server return tier name, client resolve color" pattern (decision §3).
@@ -920,7 +985,7 @@ Khi Claude mới vào session:
   - `792e43c` refactor(discovery): replace badge hex with KPI pastel tokens. `app/dashboard/discovery/page.tsx` — 3 module-level const `BADGE_STYLE_{DONE,NEXT,LOCKED}` để dedupe 4 inline-style sites (DONE used 2x). Map Tailwind palette → KPI tokens với intentional hue shift (emerald → kpi-healthy lime, amber → kpi-attention warm yellow). LOCKED border dùng `color-mix(in srgb, var(--text-3) 30%, transparent)` mirror visual weight gốc.
   - `ed27932` refactor(discovery): replace checkmark hex with score-good token. 2 sites `#059669` (emerald-600) → `var(--score-good)` (#16A34A green-600) ở step-list checkmark + "Hoàn thành!" overline. Align success indicator hue với X-Ray "Tốt" tier + chart success ReferenceLine. `discovery/page.tsx` hex-clean (0 matches).
   - **Files deferred**: `app/dashboard/kpi/components/KpiCard.tsx` Tailwind utility classes (`bg-green-100`, `text-red-600`, etc.) — KHÔNG phải inline hex → out of scope M-Design-3b. Defer M-Design-Tailwind-Cleanup-1.
-- **Older feature work**: M-Design-3a (KPI status tokens foundation, 3 commits `d7fdb6d`→`b3ff123`, 3 files: 8 `--kpi-*` tokens + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `app/dashboard/page.tsx:224`) → M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
+- **Historical feature work**: M-Design-3a (KPI status tokens foundation, 3 commits `d7fdb6d`→`b3ff123`, 3 files: 8 `--kpi-*` tokens + `lib/design/chart-tokens.ts` runtime resolver + first dashboard hex refactor `app/dashboard/page.tsx:224`) → M-OrgUX-1 (Duplicate Org Detection on Onboarding, 6 commits `6ccd776`→`d57c7f1`) → M-Public-1 (repo public + HANDOFF auto-sync, 2 commits `e305e61`+`aabedce`) → M-Cleanup-1 (wizard files cleanup, 1 commit `558a471`, -1184 lines) → M-Hoshin-7 (anti-pattern audit + fix multi-org `.limit(1).single()` lookup, 1 commit `3e29a66`).
 - **Known open items**:
   - **M-OrgInvite-1 deferred items (2026-05-02)**:
     - `idx_org_invites_token` redundant với auto-generated `org_invites_token_key` UNIQUE index — drop trong migration patch khi tiện
@@ -1402,6 +1467,50 @@ Khi Claude mới vào session:
 ## 17. Architecture Decisions
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
+
+### 2026-05-03 — SWOT Coaching Redesign theo Akao Method (M-AICoach-Sensei-1)
+
+**Milestone**: M-AICoach-Sensei-1 — SWOT Coaching Redesign theo Akao Method.
+
+**Scope**: 11 commits + 1 docs commit (Task 8 HANDOFF update). 9 files touched. ~520 LOC net delta. Driver: 3 user feedback gốc về AI Coach behavior (reset context giữa session, ép tuyến tính SW→OT, reset khi paste nhiều SWOT items).
+
+**Methodology source**: Kesterson "Basics of Hoshin Kanri" Ch.4 + Ch.6, Vinardi "Business Strategy with Hoshin Kanri" Ch.3-6, Villalba-Diez "The Hoshin Kanri Forest" Ch.4-7. Persona review by Yoji Akao (1928-2016, "father of Hoshin Kanri") via roleplay analysis.
+
+**4 Architectural decisions locked**:
+
+1. **Bidirectional entry (Akao Principle 1)**: User start anywhere (S/W/O/T). Server TRUST `currentFramework` từ client (KHÔNG enforce switch). Markers `[SW_COMPLETE]/[OT_COMPLETE]` parse backward compat nhưng KHÔNG trigger framework auto-switch. Catchball philosophy.
+
+2. **Strategic Memory (Akao Principle 2)**: Server load persistent SWOT context (swot_factors source_framework IN workshop/ai_synthesized + xray_results latest) by org_id mỗi request. Inject vào system prompt qua `formatStrategicMemory(factors)` text block + `mapXRayToSwotSeed(xray)` for xrayBlock. Vinardi Ch.6 — Strategic Memory là core, Toyota catchball nhiều tháng giữ memory.
+
+3. **Framework grouping over Pareto (Akao Principle 3)**: Khi user paste 20+ items, AI nhóm theo 8M (SW) hoặc Porter+PESTEL (OT), KHÔNG hỏi "cái nào ảnh hưởng nhất". Pareto thinking là job của catchball CEO+team, KHÔNG phải AI (Kesterson Ch.4).
+
+4. **Catchball not lecture (Akao Principle 4)**: Persona "Minh" — ĐẶT CÂU HỎI giúp CEO TỰ THẤY, KHÔNG đưa kết luận thay CEO. AI là sensei challenger, không phải consultant.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG re-add forced linear SW→OT state machine. Bidirectional entry là decision lock.
+- KHÔNG remove `[SW_COMPLETE]/[OT_COMPLETE]` markers parse logic — backward compat client cũ.
+- KHÔNG modify `ExtractedInsight.quadrant` enum (lock 'S' | 'W' | 'O' | 'T').
+- KHÔNG persist `INITIAL_MSG_SW`/`INITIAL_MSG_OT` vào store — lazy inject pattern (decision D9).
+- KHÔNG abort in-flight request khi user switch framework — response valuable, commit về framework gốc qua snapshot pattern (decision D8).
+- KHÔNG dùng `swot_analyses` legacy table cho coaching context — decision D2 exclude legacy, dùng `swot_factors` only (canonical sau migration 014).
+- KHI thêm route mới có Server load context, MUST follow pattern Task 3B-2: `getActiveMembership` + `loadStrategicMemory` + safeOrgContext override (defense vs client tampering).
+- KHI extend AI structured output schema, MUST update: (a) types.ts interface, (b) isValidInsight runtime guard, (c) prompt schema example block, (d) all in-prompt JSON examples (AI pattern-matches examples). 4 sites pattern locked.
+- KHI add new IngredientSource value, MUST update SOURCE_CLS Record exhaustiveness check ở SwotIngredientCard.tsx.
+
+**Pattern lessons** (đáng generalize):
+
+1. **L25 — Verify-first phát hiện scope=0**: Task 7 verify trước build → conclusion "không cần build" (sub-features duplicate work đã ship hoặc vi phạm prompt rules). Pattern: verify-first không chỉ confirm scope, đôi khi để **kill scope**. Tránh ship feature decoration không value.
+
+2. **L26 — Streaming ≠ luôn tốt**: Task 4 originally plan switch SSE, analysis phát hiện streaming break 3-tier JSON parse fallback chain (hotfix `df3c1ef`). Pattern: streaming benefit (TTFB ~200ms) chỉ valuable cho long-form generation (vd discovery synthesis), không cho chat-style short response. Coaching response < 500 tokens → streaming overhead > benefit.
+
+3. **L27 — Schema mismatch cross-helpers**: `loadStrategicMemory` return type ≠ prompt builder expect type. Phát hiện qua Task 3B verify, fix bằng convert helper. Pattern: data flow qua nhiều helper layer MUST verify shape contract end-to-end. M-Hoshin-7 L7 reinforce.
+
+4. **L28 — TypeScript Record exhaustiveness check defensive**: Task 6D-step3 `IngredientSource` union extension forced Cursor add entry vào `SOURCE_CLS Record<IngredientSource, ...>`. TS exhaustiveness là defensive type system — extension union → require update mọi consumer. Pattern: khi extend discriminated union hoặc enum-like type, grep `Record<TypeName, ...>` toàn repo trước commit.
+
+5. **L29 — State machine claim ≠ reality**: Plan file claim "force linear" nhưng verify Task 6A phát hiện actions ORPHAN. Pattern: trust verify-first hơn HANDOFF prose. Plan file là intent, code là reality. M-Hoshin-7 L8 áp dụng cross-domain.
+
+6. **L30 — Race condition snapshot pattern**: Async action read mutable state phải snapshot tại entry, không read state lại lúc resolve. Task 6C-step3 framework switch giữa API in-flight handled qua `useSwotStore.getState().currentFramework` snapshot. Pattern reusable cho bất kỳ async action mutate state khác.
 
 ### 2026-05-02 — Helper extract for org membership lookup (M-Cleanup-6 Phase 1)
 
