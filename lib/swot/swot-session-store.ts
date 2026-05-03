@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
-import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/client'
 import { toJson } from '@/lib/utils'
 import type {
@@ -513,7 +512,7 @@ interface SwotStoreState extends SwotSession {
   setContextData: (data: SwotContextData) => void
   setIngredients: (items: SwotIngredient[]) => void
   addIngredient: (
-    item: Omit<SwotIngredient, 'id' | 'selected' | 'isSearching' | 'evidence'>
+    item: Omit<SwotIngredient, 'selected' | 'isSearching' | 'evidence'>
   ) => void
   updateIngredient: (id: string, patch: Partial<SwotIngredient>) => void
   removeIngredient: (id: string) => void
@@ -1512,7 +1511,6 @@ export const useSwotStore = create<SwotStoreState>()(
         ...state.ingredients,
         {
           ...item,
-          id: nanoid(),
           evidence: [],
           isSearching: false,
           selected: false,

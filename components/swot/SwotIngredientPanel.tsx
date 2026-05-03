@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, X } from 'lucide-react'
+import { nanoid } from 'nanoid'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import { SwotIngredientCard } from './SwotIngredientCard'
 import type { SwotQuadrant } from '@/lib/swot/types'
@@ -41,7 +42,7 @@ export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngr
   const commitAdd = () => {
     const trimmed = addText.trim()
     if (!trimmed || !addingQuadrant) { cancelAdd(); return }
-    addIngredient({ quadrant: addingQuadrant, statement: trimmed, source: 'manual' })
+    addIngredient({ id: nanoid(), quadrant: addingQuadrant, statement: trimmed, source: 'manual' })
     toast.success('Đã thêm nguyên liệu')
     cancelAdd()
   }
