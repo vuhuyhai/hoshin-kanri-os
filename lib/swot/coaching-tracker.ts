@@ -1,7 +1,3 @@
-/**
- * @deprecated Logic moved to lib/swot/swot-session-store.ts
- * Safe to delete after verifying no remaining imports.
- */
 import { EIGHT_MS, PORTER_FORCES, PESTEL_FACTORS } from './frameworks'
 import type { CoachingTrackerState, FrameworkId } from './types'
 
@@ -52,16 +48,6 @@ export function createInitialCoachingTracker(): CoachingTrackerState {
 // Navigation helpers
 // ============================================================
 
-export function getNextDimension(
-  framework: FrameworkId,
-  currentDimension: string
-): string | null {
-  const dims = DIMENSION_SEQUENCES[framework]
-  const idx = dims.indexOf(currentDimension)
-  if (idx === -1 || idx >= dims.length - 1) return null
-  return dims[idx + 1]
-}
-
 /** Get next selected dimension within a framework (skips unselected). */
 export function getNextSelectedDimension(
   framework: FrameworkId,
@@ -76,16 +62,6 @@ export function getNextSelectedDimension(
     if (selected.includes(allDims[i])) return allDims[i]
   }
   return null
-}
-
-export function getNextFramework(current: FrameworkId): FrameworkId | null {
-  const idx = FRAMEWORK_SEQUENCE.indexOf(current)
-  if (idx === -1 || idx >= FRAMEWORK_SEQUENCE.length - 1) return null
-  return FRAMEWORK_SEQUENCE[idx + 1]
-}
-
-export function getFirstDimension(framework: FrameworkId): string {
-  return DIMENSION_SEQUENCES[framework][0]
 }
 
 /** Get first selected dimension in a framework. */

@@ -25,9 +25,6 @@ import type {
 } from './coaching-types'
 import {
   createInitialCoachingTracker,
-  getNextDimension,
-  getNextFramework,
-  getFirstDimension,
   getFirstSelectedDimension,
   findFrameworkForDimension,
   selectCoachingProgress,
@@ -460,8 +457,6 @@ interface SwotStoreState extends SwotSession {
 
   updateCoachingTracker: (partial: Partial<CoachingTrackerState>) => void
   addCoachingInsight: (framework: FrameworkId, insight: DimensionInsight) => void
-  advanceDimension: () => void
-  advanceFramework: () => void
   resetCoaching: () => void
   addCoachingMessage: (msg: ChatMessage) => void
   setCoachingMessages: (msgs: ChatMessage[]) => void
@@ -1334,74 +1329,6 @@ export const useSwotStore = create<SwotStoreState>()(
         lastUpdated: new Date().toISOString(),
       },
     }))
-  },
-
-  advanceDimension: () => {
-    const tracker = get().coachingTracker
-    const fw = tracker.currentFramework
-    const current = tracker.currentDimension
-
-    // Mark current dimension as completed
-    const updatedCompleted = { ...tracker.completedDimensions }
-    if (!updatedCompleted[fw].includes(current)) {
-      updatedCompleted[fw] = [...updatedCompleted[fw], current]
-    }
-
-    const next = getNextDimension(fw, current)
-
-    if (next) {
-      set({
-        coachingTracker: {
-          ...tracker,
-          currentDimension: next,
-          completedDimensions: updatedCompleted,
-          currentPhase: 'questioning',
-          lastUpdated: new Date().toISOString(),
-        },
-      })
-    } else {
-      // Last dimension in framework — mark completed, don't crash
-      set({
-        coachingTracker: {
-          ...tracker,
-          completedDimensions: updatedCompleted,
-          currentPhase: 'completed',
-          lastUpdated: new Date().toISOString(),
-        },
-      })
-    }
-  },
-
-  advanceFramework: () => {
-    const tracker = get().coachingTracker
-    const completedFws = tracker.completedFrameworks.includes(tracker.currentFramework)
-      ? tracker.completedFrameworks
-      : [...tracker.completedFrameworks, tracker.currentFramework]
-
-    const nextFw = getNextFramework(tracker.currentFramework)
-
-    if (nextFw) {
-      set({
-        coachingTracker: {
-          ...tracker,
-          currentFramework: nextFw,
-          currentDimension: getFirstDimension(nextFw),
-          completedFrameworks: completedFws,
-          currentPhase: 'intro',
-          lastUpdated: new Date().toISOString(),
-        },
-      })
-    } else {
-      // All frameworks done
-      set({
-        coachingTracker: {
-          ...tracker,
-          completedFrameworks: completedFws,
-          currentPhase: 'completed',
-          lastUpdated: new Date().toISOString(),
-        },
-      })
-    }
   },
 
   resetCoaching: () => {
