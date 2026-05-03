@@ -44,6 +44,8 @@ export function SwotWorkshop({ orgId, onComplete }: SwotWorkshopProps) {
   const setWorkshopStep = useSwotStore((s) => s.setWorkshopStep)
   const activeEvidenceItemId = useSwotStore((s) => s.activeEvidenceItemId)
   const setActiveEvidenceItemId = useSwotStore((s) => s.setActiveEvidenceItemId)
+  const currentFramework = useSwotStore((s) => s.currentFramework)
+  const setCurrentFramework = useSwotStore((s) => s.setCurrentFramework)
 
   const [tab, setTab] = useState<Tab>('chat')
   const [isDrafting, setIsDrafting] = useState(false)
@@ -113,6 +115,24 @@ export function SwotWorkshop({ orgId, onComplete }: SwotWorkshopProps) {
         <h1 className="font-body font-black uppercase tracking-wider text-ink text-lg">
           Phân tích SWOT với AI
         </h1>
+
+        {/* SW/OT framework toggle — M-AICoach-Sensei-1 Task 6C */}
+        <div className="flex border-2 border-ink">
+          {(['sw', 'ot'] as const).map((fw) => (
+            <button
+              key={fw}
+              type="button"
+              onClick={() => setCurrentFramework(fw)}
+              className={`px-3 py-1.5 font-body font-bold uppercase text-xs tracking-wider transition-colors ${
+                currentFramework === fw ? 'bg-ink text-white' : 'bg-bg-warm text-ink hover:bg-bg-paper'
+              }`}
+              aria-label={`Chuyển sang ${fw === 'sw' ? 'phân tích nội bộ' : 'phân tích bên ngoài'}`}
+            >
+              {fw === 'sw' ? 'SW · Nội bộ' : 'OT · Bên ngoài'}
+            </button>
+          ))}
+        </div>
+
         <div className="relative group">
           <button
             type="button"

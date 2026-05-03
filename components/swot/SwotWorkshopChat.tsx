@@ -21,15 +21,35 @@ const QUADRANT_OPTIONS: { value: SwotQuadrant; label: string }[] = [
   { value: 'T', label: 'T — Thách thức' },
 ]
 
-const INITIAL_MSG: ChatMessage = {
+const INITIAL_MSG_SW: ChatMessage = {
   role: 'assistant',
-  content: 'Xin chào! Tôi là AI coach. Bạn có thể hỏi tôi về bất kỳ góc nhìn SWOT nào, hoặc nhờ tôi gợi ý thêm items cho từng nhóm.',
+  content: 'Chào CEO! Em là **Minh** — AI Coach chiến lược. Em sẽ giúp anh nhìn lại **nội bộ doanh nghiệp** (đội ngũ, hệ thống, sản phẩm, tài chính...). Anh muốn bắt đầu từ chủ đề nào? Hoặc nếu có sẵn ý gì, anh paste vào, em sẽ nhóm và hỏi root cause.',
+}
+
+const INITIAL_MSG_OT: ChatMessage = {
+  role: 'assistant',
+  content: 'Chào CEO! Em là **Minh**. Giờ mình nhìn ra **bên ngoài** — thị trường, đối thủ, xu hướng, regulation. Anh muốn bắt đầu từ đâu? Cạnh tranh? Khách hàng? Hay anh paste sẵn các quan sát, em sẽ nhóm và hỏi sâu.',
 }
 
 export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatProps) {
   const contextData = useSwotStore((s) => s.contextData)
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MSG])
+  const currentFramework = useSwotStore((s) => s.currentFramework)
+  const swMessages = useSwotStore((s) => s.swMessages)
+  const otMessages = useSwotStore((s) => s.otMessages)
+  const setSwMessages = useSwotStore((s) => s.setSwMessages)
+  const setOtMessages = useSwotStore((s) => s.setOtMessages)
   const [input, setInput] = useState('')
+
+  // Derived: messages từ store, lazy inject INITIAL_MSG nếu empty
+  const messages: ChatMessage[] = currentFramework === 'sw'
+    ? (swMessages.length === 0 ? [INITIAL_MSG_SW] : swMessages)
+    : (otMessages.length === 0 ? [INITIAL_MSG_OT] : otMessages)
+
+  // Helper: setter dynamic theo currentFramework
+  const setMessages = (msgs: ChatMessage[]) => {
+    if (currentFramework === 'sw') setSwMessages(msgs)
+    else setOtMessages(msgs)
+  }
   const [loading, setLoading] = useState(false)
   const [extractText, setExtractText] = useState('')
   const [extractQuadrant, setExtractQuadrant] = useState<SwotQuadrant>('S')
@@ -42,6 +62,8 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
 
   const sendMessages = async (msgs: ChatMessage[]) => {
     if (!contextData) return
+    // Capture framework snapshot — response commit vào framework gốc kể cả nếu user switch giữa chừng
+    const fw = useSwotStore.getState().currentFramework
     setLoading(true)
     try {
       const res = await postJson<CoachingResponse>('/api/swot/coaching', {
@@ -53,14 +75,18 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
           city: contextData.mainMarket,
           headcount: contextData.headcount,
         },
-        currentFramework: 'sw',
+        currentFramework: fw,
       })
-      setMessages([...msgs, res.message])
+      if (fw === 'sw') {
+        setSwMessages([...msgs, res.message])
+      } else {
+        setOtMessages([...msgs, res.message])
+      }
     } catch (err) {
-      const msg = err instanceof FetchJsonError
+      const errMsg = err instanceof FetchJsonError
         ? err.message
         : 'Không thể kết nối AI coach. Thử lại.'
-      toast.error(msg, {
+      toast.error(errMsg, {
         action: { label: 'Thử lại', onClick: () => { void sendMessages(msgs) } },
       })
     } finally {
