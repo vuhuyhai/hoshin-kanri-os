@@ -19,6 +19,10 @@ import type {
 } from '@/lib/swot/types'
 import { parseBody, swotCoachingSchema } from '@/lib/validation'
 import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
+import { loadStrategicMemory } from '@/lib/swot/strategic-memory'
+import { mapXRayToSwotSeed } from '@/lib/swot/xray-to-swot-mapper'
+import { formatStrategicMemory } from '@/lib/swot/coaching-prompts'
 
 /**
  * SWOT Coaching - Akao Method (M-AICoach-Sensei-1)
@@ -38,6 +42,24 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+    const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'Bạn cần thuộc một tổ chức để dùng AI Coach. Vui lòng hoàn tất onboarding.' },
+        { status: 403 }
+      )
+    }
+
+    const memory = await loadStrategicMemory(supabase, membership.org_id, user.id)
+
+    const xRaySeed = memory.xrayContext
+      ? mapXRayToSwotSeed(memory.xrayContext.xrayId, memory.xrayContext.result)
+      : undefined
+
+    const memoryBlock = formatStrategicMemory(memory.factors)
+
     const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
     if (!rl.ok) return rl.response
 
@@ -46,6 +68,10 @@ export async function POST(request: NextRequest) {
     const body = bodyParsed.data
     const messages = body.messages
     const orgContext = body.orgContext
+    const safeOrgContext = {
+      ...orgContext,
+      orgId: membership.org_id,
+    }
     const coachingTracker = body.coachingTracker as
       | CoachingTrackerState
       | undefined
@@ -65,8 +91,8 @@ export async function POST(request: NextRequest) {
 
     const basePrompt =
       currentFramework === 'sw'
-        ? getSwCoachingSystemPrompt(orgContext, coachingContext, selectedDims?.['8M'])
-        : getOtCoachingSystemPrompt(orgContext, coachingContext, extChoice, selectedDims?.Porter, selectedDims?.PESTEL)
+        ? getSwCoachingSystemPrompt(safeOrgContext, coachingContext, selectedDims?.['8M'], xRaySeed, memoryBlock)
+        : getOtCoachingSystemPrompt(safeOrgContext, coachingContext, extChoice, selectedDims?.Porter, selectedDims?.PESTEL, xRaySeed, memoryBlock)
 
     // Shallow-answer follow-up: if last user message is < 20 words,
     // append follow_up_prompt from the matching question
