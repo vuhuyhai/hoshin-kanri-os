@@ -682,6 +682,24 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
     - **Test limitation**: Playwright MCP `page.keyboard.type()` KHÔNG simulate được Vietnamese IME composition (gửi raw chars, không fire compositionstart/compositionend). Bug chỉ verify được bằng Vietnamese typing thật trên OS với IME bật. Smoke test pattern: phân Phase A (human typing IME critical cases) + Phase B (Playwright regression ASCII + keyboard shortcuts).
     - **Pattern lesson generalize**: Audit checklist cho mọi textarea/input mới chấp nhận Vietnamese: (1) onKeyDown có guard isComposing chưa? (2) Field có save vào DB qua .trim() không? (3) Có shared handler dùng cho cả numeric + text field không? Nếu (3) yes → guard ở shared handler (defense in depth, numeric không impact).
 
+28. **Strategic Memory dump 4 quadrants regardless framework → AI context bias** (learned 2026-05-08, commit c8df2bf, Bug 3). Akao Method M-AICoach-Sensei-1 ship Strategic Memory feature (Akao Principle 2) load `swot_factors` từ DB cross-session inject vào system prompt qua `formatStrategicMemory(factors)`. Function output 4 sections S/W/O/T regardless `currentFramework`. Khi org có nhiều S/W populated từ workshop trước (Ladysfit case: ≥10 S/W factors, 0 O/T) + plus rule "REFERENCE bối cảnh này nếu liên quan" + example "[S2]... [W1]" trong prompt → AI có "context gravity" kéo về SW topics dù user toggle OT mode. User phải nhắc thẳng "anh đang phân tích O-T hay không?" mới quay lại đúng framework.
+    - **Root cause specific**: Akao Principle 1 (bidirectional entry) + Principle 2 (strategic memory) emergent gap. Server respect `currentFramework` đúng (route.ts parse + branch SW/OT prompt). Prompt builder OT có rules khác hẳn SW (Porter+PESTEL vs 8M, quadrant lock chỉ emit O/T). NHƯNG `formatStrategicMemory(factors)` không filter quadrants → memory block (10+ items S/W) lấn át OT prompt rules ngắn hơn. AI pattern-match "data nhiều = topic quan trọng" → drift về SW.
+    - **Fix pattern**: Optional param `currentFramework?: 'sw' | 'ot'`. SW mode filter `['S', 'W']`, OT mode filter `['O', 'T']`, undefined giữ backward compat 4 quadrants.
+```ts
+      const quadrantsToShow: Array<'S' | 'W' | 'O' | 'T'> =
+        currentFramework === 'sw' ? ['S', 'W']
+        : currentFramework === 'ot' ? ['O', 'T']
+        : ['S', 'W', 'O', 'T']
+```
+      Plus early return `if (sections.length === 0) return ''` khi quadrants được filter rỗng (đừng emit empty header "BỐI CẢNH SWOT" rồi 0 sections).
+    - **Wire-up route.ts**: Reorder `parseBody` + `currentFramework = body.currentFramework ?? 'sw'` LÊN TRƯỚC `loadStrategicMemory + formatStrategicMemory` calls. Pattern data flow: parse → memory → format(memory, framework) → buildPrompt(memory, framework).
+    - **Constraint cho future AI sessions**:
+      - KHÔNG remove filter param hoặc revert sang 4-quadrants-always. Decision lock §17 M-AICoach-Sensei-1 KHÔNG mâu thuẫn — Strategic Memory vẫn ON, chỉ filter scope theo framework.
+      - KHI thêm callee mới gọi `formatStrategicMemory`, MUST pass `currentFramework` nếu route có framework concept. Backward compat optional param chỉ cho callers không có framework.
+      - KHÔNG add cross-quadrant link soft-suggestion (vd "Lần trước anh nói [S2], có liên kết [O1] không?") cho OT mode mà KHÔNG verify smoke test fresh org. Pattern advanced cần Option B/C re-design (xem session 2026-05-08 fix decision).
+    - **Smoke test minimum**: Ladysfit-style org (S/W populated, O/T empty) → toggle OT → câu hỏi câu OT scope đầu tiên (Porter rivalry/PESTEL macro/customer external) → verify KHÔNG reference [S1]/[W1] và KHÔNG hỏi 8M dimensions.
+    - **Pattern lesson generalize**: Khi ship feature inject context vào AI prompt (memory, RAG, retrieved docs), MUST scope context theo current task/mode. "Dump everything" pattern triggers context gravity — AI bias toward quadrant/topic có nhiều data. Audit checklist mọi prompt-injection feature: (1) context relevant cho current task chưa? (2) có filter theo mode/framework/quadrant không? (3) test edge case asymmetric data (1 quadrant có 10 items, 1 quadrant có 0).
+
 ---
 
 ## 11. Dev Workflow
@@ -928,9 +946,10 @@ Khi Claude mới vào session:
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-08 — post commit f3e6b96 (IME composition guard 6 instances). HEAD `f3e6b96`. Touch 5 files: components/swot/{SwotWorkshopChat,SwotIngredientCard,SwotIngredientPanel,SwotFactorInput}.tsx + app/dashboard/kpi/components/KpiUpdateForm.tsx. 24 insertions / 5 deletions. Smoke test PASS (CASE 1+2 human Vietnamese typing, CASE 3a/b/c Playwright regression).
+- **Last verified**: 2026-05-08 — post commit c8df2bf (Strategic Memory framework filter, Bug 3 fix). HEAD `c8df2bf`. Touch 2 files: lib/swot/coaching-prompts.ts (signature + filter array) + app/api/swot/coaching/route.ts (reorder parse + pass param). 20 insertions / 10 deletions. Smoke test PASS (CASE 1 OT toggle Porter rivalry question Ha Noi competitors no SW reference, CASE 2 SW toggle internal retention question 8M Man dimension routing đúng).
+  Previous: f3e6b96 (IME composition guard 6 instances) + 44121b4 (HANDOFF pitfall #27).
 
-  Previous: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d).
+  Earlier: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d).
 - **Last migration applied**: `035_org_invites.sql` — table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (M-OrgInvite-1, committed). Previous: `034` functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`).
 - **API routes count**: 52 (48 + 4 mới M-OrgInvite-1: POST/GET `/api/invites`, DELETE `/api/invites/[token]`, GET `/api/invites/[token]/info`, POST `/api/invites/[token]/accept`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
@@ -1497,7 +1516,7 @@ Khi Claude mới vào session:
       - KHI thêm route public-ish (authenticated user chưa có `org_members` row), MUST rate-limit + minimize response shape + audit log. Precedent: `/api/orgs/check-similar` (M-OrgUX-1).
       - KHI Cursor/Claude write smoke test PowerShell cho Supabase REST, MUST tránh `Invoke-WebRequest` (silent header strip), dùng `[System.Net.HttpWebRequest]` direct (xem §10 pitfall mới).
       - KHI write Playwright UI smoke test, scope alert assertions với specific text via `:has-text(...)` thay vì global `[role="alert"]` (Sonner Toaster + Next 16 dev indicator + analytics overlays đều render hidden alert region) — xem §10 pitfall mới.
-  - **AI return JSON parse error trong SwotWorkshopChat (deferred 2026-05-08)**: Production user gõ "Thang nay dat." (CASE 2 smoke test) hit Tier 3 fallback toast "Xin lỗi, AI vừa trả lời lỗi format". Hypothesis ranked: (a) credit balance trừ dần — auto-reload threshold $5 chưa hit, (b) short input ASCII không context khiến AI hallucinate JSON syntax, (c) pre-existing intermittent JSON parse failure. Defer milestone riêng — cần verify credit balance + Anthropic logs + re-test với input dài hơn. Trigger session mới: 1 input dài + 1 input ngắn cùng request → so sánh fail rate.
+  - **AI return JSON parse error trong SwotWorkshopChat (deferred 2026-05-08, evidence updated)**: Production user gõ "Thang nay dat." (8 chars ASCII Vietnamese không dấu) hit Tier 3 fallback toast "Xin lỗi, AI vừa trả lời lỗi format". Reproduced 2 lần trên 2 session khác nhau (2026-05-08 evidence Image 2 SW mode message thứ 2 sau hello "chao"). Hypothesis (b) confirmed mới — short ASCII Vietnamese không context → AI hallucinate JSON syntax (trailing prose, unescaped quote, mismatched brace) → JSON.parse fail → Tier 3 fallback. Hypothesis (a) credit balance + (c) intermittent JSON failure đã loại trừ qua hotfix df3c1ef bump max_tokens 800→8192 + 3-tier fallback chain. Real root cause: AI structured output route schema gửi JSON-wrapped response cho input quá ngắn không đủ context để generate full schema → AI improvise dẫn đến malformed. Defer milestone M-AICoach-ShortInput-1: (1) detect input length < 30 chars + add fallback non-JSON text response thay vì Tier 3 error, (2) prompt instruct AI explicit "nếu input quá ngắn để extract insight, return {message: 'câu prompt CEO làm rõ', extractedInsight: null}" thay vì improvise schema. Effort estimate ~2-3h, 1 commit. **Trigger immediate**: nếu user complain lần thứ 3 trong 1 tuần.
 
 ---
 
@@ -1534,6 +1553,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHI thêm route mới có Server load context, MUST follow pattern Task 3B-2: `getActiveMembership` + `loadStrategicMemory` + safeOrgContext override (defense vs client tampering).
 - KHI extend AI structured output schema, MUST update: (a) types.ts interface, (b) isValidInsight runtime guard, (c) prompt schema example block, (d) all in-prompt JSON examples (AI pattern-matches examples). 4 sites pattern locked.
 - KHI add new IngredientSource value, MUST update SOURCE_CLS Record exhaustiveness check ở SwotIngredientCard.tsx.
+- KHI thêm caller mới gọi `formatStrategicMemory(factors)`, MUST pass `currentFramework` param nếu route có framework concept (SW vs OT). Backward compat optional param chỉ dành cho legacy callers không có framework. Bug 3 fix commit c8df2bf reinforce decision lock — Strategic Memory inject vào prompt MUST filter scope theo current task để tránh context gravity bias. Pattern: feature inject context vào AI prompt MUST scope context theo current mode/framework/quadrant.
 
 **Pattern lessons** (đáng generalize):
 
