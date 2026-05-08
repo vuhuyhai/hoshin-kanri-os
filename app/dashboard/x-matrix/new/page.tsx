@@ -24,13 +24,10 @@ export default async function NewXMatrixPage() {
     ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
     : memberships[0]
 
-  // Canvas là edit-flow CEO/Manager. Member không có edit affordance
-  // → redirect /dashboard (KPI + Hansei + Gemba writeable). Future
-  // M-Hoshin-7 nới Member writer Hoshin sẽ revisit gate này.
-  if (membership.role === 'Member') {
-    redirect('/dashboard')
-  }
-
+  // canEdit excludes Member — Member-POV read-only canvas access shipped
+  // M-Member-POV-1. Edit affordances gated UI-side via useCanEdit() Context
+  // (Task 2A-2C). Member can still submit gemba feedback on Hoshin via
+  // GembaModal (Q3 alpha decision).
   const canEdit = membership.role === 'CEO' || membership.role === 'Manager'
 
   const { data: existingMatrix } = await supabase
@@ -63,7 +60,7 @@ export default async function NewXMatrixPage() {
   return (
     <HoshinGembaSection
       orgId={membership.org_id}
-      userRole={membership.role as 'CEO' | 'Manager'}
+      userRole={membership.role as 'CEO' | 'Manager' | 'Member'}
       hoshins={hoshinsForGemba}
       xMatrixId={existingMatrix?.id ?? null}
     >

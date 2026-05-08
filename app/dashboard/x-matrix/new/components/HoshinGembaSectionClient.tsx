@@ -18,9 +18,10 @@ interface ContextValue {
 
 const HoshinGembaContext = createContext<ContextValue | null>(null)
 
-// Hook cho HoshinCard (Task 3B). Outside Provider → defensive default
-// (Member redirect ra /dashboard ở page-level role-gate, nhưng future
-// M-Hoshin-7 nới Member writer sẽ exercise null path).
+// Hook cho HoshinCard (Task 3B). Outside Provider → defensive default.
+// Member access canvas read-only sau M-Member-POV-1 (canvas Provider
+// luôn wrap children) — null path là safety net cho component được
+// render ngoài canvas tree.
 //
 // isPersisted (M-Hoshin-6.1 hotfix): hoshin.id có nằm trong vision_json
 // đã save chưa. False = Hoshin client-only (chưa SubmitBar save) →
@@ -65,10 +66,10 @@ export function HoshinGembaSectionClient({
   existingHoshinIds,
   children,
 }: Props) {
-  // Q-canvas page-level đã redirect Member → /dashboard. canModerate
-  // luôn true cho rendered users (CEO + Manager). Field giữ trong
-  // context cho symmetry với KpiGembaSectionClient + future
-  // M-Hoshin-7 nới Member writer.
+  // Member access canvas shipped M-Member-POV-1 — Member render canvas
+  // read-only và submit gemba feedback (Q3 alpha) nhưng KHÔNG moderate
+  // (acknowledge/resolve). canModerate gate ở GembaCommentThread
+  // controls cho CEO/Manager only.
   const canModerate = role !== 'Member'
 
   // Banner ở canvas page chỉ phản ánh Hoshin signals — KPI count đã
