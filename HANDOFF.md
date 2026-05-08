@@ -1018,6 +1018,13 @@ Khi Claude mới vào session:
     - MODIFIED: `app/dashboard/layout.tsx` (+18/-6 LOC, build orgNameById Map + pass `orgId` + `memberships` to Sidebar/Header)
     - MODIFIED: `components/layout/sidebar.tsx` (+34/-7 LOC, optional props + `showSwitcher` guard + OrgSwitcher invocation)
     - MODIFIED: `components/layout/header.tsx` (+4/-2 LOC, cascade props to MobileSidebarContent)
+  - **Production verify (2026-05-09 post-deploy 5/5 PASS)**: Vercel deploy `dpl_GL952HzBkGaGCKFwwSdawGyLvp2k` READY. Build clean 23.8s (0 error/warning). Smoke production 4/4:
+    - `POST /api/orgs/switch` → HTTP 401 (route exists, auth gate hit)
+    - `GET /api/swot/xray-context` → HTTP 404 (M-Cleanup-5 cleanup preserved)
+    - `GET /api/swot/prefill-from-xray` → HTTP 404 (M-Cleanup-5 cleanup preserved)
+    - `GET /` → HTTP 200 (landing page OK)
+    - Playwright bonus: `/dashboard` redirect `/login` no 500 error
+    - Note: Vercel alias propagation lag observed (~5-10 phút) — production traffic temporarily serve từ previous deploy post-READY confirm. Pattern reusable: alias propagation timing không block milestone close-out nếu new deploy READY + smoke tests hit user-facing URL return expected codes (route reachable confirms cycling complete eventually). Pattern lesson L41 §17.
   - **Pattern lessons** (4 mới, đáng generalize):
     1. **L37 — Trio pattern cho user_metadata sync** (REFINED post-smoke từ L37 anticipate "full reload bypass cookie staleness"): Mutate `user_metadata` + read sau đó MUST follow `updateUser` + `refreshSession` + full reload trio. `auth.getUser()` đi network call NHƯNG returns JWT claim, không fresh DB. `refreshSession` re-mints JWT với fresh payload bridge gap. Anti-pattern: skip refreshSession assume `getUser` = fresh.
     2. **L38 — Sheet drawer mobile parity zero-cost** (proven validated trong M-Auth-MultiOrg-1 smoke test CASE 4): Khi mobile pattern dùng Sheet drawer rendering same content as desktop sidebar (existing `MobileSidebarContent` wraps `SidebarContent`), thêm component mới vào sidebar tự động available trên mobile. Zero mobile-specific code. Proven CASE 4 PASS (hamburger → drawer → OrgSwitcher click works identical desktop).
@@ -1738,6 +1745,8 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 3. **L39 — Reader-uniform-pattern enables single-mutation switch** (proven validated). 19 reader files đều dùng `find(m => m.org_id === lastOrgId) ?? memberships[0]` (V6 audit). 1 metadata write → all 19 readers consistent. Pattern: TRƯỚC khi build cross-cutting feature mutate state, audit reader pattern uniformity. Non-uniform readers = bugs from inconsistency.
 
 4. **L40 — Optional props + fallback pattern cho phase boundary buildability** (M-Auth-MultiOrg-1 Task 2B→2C transition). Khi component cần data chưa available ở caller (data fetch wired ở task sau), make new props OPTIONAL + render fallback to legacy/static. Typecheck stays green qua phase boundary. Bonus: defensive cho future non-target callers — KHÔNG remove fallback sau khi data wired.
+
+5. **L41 — Vercel alias propagation lag post-READY**: Vercel deploy READY ≠ production traffic serving immediately. Alias DNS/edge cache cycle takes ~5-10 phút post-READY. Pattern: KHÔNG re-deploy hoặc panic nếu Vercel MCP `get_runtime_logs` cho new deployment ID return "No logs found" trong window post-READY — traffic chưa cycle qua. Verify production via user-facing URL (chienluoc.org) curl smoke tests: nếu route reachable trả expected codes (401/200/404) → alias eventually cycle, milestone close-out OK. M-Auth-MultiOrg-1 hit pattern này (deploy `dpl_GL952HzBkGaGCKFwwSdawGyLvp2k` READY 23.8s build clean, runtime logs empty 5-10 phút trong khi curl chienluoc.org confirm new routes reachable).
 
 ### 2026-05-08 — Tech Debt Sweep (M-Cleanup-5)
 
