@@ -52,11 +52,13 @@ interface HeaderProps extends SidebarProps {
 }
 
 export function Header({
+  orgId,
   orgName,
   userEmail,
   userRole,
   orgIndustry,
   userName,
+  memberships,
 }: HeaderProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
@@ -154,10 +156,12 @@ export function Header({
         >
           <MobileSidebarContent
             userRole={userRole}
+            orgId={orgId}
             orgName={orgName}
             orgIndustry={orgIndustry}
             userName={userName}
             userEmail={userEmail}
+            memberships={memberships}
             onNavigate={() => setSheetOpen(false)}
           />
         </SheetContent>

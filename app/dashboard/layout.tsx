@@ -38,12 +38,13 @@ export default async function DashboardLayout({
     ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
     : memberships[0]
 
-  const [{ data: org }, { data: profile }] = await Promise.all([
+  const orgIds = memberships.map((m) => m.org_id)
+
+  const [{ data: orgs }, { data: profile }] = await Promise.all([
     supabase
       .from('organizations')
-      .select('*')
-      .eq('id', membership.org_id)
-      .maybeSingle(),
+      .select('id, name, industry')
+      .in('id', orgIds),
     supabase
       .from('users')
       .select('full_name')
@@ -51,11 +52,22 @@ export default async function DashboardLayout({
       .maybeSingle(),
   ])
 
-  const orgName = org?.name ?? 'Công ty'
-  const orgIndustry = org?.industry ?? ''
+  const orgNameById = new Map(
+    (orgs ?? []).map((o) => [o.id, { name: o.name, industry: o.industry }]),
+  )
+  const currentOrg = orgNameById.get(membership.org_id)
+
+  const orgName = currentOrg?.name ?? 'Công ty'
+  const orgIndustry = currentOrg?.industry ?? ''
   const userName = profile?.full_name ?? ''
   const userEmail = user.email ?? ''
   const userRole = membership.role ?? ''
+
+  const membershipsForSwitcher = memberships.map((m) => ({
+    org_id: m.org_id,
+    org_name: orgNameById.get(m.org_id)?.name ?? 'Công ty',
+    role: m.role,
+  }))
 
   return (
     <div className="flex min-h-screen bg-bg-warm">
@@ -71,21 +83,25 @@ export default async function DashboardLayout({
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-72 lg:flex-col lg:border-r-[3px] lg:border-ink lg:overflow-y-auto">
         <Sidebar
           userRole={userRole}
+          orgId={membership.org_id}
           orgName={orgName}
           orgIndustry={orgIndustry}
           userName={userName}
           userEmail={userEmail}
+          memberships={membershipsForSwitcher}
         />
       </aside>
 
       {/* Main area — offset by sidebar on desktop */}
       <div className="flex min-w-0 flex-1 flex-col lg:pl-72">
         <Header
+          orgId={membership.org_id}
           orgName={orgName}
           userEmail={userEmail}
           userRole={userRole}
           orgIndustry={orgIndustry}
           userName={userName}
+          memberships={membershipsForSwitcher}
         />
 
         <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
