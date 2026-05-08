@@ -13,6 +13,7 @@ import {
 import {
   collectSuggestedFields,
   fetchAiPrefill,
+  useCanEdit,
   useCanvas,
   type XMatrixCanvasData,
 } from './state/CanvasContext'
@@ -31,6 +32,7 @@ function formatTime(date: Date): string {
 
 export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
   const { state, dispatch } = useCanvas()
+  const canEdit = useCanEdit()
   const { saveStatus, lastSavedAt } = state.ui
 
   const [prefillModalOpen, setPrefillModalOpen] = useState(false)
@@ -157,13 +159,15 @@ export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
           <span className="badge-brutal tag-brand">Bản nháp</span>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className={`flex items-center gap-2 ${indicator.className}`}>
-            {indicator.icon}
-            <span className="font-mono text-xs font-bold uppercase tracking-wider">
-              {indicator.text}
-            </span>
-          </div>
-          {canShowPrefillButton && (
+          {canEdit && (
+            <div className={`flex items-center gap-2 ${indicator.className}`}>
+              {indicator.icon}
+              <span className="font-mono text-xs font-bold uppercase tracking-wider">
+                {indicator.text}
+              </span>
+            </div>
+          )}
+          {canEdit && canShowPrefillButton && (
             <button
               type="button"
               onClick={handlePrefillClick}
@@ -174,14 +178,16 @@ export function CanvasHeader({ storageKey }: CanvasHeaderProps) {
               AI gợi ý từ Discovery
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleClearDraft}
-            className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-[var(--text-3)] underline-offset-2 transition-colors hover:text-[var(--destructive)] hover:underline"
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            Xóa nháp
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-[var(--text-3)] underline-offset-2 transition-colors hover:text-[var(--destructive)] hover:underline"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              Xóa nháp
+            </button>
+          )}
         </div>
       </div>
 

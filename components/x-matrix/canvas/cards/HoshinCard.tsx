@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useCanvas, type XMatrixHoshinExtended } from '../state/CanvasContext'
+import {
+  useCanEdit,
+  useCanvas,
+  type XMatrixHoshinExtended,
+} from '../state/CanvasContext'
 import { HoshinEditModal } from '../modals/HoshinEditModal'
 import { GembaModal } from '../GembaModal'
 import { useHoshinGembaComments } from '@/app/dashboard/x-matrix/new/components/HoshinGembaSectionClient'
@@ -21,6 +25,7 @@ const PASTEL_CLASSES = [
 
 export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   const { dispatch } = useCanvas()
+  const canEdit = useCanEdit()
   const pastel = PASTEL_CLASSES[slotIndex % PASTEL_CLASSES.length]
   const [modalOpen, setModalOpen] = useState(false)
   const [gembaModalOpen, setGembaModalOpen] = useState(false)
@@ -30,6 +35,7 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
     useHoshinGembaComments(hoshin?.id ?? '')
 
   const handleEmptyClick = () => {
+    if (!canEdit) return
     dispatch({
       type: 'ADD_HOSHIN',
       payload: {
@@ -45,10 +51,23 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
   }
 
   const handleFilledClick = () => {
+    if (!canEdit) return
     setModalOpen(true)
   }
 
   if (!hoshin) {
+    if (!canEdit) {
+      return (
+        <div
+          className="flex h-[110px] w-full items-center justify-center border-2 border-dashed border-[var(--text-3)] bg-[var(--bg)]/40 p-2"
+          role="presentation"
+        >
+          <span className="font-mono text-[10px] uppercase tracking-wider italic text-[var(--text-3)]">
+            Chưa có Hoshin #{slotIndex + 1}
+          </span>
+        </div>
+      )
+    }
     return (
       <button
         type="button"
@@ -71,8 +90,13 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
     <div className="relative">
       <button
         type="button"
-        onClick={handleFilledClick}
-        className={`${pastel} flex h-[110px] w-full cursor-pointer flex-col gap-1 p-2 text-left transition-shadow hover:shadow-[var(--shadow-lg)]`}
+        onClick={canEdit ? handleFilledClick : undefined}
+        aria-disabled={!canEdit}
+        className={`${pastel} flex h-[110px] w-full flex-col gap-1 p-2 text-left transition-shadow ${
+          canEdit
+            ? 'cursor-pointer hover:shadow-[var(--shadow-lg)]'
+            : 'cursor-default'
+        }`}
       >
         <div className="flex items-center justify-between gap-1">
           <span className="font-mono text-[10px] uppercase tracking-wider text-ink">
@@ -90,7 +114,7 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
           </h3>
         ) : (
           <span className="line-clamp-2 text-sm italic text-[var(--text-3)]">
-            (Chưa đặt tên — click để sửa)
+            {canEdit ? '(Chưa đặt tên — click để sửa)' : '(Chưa đặt tên)'}
           </span>
         )}
         <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-[var(--text-2)]">
@@ -118,11 +142,13 @@ export function HoshinCard({ hoshin, slotIndex }: HoshinCardProps) {
           <span aria-hidden>💬</span>
         </button>
       )}
-      <HoshinEditModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        slotIndex={slotIndex}
-      />
+      {canEdit && (
+        <HoshinEditModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          slotIndex={slotIndex}
+        />
+      )}
       <GembaModal
         open={gembaModalOpen}
         onClose={() => setGembaModalOpen(false)}

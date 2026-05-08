@@ -10,7 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import { useCanvas } from './state/CanvasContext'
+import { useCanEdit, useCanvas } from './state/CanvasContext'
 import { useCanvasValidation } from './state/useCanvasValidation'
 import { postJson } from '@/lib/http/fetch-json'
 import { trackXMatrixCompleted } from '@/lib/analytics/events'
@@ -21,6 +21,7 @@ interface SubmitBarProps {
 }
 
 export function SubmitBar({ orgId }: SubmitBarProps) {
+  const canEdit = useCanEdit()
   const { state } = useCanvas()
   const router = useRouter()
   const { errors, warnings, completeness, canSubmit } = useCanvasValidation(
@@ -30,6 +31,8 @@ export function SubmitBar({ orgId }: SubmitBarProps) {
   const [errorsExpanded, setErrorsExpanded] = useState(false)
   const [warningsExpanded, setWarningsExpanded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  if (!canEdit) return null
 
   const hasErrors = errors.length > 0
   const hasWarnings = warnings.length > 0
