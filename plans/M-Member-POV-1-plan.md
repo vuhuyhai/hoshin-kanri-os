@@ -320,10 +320,57 @@ Hiện tại `canEdit?: boolean` chỉ tồn tại như prop drilling từ page.
 | Phase B Playwright defer? | ✅ Defer if Phase A pass 7/7 (no CI pipeline → no recurring value) | §4 |
 | Chạy SQL trước commit? | ✅ Done 2026-05-08, output filled §2.2 | §2.2 |
 
-## 8. Approval Gate — APPROVED 2026-05-08
+## 8. Approval Gate — SHIPPED 2026-05-08
 
 - [x] Vũ Hải review + confirm 8 decisions Q1-Q8
 - [x] Vũ Hải chạy 3 SQL §2.2 → output filled
 - [x] Em apply 2 push-back (C12 API defense layer 2, CASE 8 DOM manipulation)
-- [ ] Em commit Task 1 deliverable (this commit)
-- [ ] Pre-Task 2: Vũ Hải verify sign-in `member-test@ladysfit.local` work
+- [x] Em commit Task 1 deliverable (commit 92a58b3)
+- [x] Pre-Task 2: Vũ Hải verify sign-in `member-test@ladysfit.local` PASS
+- [x] Task 2A foundation shipped (commit 544ca5a)
+- [x] Task 2B wire Context shipped (commit 8284a77)
+- [x] Task 2C hide affordances shipped (commit 84e918c)
+- [x] Task 2D access enable shipped (commit ceeeb1c)
+- [x] Task 2E smoke test 8/8 PASS Phase A manual
+- [x] Push origin master + Vercel deploy READY
+- [x] Production verify Member POV PASS
+- [x] HANDOFF + plan close-out commit (this commit `7570a61`)
+
+## 9. Shipped Summary
+
+**Status**: ✅ SHIPPED 2026-05-08
+
+**Commits** (6 total):
+
+| Task | Commit | Files | LOC | Description |
+|---|---|---|---|---|
+| 1 | `92a58b3` | 1 | +329 | Plan docs design audit + 8 decision lock |
+| 2A | `544ca5a` | 1 | +31/-4 | canEdit field vào CanvasContext state + CLEAR_DRAFT preserve |
+| 2B | `8284a77` | 3 | +8/-8 | Wire canEdit Context, remove prop drill XMatrixCanvasPage→CanvasGrid→CenterX |
+| 2C | `84e918c` | 5 | +123/-44 | Hide edit affordances 5 components (VisionEditor, CanvasHeader, SubmitBar, YearGoalCard, HoshinCard) |
+| 2D | `ceeeb1c` | 2 | +13/-15 | Remove Member redirect + extend userRole cast + orphan comments cleanup |
+| 2E-3 | `7570a61` | 2 | ~ | HANDOFF + plan close-out |
+
+**Smoke test 8/8 PASS** (Phase A manual 2026-05-08):
+
+| Case | Result | Note |
+|---|---|---|
+| 1 — Access canvas read-only | ✅ | URL stay /dashboard/x-matrix/new, render đầy đủ |
+| 2 — Hide edit affordances | ✅ | AI Prefill + Clear Draft + save status + SubmitBar hide; branding + readonly Vision paragraph + slot placeholders italic visible |
+| 3 — HoshinCard click no-op | ✅ | Modal KHÔNG mở, console clean |
+| 4 — Correlation cell disabled | ✅ | Footer hint "Chỉ CEO và Manager edit được correlation matrix" visible |
+| 5 — Gemba Hoshin submit | ✅ | Comment hiện thread status open, KHÔNG moderate buttons (canModerate=false Member) |
+| 6 — Gemba KPI regression | ✅ | M-Hoshin-5 flow intact |
+| 7 — CEO regression | ✅ | Vision textarea editable, AI Prefill visible, save status "Đã lưu lúc 16:35", slot Y3×H3 cyan AI prefill suggestion working |
+| 8 — DOM manipulation defense | ✅ | removeAttribute disabled + aria-disabled → click → no-op (handler undefined không re-bind sau attribute remove) |
+
+**Vercel deploy**: `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi` READY (build 21s, 0 error, 0 warning, route /dashboard/x-matrix/new generated, runtime logs clean)
+
+**Production verify**: chienluoc.org Member POV PASS (incognito login member-test@ladysfit.local → render canvas read-only đúng spec)
+
+**Pattern lessons captured** (HANDOFF §17 + §10):
+- L31 Permission field reset audit (pitfall #29)
+- L32 Verify-first phát hiện scope wider hơn assume (CanvasGrid intermediate)
+- L33 Bonus catch quality > spec literal (aria-disabled, gated modal render)
+
+**Constraints locked** cho future AI sessions: 8 constraints C1-C8 (xem §17 entry 2026-05-08)

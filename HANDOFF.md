@@ -700,6 +700,25 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
     - **Smoke test minimum**: Ladysfit-style org (S/W populated, O/T empty) → toggle OT → câu hỏi câu OT scope đầu tiên (Porter rivalry/PESTEL macro/customer external) → verify KHÔNG reference [S1]/[W1] và KHÔNG hỏi 8M dimensions.
     - **Pattern lesson generalize**: Khi ship feature inject context vào AI prompt (memory, RAG, retrieved docs), MUST scope context theo current task/mode. "Dump everything" pattern triggers context gravity — AI bias toward quadrant/topic có nhiều data. Audit checklist mọi prompt-injection feature: (1) context relevant cho current task chưa? (2) có filter theo mode/framework/quadrant không? (3) test edge case asymmetric data (1 quadrant có 10 items, 1 quadrant có 0).
 
+29. **CLEAR_DRAFT reducer reset ui slice mất permission state** (learned M-Member-POV-1 Task 2A bonus catch 2026-05-08, commit 544ca5a). Khi extend `CanvasUiState` với field permission/role-derived (vd `canEdit: boolean`), reducer actions reset ui slice (CLEAR_DRAFT, RESET_UI, INIT) sẽ ghi đè field đó về initial value. Triệu chứng: CEO click "Clear Draft" → state.ui reset → canEdit về initialUi default (false) → CEO bị Member-POV oan, edit affordances biến mất.
+    - **Root cause**: CLEAR_DRAFT branch original code: `return { ...state, ui: initialUi }`. initialUi.canEdit = false (defensive default). Reset ghi đè canEdit từ true (CEO) về false.
+    - **Fix pattern (apply trong Task 2A commit 544ca5a)**: Reset ui slice MUST preserve permission fields:
+```ts
+      case 'CLEAR_DRAFT':
+        return {
+          ...state,
+          data: emptyXMatrixData,
+          ui: { ...initialUi, canEdit: state.ui.canEdit }
+        }
+```
+    - **Generalize**: Permission field type = role-derived (canEdit, canModerate, canDelete, isAdmin) khác state UI field (saveStatus, expandedIds, hoveredCellId). Permission field set 1 lần init từ Provider props, KHÔNG reset bởi user action. Pattern lesson: khi add field vào ui slice, classify "user-controlled" vs "permission-derived". Permission-derived MUST preserve trong mọi reducer action reset ui.
+    - **Audit checklist khi extend ui state**:
+      - (a) Field này set từ đâu? Provider props (permission) hay user action (UI state)?
+      - (b) Grep mọi `case 'XXX_RESET'` / `case 'CLEAR_*'` / `case 'INIT'` trong reducer
+      - (c) Mọi reset action MUST preserve permission fields qua `ui: { ...initialUi, canEdit: state.ui.canEdit, canModerate: state.ui.canModerate, ... }`
+      - (d) Test: dispatch reset action → assert permission fields unchanged
+    - **Pattern reusable**: M-Cleanup-7 reducer guard layer 2 (defer per Q2.4 plan §5) — guard sẽ check permission BEFORE applying mutation. Pitfall #29 là defense layer 1 UI-side, M-Cleanup-7 sẽ là layer 2 reducer-side. Cả 2 layer cần thiết, không thay thế nhau.
+
 ---
 
 ## 11. Dev Workflow
@@ -946,9 +965,9 @@ Khi Claude mới vào session:
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-08 — post M-AICoach-ShortInput-1 (Bug 2 fix short-input fallback). HEAD `2b0e4eb` (code) + docs commit close-out này. Touch 3 files: lib/swot/coaching-prompts.ts (SW Rule 9 + OT Rule 10 + 2 examples) + plans/M-AICoach-ShortInput-1-plan.md (Task 1 design audit) + HANDOFF.md (this update). Task 2 +13/-3 LOC compact. Smoke test PASS 8/8 Phase A manual (CASE 1-7 covering short ASCII / Vietnamese diacritic / Bug 2 regression "Thang nay dat." / boundary 3-5 words / full context flow chính / empty input / Bug 3 cross-framework Strategic Memory guard).
+- **Last verified**: 2026-05-08 — post M-Member-POV-1 (Canvas Member-POV Redesign, 6 commits 92a58b3→7570a61). HEAD `7570a61` (close-out này). Touch 11 files: app/dashboard/x-matrix/new/page.tsx + app/dashboard/x-matrix/new/components/HoshinGembaSectionClient.tsx + components/x-matrix/canvas/state/CanvasContext.tsx + components/x-matrix/canvas/XMatrixCanvasPage.tsx + CanvasGrid.tsx + CenterX.tsx + VisionEditor.tsx + CanvasHeader.tsx + SubmitBar.tsx + cards/YearGoalCard.tsx + cards/HoshinCard.tsx + plans/M-Member-POV-1-plan.md. Smoke test 8/8 PASS Phase A manual (CASE 1-7 functional + CASE 8 DOM manipulation defense, click no-op verified post-removeAttribute). Vercel deploy `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi` READY, build 21s clean (0 error, 0 warning, route /dashboard/x-matrix/new generated). Production verify Member POV chienluoc.org PASS.
 
-  Previous: c8df2bf (Strategic Memory framework filter, Bug 3 fix) + f3e6b96 (IME composition guard 6 instances) + 44121b4 (HANDOFF pitfall #27).
+  Previous: M-AICoach-ShortInput-1 (Bug 2 fix prompt fallback short-input < 5 từ, 2 commits 2b0e4eb→1dcfb53).
 
   Earlier: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d).
 - **Last migration applied**: `035_org_invites.sql` — table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (M-OrgInvite-1, committed). Previous: `034` functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`).
@@ -957,7 +976,55 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest milestone**: M-AICoach-ShortInput-1 (Bug 2 fix, code commit `2b0e4eb` + docs close-out, ~2h work). Trigger: HANDOFF §16 known open items deferred 2026-05-08 evidence Image 2 (production user gõ "Thang nay dat." reproduced 2 lần hit Tier 3 fallback "Xin lỗi, AI vừa trả lời lỗi format"). Fix prompt-level (Q3 γ AI-side decision lock): SW Rule 9 + OT Rule 10 trigger khi input < 5 words → AI return extractedInsight: null + conversational probe message bám sát topic CEO. Persona Akao Minh preserve (catchball not lecture, 1-2 example concrete KHÔNG list 4-5 options). Bug 3 cross-framework guard verified pass (Strategic Memory KHÔNG fabricate vào probe response).
+- **Latest milestone**: M-Member-POV-1 (Canvas Member-POV Redesign, code commits 544ca5a→ceeeb1c + docs close-out, 6 commits total, ~4h work). Trigger: M-Hoshin-6 Q-canvas redirect Member /dashboard tạm thời 2026-04-30 + code comments explicit "future M-Hoshin-7 nới Member writer" → M-Member-POV-1 thực thi reservation đó. Akao Method bidirectional entry: Member là gemba observer cần thấy strategic chain (Vision → YearGoal → Hoshin → KPI) để comment đúng context.
+  - **Tasks shipped (5 tasks → 6 commits)**:
+    1. Task 1: Plan docs design audit + 8 decision lock (commit `92a58b3`, 329 LOC)
+    2. Task 2A: Add canEdit field vào CanvasContext state (commit `544ca5a`, +31/-4 LOC, 1 file). Bonus catch CLEAR_DRAFT preserve canEdit (pitfall #29)
+    3. Task 2B: Wire canEdit Context end-to-end, remove prop drill (commit `8284a77`, +8/-8 LOC, 3 files). Verify-first phát hiện CanvasGrid intermediate em prompt sai
+    4. Task 2C: Hide edit affordances 5 components (commit `84e918c`, +123/-44 LOC, 5 files). 3 bonus catch: hooks order preservation SubmitBar, aria-disabled a11y, modal render gated layer 2
+    5. Task 2D: Remove Member redirect + extend userRole cast (commit `ceeeb1c`, +13/-15 LOC, 2 files). Cleanup orphan M-Hoshin-7 comments
+    6. Task 2E: Smoke test 8/8 PASS Phase A manual + push deploy + Vercel verify chain G3 + production verify (close-out commit `7570a61`)
+  - **3 architectural changes**:
+    1. **Bidirectional Member access**: Member redirect /dashboard → render canvas read-only. Akao gemba observer principle.
+    2. **Context single source of truth**: canEdit field vào CanvasUiState, replace prop drill 3 levels (XMatrixCanvasPage → CanvasGrid → CenterX). Pattern §17 M-Hoshin-6 Q4 α+γ compose proven 4 lần.
+    3. **canSubmit ≠ canModerate** (Q3 α): Member submit gemba comment Hoshin (Q3 α) nhưng KHÔNG moderate (acknowledge/resolve/delete). Tách biệt 2 permission level qua `canModerate = role !== 'Member'` HoshinGembaSectionClient L72 + form access defaults open via GembaModal isPersisted gate only.
+  - **8 decisions locked Task 1**:
+    - Q1 α SCOPE: Full canvas read-only (Vision + YearGoals + Hoshins + Correlation + KPIs + Owners visible)
+    - Q2 α EDIT AFFORDANCES: Hide hoàn toàn (button KHÔNG render cho Member, exception CenterX correlation cells giữ disabled pattern)
+    - Q3 α GEMBA HOSHIN: Bật Member submit gemba Hoshin (execute M-Hoshin-6 Q3 γ defer plan, KHÔNG vi phạm M-Hoshin-5 Q8 INSERT-only)
+    - Q4 α SUBMIT BAR: Hide hoàn toàn (early return null sau hooks, server defense layer 2 preserved)
+    - Q5 β CORRELATION MATRIX: Display only (header EducationalTooltip đã explain, per-cell tooltip = noise)
+    - Q6 α ROUTE GATE: Remove redirect (canEdit derived từ role, page render canvas + canEdit gate UI)
+    - Q7 α SIDEBAR: Show link cho mọi role (consistency, sidebar 7 links chưa gate role nào)
+    - Q8 EFFORT: 5 commits / 11 files / 8 smoke cases / 4h / Risk MEDIUM
+  - **Pattern lessons** (đáng generalize):
+    1. **L31 Permission field reset audit** (pitfall #29 mới): Khi extend ui state với role-derived field, audit mọi reducer action reset ui slice. M-Member-POV-1 Task 2A bonus catch (CLEAR_DRAFT mất canEdit). Apply universally cho future ui state extensions.
+    2. **Verify-first phát hiện intermediate component**: Task 2B em prompt assume direct XMatrixCanvasPage→CenterX. Verify-first phát hiện CanvasGrid intermediate prop drill. Pattern L29 (M-Hoshin-7 lesson) áp dụng — trust verify-first hơn em assumption.
+    3. **Bonus catch quality > spec literal**: Cursor Task 2C đi xa hơn spec — `aria-disabled={!canEdit}` cho a11y, modal render gated `{canEdit && ...}` cho defense layer 2 UI-side. Pattern: spec define minimum, Cursor judgment quality MAY exceed nếu defensive trade-off đúng. Anti-pattern: spec literal = không suy nghĩ thêm.
+    4. **Phase boundary discipline 5 sub-commits**: Task 2A foundation → 2B wire → 2C consumers → 2D access → 2E smoke test. Mỗi commit ship + verify riêng, easier rollback. Pattern proven 7 milestones liên tiếp (M-Hoshin-2/3/4/5/6 + M-Cleanup-1 + M-AICoach-Sensei-1 + M-Member-POV-1).
+  - **Files changed** (11 files + 1 plan doc, ~520 LOC delta):
+    - app/dashboard/x-matrix/new/page.tsx — remove redirect Member, extend userRole cast
+    - app/dashboard/x-matrix/new/components/HoshinGembaSectionClient.tsx — orphan M-Hoshin-7 comments cleanup
+    - components/x-matrix/canvas/state/CanvasContext.tsx — canEdit field + useCanEdit hook + CLEAR_DRAFT preserve
+    - components/x-matrix/canvas/XMatrixCanvasPage.tsx — pass canEdit Provider
+    - components/x-matrix/canvas/CanvasGrid.tsx — remove canEdit prop drill
+    - components/x-matrix/canvas/CenterX.tsx — useCanEdit hook subscribe
+    - components/x-matrix/canvas/VisionEditor.tsx — readonly paragraph fallback
+    - components/x-matrix/canvas/CanvasHeader.tsx — gate AI Prefill + Clear Draft + save status
+    - components/x-matrix/canvas/SubmitBar.tsx — early return null
+    - components/x-matrix/canvas/cards/YearGoalCard.tsx — empty slot non-button + filled click no-op
+    - components/x-matrix/canvas/cards/HoshinCard.tsx — same pattern + gemba badge UNTOUCHED
+    - plans/M-Member-POV-1-plan.md — design audit + close-out
+  - **Constraints cho future AI sessions**:
+    - KHÔNG re-add `redirect('/dashboard')` cho Member trong page.tsx — Member access read-only locked
+    - KHÔNG remove `canEdit` field khỏi CanvasUiState — Context single source of truth locked
+    - KHÔNG gate canEdit lên gemba badge HoshinCard — Q3 α Member submit Hoshin lock (execute M-Hoshin-6 Q3 γ defer)
+    - KHÔNG add view-only modal cho HoshinCard click — Q2 α hide affordance lock, defer M-Member-POV-2 nếu user complain
+    - KHÔNG modify CLEAR_DRAFT branch reducer mất canEdit preserve — pitfall #29 regression guard
+    - KHÔNG add reducer guard layer 2 cho edit actions trong M-Member-POV-1 scope — defer M-Cleanup-7 explicitly
+    - KHI extend ui state CanvasUiState với field mới, MUST classify permission vs UI state + audit reset actions (pitfall #29 checklist)
+    - KHI thêm role-gate route mới (Member access different feature), follow pattern: page render + Context flag + UI components subscribe hook (4 layers Task 2A→2D)
+- **Previous milestone**: M-AICoach-ShortInput-1 (Bug 2 fix, code commit `2b0e4eb` + docs close-out, ~2h work). Trigger: HANDOFF §16 known open items deferred 2026-05-08 evidence Image 2 (production user gõ "Thang nay dat." reproduced 2 lần hit Tier 3 fallback "Xin lỗi, AI vừa trả lời lỗi format"). Fix prompt-level (Q3 γ AI-side decision lock): SW Rule 9 + OT Rule 10 trigger khi input < 5 words → AI return extractedInsight: null + conversational probe message bám sát topic CEO. Persona Akao Minh preserve (catchball not lecture, 1-2 example concrete KHÔNG list 4-5 options). Bug 3 cross-framework guard verified pass (Strategic Memory KHÔNG fabricate vào probe response).
   - **Tasks shipped**:
     1. Task 1: Design audit + plan file (verify-first phát hiện dead code path `followUpHint` < 20 words trigger từ COACHING_QUESTION_BANK đã design nhưng client không truyền `coachingTracker` → reuse infrastructure thay vì build mới)
     2. Task 2: SW Rule 9 + OT Rule 10 atomic update (commit `2b0e4eb`, +13/-3 LOC)
@@ -1545,6 +1612,42 @@ Khi Claude mới vào session:
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
 
+### 2026-05-08 — Canvas Member-POV Read-Only Access (M-Member-POV-1)
+
+**Milestone**: M-Member-POV-1 — Canvas Member-POV Redesign.
+
+**Scope**: 6 commits (Task 1-2E). 11 files touched + 1 plan doc. ~520 LOC delta. Production READY at chienluoc.org commit `7570a61` (Vercel `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi`). Driver: M-Hoshin-6 Q-canvas redirect tạm thời 2026-04-30 + code comments explicit "future M-Hoshin-7 nới Member writer" → M-Member-POV-1 thực thi reservation.
+
+**Methodology source**: Akao Method bidirectional entry (Vinardi Ch.6 — Strategic Memory accessible to all stakeholders). Toyota gemba philosophy: Member là frontline observer, KHÔNG passive reader. Member access strategic context = comment quality cao hơn.
+
+**3 Architectural decisions locked**:
+
+1. **Bidirectional Member access (Akao Principle 1 extension)**: Member render canvas read-only thay vì redirect /dashboard. CEO/Manager edit, Member observe + comment. Markers gate UI affordances qua canEdit Context field.
+
+2. **Context single source of truth cho permission state**: canEdit field vào CanvasUiState, replace prop drill 3 levels (XMatrixCanvasPage → CanvasGrid → CenterX). Pattern §17 M-Hoshin-6 Q4 α+γ compose proven 4 lần (HoshinGembaSectionClient + KpiGembaSectionClient + CanvasContext + Member-POV).
+
+3. **canSubmit ≠ canModerate (Q3 α gemba Hoshin)**: Member submit gemba comment Hoshin nhưng KHÔNG moderate (acknowledge/resolve/delete). Execute M-Hoshin-6 Q3 γ defer plan. Permission tách biệt qua HoshinGembaSectionClient.canModerate = role !== 'Member' (M-Hoshin-6 đã có) + GembaModal form access defaults open via isPersisted gate only.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG re-add `redirect('/dashboard')` cho Member trong page.tsx — Member access read-only là decision lock.
+- KHÔNG remove canEdit field khỏi CanvasUiState — Context single source of truth lock.
+- KHÔNG gate canEdit lên gemba badge HoshinCard — Q3 α Member submit Hoshin lock (execute M-Hoshin-6 Q3 γ defer).
+- KHÔNG add view-only modal cho HoshinCard click — Q2 α hide affordance lock, defer M-Member-POV-2 nếu user complain.
+- KHÔNG modify CLEAR_DRAFT branch reducer mất canEdit preserve — pitfall #29 regression guard.
+- KHÔNG add reducer guard layer 2 cho edit actions trong M-Member-POV-1 scope — defer M-Cleanup-7 explicitly per Q2.4 plan.
+- KHI extend ui state CanvasUiState với field mới, MUST classify permission-derived vs user-controlled + audit reset actions per pitfall #29 checklist.
+- KHI thêm role-gate route mới (Member access feature khác), follow 4-layer pattern: page render + Context flag + UI components subscribe hook + smoke test 8 cases (Phase A manual với Member account).
+- KHI add component canvas mới có click handler edit, MUST consume useCanEdit hook + gate `onClick={canEdit ? handler : undefined}` + render fallback non-interactive cho Member.
+
+**Pattern lessons** (đáng generalize):
+
+1. **L31 Permission field reset audit** (pitfall #29 mới): Khi extend ui state với role-derived field (canEdit, canModerate, canDelete, isAdmin), audit mọi reducer action reset ui slice (CLEAR_DRAFT, RESET_UI, INIT). Permission field MUST preserve qua `ui: { ...initialUi, canEdit: state.ui.canEdit }`. M-Member-POV-1 Task 2A bonus catch. Apply universally cho future ui state extensions.
+
+2. **L32 Verify-first phát hiện scope wider hơn em assume**: Task 2B em prompt assume direct XMatrixCanvasPage→CenterX prop drill. Cursor verify-first phát hiện CanvasGrid intermediate (3 levels). Pattern L29 (M-Hoshin-7) reinforce — trust verify-first hơn em assumption + plan prose. Plan claim ≠ reality.
+
+3. **L33 Bonus catch quality > spec literal**: Cursor Task 2C ship aria-disabled a11y + modal render gated `{canEdit && ...}` defense layer 2 UI-side. Spec define minimum, Cursor judgment MAY exceed nếu defensive trade-off đúng. Pattern: AI pair programmer trusted với scope expansion nếu quality + safety > literal spec adherence.
+
 ### 2026-05-03 — SWOT Coaching Redesign theo Akao Method (M-AICoach-Sensei-1)
 
 **Milestone**: M-AICoach-Sensei-1 — SWOT Coaching Redesign theo Akao Method.
@@ -2106,6 +2209,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Member-POV-1 — Canvas Member-POV Redesign** ✅ SHIPPED 2026-05-08 (6 commits 92a58b3→7570a61, 11 files + 1 plan doc, ~520 LOC delta, ~4h work). Member access X-Matrix canvas read-only thay vì redirect /dashboard. Akao bidirectional entry: Member là gemba observer thấy strategic chain để comment context. 3 architectural changes (bidirectional access, Context single source of truth, canSubmit ≠ canModerate Q3 α). 8 decisions locked Task 1. Smoke test 8/8 PASS Phase A manual. Vercel deploy `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi` READY (build 21s clean). Production verify Member POV chienluoc.org PASS. 3 pattern lessons L31-L33 (permission field reset audit, verify-first scope wider, bonus catch quality > spec literal). New pitfall §10 #29 (CLEAR_DRAFT preserve permission state). See §16 + §17.
 - **M-Cleanup-6 Phase 1 — Fix `.single()` anti-pattern + extract helper** ✅ shipped 2026-05-02 (1 commit, 8 files, ~30 phút work). Helper `lib/auth/getActiveMembership.ts` (typed shape `{ org_id, role } | null`) + 7 API routes refactor (`x-matrix/prefill`, `kpi/list`, `report/monthly` split JOIN → 2 queries, `discovery/vision-save`, `discovery/pain-mapper`, `x-ray/history`, `x-ray/score`). Smoke test KPI Tracker PASS. Phase 2 (12 dashboard inline sites refactor) deferred. See §16 + §17.
 - **M-OrgInvite-1 — CEO Invite Link Flow** ✅ SHIPPED 2026-05-02 (1 commit `735c132`, 26 files, 1464 insertions). DB migration 035 (table `org_invites` + enum `invite_role` + 3 RLS + 3 indexes) + 4 API routes (POST/GET `/api/invites`, DELETE `/api/invites/[token]`, GET `/api/invites/[token]/info` public, POST `/api/invites/[token]/accept` authed) + UI public accept page `/invite/[token]` + Settings Members section replace fake handler + auth redirect fix (login + register honor `?redirect=` whitelist) + multi-org systemic fix (12 dashboard pages + layout `.maybeSingle()` → array + find/fallback). 7 decisions locked Task 1 (Option B link, separate table, `/invite/[token]` route, MVP existing-account-only, 5 max pending, Resend email, no revoke confirm). 4 bugs fixed: Next.js dynamic segment conflict ([id]+[token]), multi-org `.maybeSingle()` PGRST116, `router.push` stale cookie, `updateUser` metadata not in session. OAuth + email-confirm invite flows deferred. See §16 + §17.
 - **M-Design-3b — Dashboard hex-to-token refactor** ✅ SHIPPED 2026-05-02 (6 commits `868fa34`→`ed27932`, 5 files changed: 1 foundation extend + 4 consumer refactors). 0 raw hex còn trong logic của 4 files. Foundation: `--kpi-{healthy,attention}-strong` saturated variants + `--score-{critical,weak,fair,good}` 4-tier scale + `withAlpha()` helper + `ScoreTier` type + `getScoreTier()` server-safe classifier + `resolveScoreToken()` client resolver. Consumers: XRayHistoryChart (10 sites + CustomDot closure), xray-history page (server tier-passing pattern), KpiSparkline (3 sites + alpha pattern), discovery hub (5 sites: 3 badges + 2 checkmarks). 5 decisions locked (tách 2 scales, reuse `--destructive`, server/client boundary, KpiCard 3-tier giữ nguyên, dark mode out-of-scope). KpiCard.tsx Tailwind utility classes deferred → M-Design-Tailwind-Cleanup-1. New pitfalls §10 #22 (border-subtle shorthand), #23 (Recharts var() + server boundary). See §16 + §17.
@@ -2124,12 +2228,11 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 **Candidates ưu tiên** (chọn 1 sau khi anh decide):
 
-1. **M-Member-POV-1 — Canvas Member-POV redesign**: Mở Member access canvas + hide edit affordances. Cost ~5-7 commits, 1-2 sessions.
-2. **M-Design-Tailwind-Cleanup-1** (NEW from M-Design-3b deferred scope): KpiCard.tsx Tailwind utility classes (`bg-green-100`, `text-red-600`, `border-red-200`, `dark:bg-green-950`, etc.) + tangential utilities trong `discovery/page.tsx` (`border-red-300`, `text-amber-600`, `bg-gray-900`, etc.) không khớp NB palette / KPI tokens. Cần decision: tạo utility classes mới (`.kpi-healthy-bg` etc.) hay convert sang inline style với CSS vars. Cost ~2-3h. **Trigger**: design audit khám phá hue mismatch user-visible HOẶC milestone refactor dashboard sang dark mode (M-Design-Dark-1).
-3. **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt): `--brand`/`--accent` collision cleanup. `globals.css` line 169 reassigns `--accent: var(--brand)` (#c73937), override shadcn neutral `--accent: #ECEAE6` used cho menu/sidebar hover patterns. Audit components dùng `var(--accent)` to determine if brand-coloring is intentional or accidental. Cost ~1-2 commits + visual regression check.
-4. **M-Design-Dark-1** (NEW from M-Design-3b deferred): Add `.dark` variants cho `--kpi-*` (M-Design-3a foundation) + `--kpi-*-strong` + `--score-*` (M-Design-3b foundation). Visual A/B test side-by-side light/dark cho xray history chart + KpiSparkline + dashboard cards. Trigger: user request explicit, currently no signal. Cost ~3-4 commits, 2-3h.
-5. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
-6. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
+1. **M-Design-Tailwind-Cleanup-1** (NEW from M-Design-3b deferred scope): KpiCard.tsx Tailwind utility classes (`bg-green-100`, `text-red-600`, `border-red-200`, `dark:bg-green-950`, etc.) + tangential utilities trong `discovery/page.tsx` (`border-red-300`, `text-amber-600`, `bg-gray-900`, etc.) không khớp NB palette / KPI tokens. Cần decision: tạo utility classes mới (`.kpi-healthy-bg` etc.) hay convert sang inline style với CSS vars. Cost ~2-3h. **Trigger**: design audit khám phá hue mismatch user-visible HOẶC milestone refactor dashboard sang dark mode (M-Design-Dark-1).
+2. **M-Design-Tokens-Cleanup-1** (NEW from M-Design-3a tech debt): `--brand`/`--accent` collision cleanup. `globals.css` line 169 reassigns `--accent: var(--brand)` (#c73937), override shadcn neutral `--accent: #ECEAE6` used cho menu/sidebar hover patterns. Audit components dùng `var(--accent)` to determine if brand-coloring is intentional or accidental. Cost ~1-2 commits + visual regression check.
+3. **M-Design-Dark-1** (NEW from M-Design-3b deferred): Add `.dark` variants cho `--kpi-*` (M-Design-3a foundation) + `--kpi-*-strong` + `--score-*` (M-Design-3b foundation). Visual A/B test side-by-side light/dark cho xray history chart + KpiSparkline + dashboard cards. Trigger: user request explicit, currently no signal. Cost ~3-4 commits, 2-3h.
+4. **M-Cleanup-5 — Admin views + orphan SWOT routes**: 2 SQL views LIMIT 1 + 2 orphan routes (`/api/swot/xray-context` + `/api/swot/prefill-from-xray` — 0 frontend caller). Cost ~30 phút (verify trigger trước).
+5. **M-Gemba-AI-1 — AI sensei summarize gemba threads** (defer until baseline data ≥ 10 real comments per org). Currently DB only has test comments.
 
 ### Future milestones (TBD priority)
 
