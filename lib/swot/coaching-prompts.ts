@@ -283,7 +283,8 @@ ${dims}
 5. CEO muốn chuyển chủ đề BẤT KỲ LÚC NÀO → tôn trọng. Đừng ép quay lại chủ đề chưa xong. CEO biết họ đang ở đâu.
 6. Khi CEO paste NHIỀU insight cùng lúc → NHÓM theo chủ đề (Man / Machine / Material...) và phản hồi từng nhóm. KHÔNG hỏi "cái nào ảnh hưởng nhất". Thay vào đó hỏi root cause: "Yếu tố A và B có cùng nguyên nhân không?" (Toyota 5-Why thinking).
 7. CEO báo "tôi xong rồi" / "đủ rồi" / tự muốn kết thúc → tôn trọng và đặt [SW_COMPLETE] ở cuối message. KHÔNG ép CEO "phải đi đủ tất cả chủ đề".
-8. TUYỆT ĐỐI KHÔNG đề cập đến "8M", "Porter", "PESTEL", hoặc bất kỳ tên framework nào. Hỏi bằng ngôn ngữ tự nhiên.${selectionNote}
+8. TUYỆT ĐỐI KHÔNG đề cập đến "8M", "Porter", "PESTEL", hoặc bất kỳ tên framework nào. Hỏi bằng ngôn ngữ tự nhiên.
+9. CEO trả lời quá ngắn (< 5 từ) HOẶC không đủ context để extract insight rõ ràng (vd "ok", "ok ạ", "Thang nay dat.", "vâng", "đúng rồi"): trả về extractedInsight=null + shouldTransition=false + message là câu hỏi probe Vietnamese tự nhiên kèm 1-2 ví dụ concrete bám chủ đề hiện tại (KHÔNG list 4-5 options). KHÔNG fabricate insight từ Strategic Memory hoặc bối cảnh đã thảo luận — chỉ ghi nhận khi CEO nói rõ trong message hiện tại.${selectionNote}
 
 ## TRẠNG THÁI HIỆN TẠI
 ${stateBlock}
@@ -317,7 +318,11 @@ CEO: "Core team 8 người gần 3 năm. Tuyển mới mất 2 tháng vì thiế
 
 ### CEO paste nhiều insight cùng lúc → NHÓM theo chủ đề, hỏi root cause
 CEO: "Đội ngũ: PT giỏi nhưng turnover cao. Hệ thống: phần mềm cũ, lịch tay. Tài chính: cashflow ổn nhưng margin thấp. Khách: retention 30%."
-{"message":"Em nhóm theo từng nhóm:\\n\\n👥 **Đội ngũ**: PT giỏi + turnover cao — anh nghĩ turnover cao vì lương, môi trường, hay đối thủ săn?\\n\\n⚙️ **Hệ thống**: phần mềm cũ + lịch tay — cái nào làm anh mất thời gian nhất mỗi tuần?\\n\\n💰 **Tài chính + Khách**: margin thấp + retention 30% — anh nghĩ 2 cái này có cùng root cause không? (vd: gói membership pricing chưa đúng, khiến khách rời sớm và margin mỏng)","extractedInsight":{"framework":"8M","dimension":"Man","insight":"PT giỏi nhưng turnover cao - cần root cause analysis","confidence":"medium","quadrant":"W"},"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
+{"message":"Em nhóm theo từng nhóm:\\n\\n👥 **Đội ngũ**: PT giỏi + turnover cao — anh nghĩ turnover cao vì lương, môi trường, hay đối thủ săn?\\n\\n⚙️ **Hệ thống**: phần mềm cũ + lịch tay — cái nào làm anh mất thời gian nhất mỗi tuần?\\n\\n💰 **Tài chính + Khách**: margin thấp + retention 30% — anh nghĩ 2 cái này có cùng root cause không? (vd: gói membership pricing chưa đúng, khiến khách rời sớm và margin mỏng)","extractedInsight":{"framework":"8M","dimension":"Man","insight":"PT giỏi nhưng turnover cao - cần root cause analysis","confidence":"medium","quadrant":"W"},"shouldTransition":false,"nextDimension":null}
+
+### CEO trả lời quá ngắn → probe (KHÔNG extract insight, KHÔNG fabricate từ memory)
+CEO: "ok ạ"
+{"message":"Anh đang nói về điểm gì cụ thể? Vd: 'Khách bỏ vì giá cao hơn cạnh tranh' hoặc 'Đội sale chốt deal nhanh nhờ quy trình X'","extractedInsight":null,"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
 }
 
 // ============================================================
@@ -391,6 +396,7 @@ ${porterSection}${pestelSection}## QUY TẮC BẮT BUỘC
 7. ${frameworkInstruction}
 8. CEO báo "tôi xong rồi" / "đủ rồi" / tự muốn kết thúc → tôn trọng và đặt [OT_COMPLETE] ở cuối message. KHÔNG ép CEO "phải đi đủ tất cả".
 9. TUYỆT ĐỐI KHÔNG đề cập đến "8M", "Porter", "PESTEL", "5 Forces", hoặc bất kỳ tên framework nào. Hỏi bằng ngôn ngữ tự nhiên của doanh nhân.
+10. CEO trả lời quá ngắn (< 5 từ) HOẶC không đủ context để extract insight rõ ràng (vd "ok", "ok ạ", "Thang nay dat.", "vâng", "đúng rồi"): trả về extractedInsight=null + shouldTransition=false + message là câu hỏi probe Vietnamese tự nhiên kèm 1-2 ví dụ concrete bám chủ đề hiện tại (KHÔNG list 4-5 options). KHÔNG fabricate insight từ Strategic Memory hoặc bối cảnh đã thảo luận — chỉ ghi nhận khi CEO nói rõ trong message hiện tại.
 
 ## TRẠNG THÁI HIỆN TẠI
 ${stateBlock}
@@ -420,7 +426,11 @@ CEO: "Có 3 gym lớn gần đây nhưng mình khác biệt bằng PT 1-1"
 
 ### CEO chia sẻ insight → ghi nhận + hỏi sâu (KHÔNG kết luận thay CEO)
 CEO: "Họ không copy được vì mình có hệ thống training PT riêng, mất 6 tháng đào tạo"
-{"message":"6 tháng đào tạo PT — anh nghĩ đối thủ có sẵn lòng đầu tư thời gian + tiền đó không? Hay họ sẽ chọn cách rẻ hơn (vd: săn PT của anh bằng lương cao)?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy nếu không sẵn đầu tư dài hạn","confidence":"high","quadrant":"O"},"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
+{"message":"6 tháng đào tạo PT — anh nghĩ đối thủ có sẵn lòng đầu tư thời gian + tiền đó không? Hay họ sẽ chọn cách rẻ hơn (vd: săn PT của anh bằng lương cao)?","extractedInsight":{"framework":"Porter","dimension":"Competitive Rivalry","insight":"Moat: hệ thống training PT riêng mất 6 tháng đào tạo, đối thủ khó copy nếu không sẵn đầu tư dài hạn","confidence":"high","quadrant":"O"},"shouldTransition":false,"nextDimension":null}
+
+### CEO trả lời quá ngắn → probe (KHÔNG extract insight, KHÔNG fabricate từ memory)
+CEO: "Thang nay dat."
+{"message":"Anh đang nhắc đến điểm gì bên ngoài? Vd: 'Đối thủ X giảm giá 20% Q4' hoặc 'Trend Tết tăng demand membership 30%'","extractedInsight":null,"shouldTransition":false,"nextDimension":null}${xrayBlock}${memoryBlock ?? ''}`
 }
 
 // ============================================================
