@@ -189,7 +189,10 @@ function formatStateBlock(ctx?: CoachingContext): string {
   return block
 }
 
-export function formatStrategicMemory(factors: SwotFactorRow[]): string {
+export function formatStrategicMemory(
+  factors: SwotFactorRow[],
+  currentFramework?: 'sw' | 'ot',
+): string {
   if (factors.length === 0) return ''
 
   const byQuadrant: Record<string, SwotFactorRow[]> = { S: [], W: [], O: [], T: [] }
@@ -206,8 +209,15 @@ export function formatStrategicMemory(factors: SwotFactorRow[]): string {
     T: 'Thách thức đã nhận diện',
   }
 
+  // Filter quadrants theo framework để tránh context bias
+  // SW mode chỉ output S/W, OT mode chỉ output O/T, undefined → cả 4 (backward compat).
+  const quadrantsToShow: Array<'S' | 'W' | 'O' | 'T'> =
+    currentFramework === 'sw' ? ['S', 'W']
+    : currentFramework === 'ot' ? ['O', 'T']
+    : ['S', 'W', 'O', 'T']
+
   const sections: string[] = []
-  for (const q of ['S', 'W', 'O', 'T']) {
+  for (const q of quadrantsToShow) {
     const items = byQuadrant[q].slice(0, 10)
     if (items.length === 0) continue
     const lines = items.map((f) => `  - [${f.code}] ${f.content}`)

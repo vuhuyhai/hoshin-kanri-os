@@ -52,14 +52,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const memory = await loadStrategicMemory(supabase, membership.org_id, user.id)
-
-    const xRaySeed = memory.xrayContext
-      ? mapXRayToSwotSeed(memory.xrayContext.xrayId, memory.xrayContext.result)
-      : undefined
-
-    const memoryBlock = formatStrategicMemory(memory.factors)
-
     const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
     if (!rl.ok) return rl.response
 
@@ -80,6 +72,14 @@ export async function POST(request: NextRequest) {
     // clients that omit the field. Tracker no longer overrides — the client
     // owns SW vs OT routing under the Akao method.
     const currentFramework = body.currentFramework ?? 'sw'
+
+    const memory = await loadStrategicMemory(supabase, membership.org_id, user.id)
+
+    const xRaySeed = memory.xrayContext
+      ? mapXRayToSwotSeed(memory.xrayContext.xrayId, memory.xrayContext.result)
+      : undefined
+
+    const memoryBlock = formatStrategicMemory(memory.factors, currentFramework)
 
     // Derive coaching context from tracker (if provided), for prompt injection
     const coachingContext = coachingTracker
