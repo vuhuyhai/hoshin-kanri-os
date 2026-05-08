@@ -656,6 +656,32 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
     - Pattern: smoke test scripts/cleanup automation MUST include port verify step trước khi return success.
     - Discovered: Smoke test cleanup PID 17472 (npm parent) terminated nhưng PID 4632 (next-server child) vẫn alive, giữ port 3000. Phát hiện qua `Get-NetTCPConnection`. Resolved bằng manual kill PID 4632.
 
+27. **IME Vietnamese composition race với Enter submit handler** (learned 2026-05-08, commit f3e6b96, fix 6 instances). User gõ Telex/VNI với syllable kết thúc bằng dấu thanh hoặc dấu mũ (vd "chào." = "chao" + "." cho dấu huyền + "." cho dấu chấm) — composition buffer chưa flush khi user nhấn Enter. Handler đọc `input` state thiếu 1-2 ký tự cuối, `setInput('')` chạy, sau đó `compositionend` fire `onChange` với chuỗi cuối → ghi đè `''` thành 1-2 ký tự. UI bug visible: input giữ 2 ký tự cuối sau submit. Data loss bug invisible: `note.trim()` cắt cụt 2 ký tự cuối trước khi insert DB (KpiUpdateForm.tsx note field — silent data corruption).
+    - **Root cause**: React.KeyboardEvent.nativeEvent.isComposing = true khi IME đang compose. Default Enter handler không check property này. compositionend event fire async sau keydown → race condition.
+    - **Fix pattern (apply mọi Enter handler trên textarea/input có thể nhận tiếng Việt)**:
+```ts
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+          e.preventDefault()
+          handleSend()
+        }
+      }}
+```
+    - **Defense in depth**: kiểm cả `isComposing` (Chrome/Edge/Safari) và `keyCode === 229` (legacy Firefox/IE báo "key in composition"). Cả 2 check vì browser support khác nhau.
+    - **TypeScript constraint**: React.KeyboardEvent generic không expose `isComposing` direct. Cast qua `e.nativeEvent as KeyboardEvent` nếu strict mode complain. Pattern KpiUpdateForm.tsx dùng early-return:
+```ts
+      const handleKeyDown = (e: React.KeyboardEvent) => {
+        const ne = e.nativeEvent as KeyboardEvent
+        if (ne.isComposing || ne.keyCode === 229) return
+        if (e.key === 'Enter') handleSave()
+        if (e.key === 'Escape') onCancel()
+      }
+```
+    - **6 instances đã fix** trong commit f3e6b96 (pattern reusable cho Vietnamese SaaS): SwotWorkshopChat.tsx (2 inputs), SwotIngredientCard.tsx, SwotIngredientPanel.tsx, SwotFactorInput.tsx, KpiUpdateForm.tsx.
+    - **Severity ranking**: Data-loss instance (KpiUpdateForm note → DB) > UI annoyance instance (chat textarea giữ ký tự thừa). Khi audit codebase tìm pattern bug này, ưu tiên field text Vietnamese nào có `.trim()` rồi save DB — đó là data-loss path.
+    - **Test limitation**: Playwright MCP `page.keyboard.type()` KHÔNG simulate được Vietnamese IME composition (gửi raw chars, không fire compositionstart/compositionend). Bug chỉ verify được bằng Vietnamese typing thật trên OS với IME bật. Smoke test pattern: phân Phase A (human typing IME critical cases) + Phase B (Playwright regression ASCII + keyboard shortcuts).
+    - **Pattern lesson generalize**: Audit checklist cho mọi textarea/input mới chấp nhận Vietnamese: (1) onKeyDown có guard isComposing chưa? (2) Field có save vào DB qua .trim() không? (3) Có shared handler dùng cho cả numeric + text field không? Nếu (3) yes → guard ở shared handler (defense in depth, numeric không impact).
+
 ---
 
 ## 11. Dev Workflow
@@ -902,13 +928,16 @@ Khi Claude mới vào session:
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-02 — post M-Cleanup-6 Phase 1 (`.single()` anti-pattern fix in 7 API routes + extract `lib/auth/getActiveMembership.ts` helper, 1 commit, 8 files). HEAD `9305140`. Previous: M-OrgInvite-1 (CEO invite link flow, commit `735c132`, 26 files, 1464 insertions) — multi-tenant invite system shipped: 1 table + 4 API + 2 UI + auth redirect fix + 12 dashboard pages multi-org `.maybeSingle()` → array pattern fix. Earlier: hotfix `df3c1ef` (AI Coach SWOT JSON parser 3-tier fallback chain, `max_tokens` bump 800→4096) on top of M-Design-3b (Dashboard hex-to-token refactor: 6 commits `868fa34`→`ed27932`, 4 files refactored, 0 raw hex còn trong logic).
+- **Last verified**: 2026-05-08 — post commit f3e6b96 (IME composition guard 6 instances). HEAD `f3e6b96`. Touch 5 files: components/swot/{SwotWorkshopChat,SwotIngredientCard,SwotIngredientPanel,SwotFactorInput}.tsx + app/dashboard/kpi/components/KpiUpdateForm.tsx. 24 insertions / 5 deletions. Smoke test PASS (CASE 1+2 human Vietnamese typing, CASE 3a/b/c Playwright regression).
+
+  Previous: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d).
 - **Last migration applied**: `035_org_invites.sql` — table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (M-OrgInvite-1, committed). Previous: `034` functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`).
 - **API routes count**: 52 (48 + 4 mới M-OrgInvite-1: POST/GET `/api/invites`, DELETE `/api/invites/[token]`, GET `/api/invites/[token]/info`, POST `/api/invites/[token]/accept`)
 - **Lib modules**: admin, ai, analytics, annual-review, blog, discovery, email, hansei, http, newsletter, pql, supabase, swot, validation, x-matrix, x-ray + rate-limit.ts
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
+- **Latest commit**: `f3e6b96` — IME composition guard 6 instances (commit standalone, không phải milestone). Pattern §10 #27. Fix data-loss bug critical KpiUpdateForm note field. Smoke test PASS. KHÔNG push lên production yet (chờ verify Bug 2 AI lỗi format trong session sau).
 - **Latest feature work**: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d, ~13 hours work). Trigger: 3 user feedback về AI Coach reset + ép tuyến tính + reset context giữa session.
   - **Tasks shipped (8 tasks → 15 commits)**:
     1. Task 1: Plan docs (commit `4273d57`)
@@ -1468,6 +1497,7 @@ Khi Claude mới vào session:
       - KHI thêm route public-ish (authenticated user chưa có `org_members` row), MUST rate-limit + minimize response shape + audit log. Precedent: `/api/orgs/check-similar` (M-OrgUX-1).
       - KHI Cursor/Claude write smoke test PowerShell cho Supabase REST, MUST tránh `Invoke-WebRequest` (silent header strip), dùng `[System.Net.HttpWebRequest]` direct (xem §10 pitfall mới).
       - KHI write Playwright UI smoke test, scope alert assertions với specific text via `:has-text(...)` thay vì global `[role="alert"]` (Sonner Toaster + Next 16 dev indicator + analytics overlays đều render hidden alert region) — xem §10 pitfall mới.
+  - **AI return JSON parse error trong SwotWorkshopChat (deferred 2026-05-08)**: Production user gõ "Thang nay dat." (CASE 2 smoke test) hit Tier 3 fallback toast "Xin lỗi, AI vừa trả lời lỗi format". Hypothesis ranked: (a) credit balance trừ dần — auto-reload threshold $5 chưa hit, (b) short input ASCII không context khiến AI hallucinate JSON syntax, (c) pre-existing intermittent JSON parse failure. Defer milestone riêng — cần verify credit balance + Anthropic logs + re-test với input dài hơn. Trigger session mới: 1 input dài + 1 input ngắn cùng request → so sánh fail rate.
 
 ---
 
