@@ -946,8 +946,9 @@ Khi Claude mới vào session:
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-08 — post commit c8df2bf (Strategic Memory framework filter, Bug 3 fix). HEAD `c8df2bf`. Touch 2 files: lib/swot/coaching-prompts.ts (signature + filter array) + app/api/swot/coaching/route.ts (reorder parse + pass param). 20 insertions / 10 deletions. Smoke test PASS (CASE 1 OT toggle Porter rivalry question Ha Noi competitors no SW reference, CASE 2 SW toggle internal retention question 8M Man dimension routing đúng).
-  Previous: f3e6b96 (IME composition guard 6 instances) + 44121b4 (HANDOFF pitfall #27).
+- **Last verified**: 2026-05-08 — post M-AICoach-ShortInput-1 (Bug 2 fix short-input fallback). HEAD `2b0e4eb` (code) + docs commit close-out này. Touch 3 files: lib/swot/coaching-prompts.ts (SW Rule 9 + OT Rule 10 + 2 examples) + plans/M-AICoach-ShortInput-1-plan.md (Task 1 design audit) + HANDOFF.md (this update). Task 2 +13/-3 LOC compact. Smoke test PASS 8/8 Phase A manual (CASE 1-7 covering short ASCII / Vietnamese diacritic / Bug 2 regression "Thang nay dat." / boundary 3-5 words / full context flow chính / empty input / Bug 3 cross-framework Strategic Memory guard).
+
+  Previous: c8df2bf (Strategic Memory framework filter, Bug 3 fix) + f3e6b96 (IME composition guard 6 instances) + 44121b4 (HANDOFF pitfall #27).
 
   Earlier: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d).
 - **Last migration applied**: `035_org_invites.sql` — table `org_invites` + enum `invite_role` + 3 RLS policies + 3 indexes (M-OrgInvite-1, committed). Previous: `034` functional index `idx_organizations_lower_name_city` on `lower(name), lower(city)` (Supabase version `20260501061239`, applied via dashboard SQL editor — `.sql` file not yet committed to `supabase/migrations/`).
@@ -956,7 +957,29 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest commit**: `f3e6b96` — IME composition guard 6 instances (commit standalone, không phải milestone). Pattern §10 #27. Fix data-loss bug critical KpiUpdateForm note field. Smoke test PASS. KHÔNG push lên production yet (chờ verify Bug 2 AI lỗi format trong session sau).
+- **Latest milestone**: M-AICoach-ShortInput-1 (Bug 2 fix, code commit `2b0e4eb` + docs close-out, ~2h work). Trigger: HANDOFF §16 known open items deferred 2026-05-08 evidence Image 2 (production user gõ "Thang nay dat." reproduced 2 lần hit Tier 3 fallback "Xin lỗi, AI vừa trả lời lỗi format"). Fix prompt-level (Q3 γ AI-side decision lock): SW Rule 9 + OT Rule 10 trigger khi input < 5 words → AI return extractedInsight: null + conversational probe message bám sát topic CEO. Persona Akao Minh preserve (catchball not lecture, 1-2 example concrete KHÔNG list 4-5 options). Bug 3 cross-framework guard verified pass (Strategic Memory KHÔNG fabricate vào probe response).
+  - **Tasks shipped**:
+    1. Task 1: Design audit + plan file (verify-first phát hiện dead code path `followUpHint` < 20 words trigger từ COACHING_QUESTION_BANK đã design nhưng client không truyền `coachingTracker` → reuse infrastructure thay vì build mới)
+    2. Task 2: SW Rule 9 + OT Rule 10 atomic update (commit `2b0e4eb`, +13/-3 LOC)
+    3. Task 3: Smoke test 8/8 PASS Phase A manual (Phase B Playwright defer — prompt-only fix low regression risk + IME composition không simulate được pitfall #27)
+    4. Task 4: HANDOFF + plan commit (docs close-out này)
+  - **Decision lock 8 questions** (plans/M-AICoach-ShortInput-1-plan.md):
+    - Q1 SCOPE γ coaching only + audit report (evidence-driven, KHÔNG scope creep)
+    - Q2 THRESHOLD γ word count < 5 (stable cross-language)
+    - Q3 LOCATION γ AI-side prompt rule (preserve Akao catchball)
+    - Q4 UX α conversational probe (match Minh persona)
+    - Q5 3-tier fallback chain KHÔNG TOUCH (vấn đề là hit rate, không phải Tier 3 message)
+    - Q6 Memory rule explicit "KHÔNG fabricate từ memory" (Bug 3 regression guard)
+    - Q7 Test 8 cases (thêm CASE 3.5 boundary 3-5 words probe quality)
+    - Q8 Effort 2-3h, 1 commit (~30-50 LOC) — actual ~2h, 13 LOC code (compact hơn estimate)
+  - **R5 deviation** (plan vs code gap): Rule mới đặt cuối block QUY TẮC BẮT BUỘC (Rule 9 SW / Rule 10 OT) thay vì insert giữa rules. Lý do: existing structure không có rule numbered "ĐẶT CÂU HỎI" / "REFERENCE memory" — chúng ở top-level NGUYÊN TẮC + trailing template literal. Position cuối block tốt hơn spec ban đầu vì reading order match execution priority. Pattern lesson L29 áp dụng (trust verify-first hơn plan prose).
+  - **Files changed**: lib/swot/coaching-prompts.ts (Task 2) + plans/M-AICoach-ShortInput-1-plan.md (new) + HANDOFF.md (Task 4).
+  - **Constraints cho future AI sessions**:
+    - KHÔNG remove SW Rule 9 / OT Rule 10 — Bug 2 regression guard locked.
+    - KHÔNG modify threshold "< 5 từ" sang char count hoặc token count mà không re-test 8 cases (đặc biệt CASE 3.5 boundary).
+    - KHÔNG remove example "ok ạ" SW + "Thang nay dat." OT — examples có evidence link production Image 2.
+    - KHÔNG add rule list 4-5 options choice trong probe — vi phạm persona Minh (overload, decision fatigue).
+    - KHI thêm AI structured output route mới có conversational input (non-tool_use), MUST add Rule short-input fallback tương tự — pattern locked.
 - **Latest feature work**: M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d, ~13 hours work). Trigger: 3 user feedback về AI Coach reset + ép tuyến tính + reset context giữa session.
   - **Tasks shipped (8 tasks → 15 commits)**:
     1. Task 1: Plan docs (commit `4273d57`)
@@ -1516,8 +1539,6 @@ Khi Claude mới vào session:
       - KHI thêm route public-ish (authenticated user chưa có `org_members` row), MUST rate-limit + minimize response shape + audit log. Precedent: `/api/orgs/check-similar` (M-OrgUX-1).
       - KHI Cursor/Claude write smoke test PowerShell cho Supabase REST, MUST tránh `Invoke-WebRequest` (silent header strip), dùng `[System.Net.HttpWebRequest]` direct (xem §10 pitfall mới).
       - KHI write Playwright UI smoke test, scope alert assertions với specific text via `:has-text(...)` thay vì global `[role="alert"]` (Sonner Toaster + Next 16 dev indicator + analytics overlays đều render hidden alert region) — xem §10 pitfall mới.
-  - **AI return JSON parse error trong SwotWorkshopChat (deferred 2026-05-08, evidence updated)**: Production user gõ "Thang nay dat." (8 chars ASCII Vietnamese không dấu) hit Tier 3 fallback toast "Xin lỗi, AI vừa trả lời lỗi format". Reproduced 2 lần trên 2 session khác nhau (2026-05-08 evidence Image 2 SW mode message thứ 2 sau hello "chao"). Hypothesis (b) confirmed mới — short ASCII Vietnamese không context → AI hallucinate JSON syntax (trailing prose, unescaped quote, mismatched brace) → JSON.parse fail → Tier 3 fallback. Hypothesis (a) credit balance + (c) intermittent JSON failure đã loại trừ qua hotfix df3c1ef bump max_tokens 800→8192 + 3-tier fallback chain. Real root cause: AI structured output route schema gửi JSON-wrapped response cho input quá ngắn không đủ context để generate full schema → AI improvise dẫn đến malformed. Defer milestone M-AICoach-ShortInput-1: (1) detect input length < 30 chars + add fallback non-JSON text response thay vì Tier 3 error, (2) prompt instruct AI explicit "nếu input quá ngắn để extract insight, return {message: 'câu prompt CEO làm rõ', extractedInsight: null}" thay vì improvise schema. Effort estimate ~2-3h, 1 commit. **Trigger immediate**: nếu user complain lần thứ 3 trong 1 tuần.
-
 ---
 
 ## 17. Architecture Decisions
@@ -1554,6 +1575,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 - KHI extend AI structured output schema, MUST update: (a) types.ts interface, (b) isValidInsight runtime guard, (c) prompt schema example block, (d) all in-prompt JSON examples (AI pattern-matches examples). 4 sites pattern locked.
 - KHI add new IngredientSource value, MUST update SOURCE_CLS Record exhaustiveness check ở SwotIngredientCard.tsx.
 - KHI thêm caller mới gọi `formatStrategicMemory(factors)`, MUST pass `currentFramework` param nếu route có framework concept (SW vs OT). Backward compat optional param chỉ dành cho legacy callers không có framework. Bug 3 fix commit c8df2bf reinforce decision lock — Strategic Memory inject vào prompt MUST filter scope theo current task để tránh context gravity bias. Pattern: feature inject context vào AI prompt MUST scope context theo current mode/framework/quadrant.
+- KHI thêm AI structured output route mới có conversational input (non-tool_use), MUST add prompt rule short-input fallback (precedent SW Rule 9 / OT Rule 10 trong M-AICoach-ShortInput-1 commit 2b0e4eb). Threshold default < 5 từ. Action default extractedInsight: null + probe conversational. Constraint default "KHÔNG fabricate từ Strategic Memory + KHÔNG list 4-5 options choice".
 
 **Pattern lessons** (đáng generalize):
 
