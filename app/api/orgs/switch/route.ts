@@ -84,9 +84,12 @@ export async function POST(request: NextRequest) {
     const fromOrgId =
       (user.user_metadata?.last_org_id as string | undefined) ?? null
 
-    // Decision Q4 γ — write metadata only; client triggers full reload so
-    // layout's auth.getUser() (network call) reads fresh metadata next request,
-    // bypassing JWT cookie staleness. See plans/M-Auth-MultiOrg-1-plan.md.
+    // Decision Q4 γ refined — updateUser writes metadata to DB, then
+    // refreshSession re-mints the JWT so its embedded user_metadata.last_org_id
+    // matches DB. Without refresh, layout.tsx auth.getUser() returns the
+    // JWT's stale claim → currentMembership falls back to memberships[0]
+    // → CheckCircle indicator renders the wrong item (smoke test CASE 1).
+    // Client still triggers a full reload after this returns.
     const { error: updateError } = await supabase.auth.updateUser({
       data: { last_org_id: org_id },
     })
@@ -96,6 +99,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Không thể đổi tổ chức', requestId },
         { status: 500 },
+      )
+    }
+
+    const { error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) {
+      // DB write already succeeded; client full reload will mint a fresh JWT
+      // on its own. Log + continue rather than fail the switch.
+      console.error(
+        '[org-switch] refreshSession failed:',
+        JSON.stringify({
+          error: refreshError.message,
+          user_id: user.id,
+          requestId,
+          timestamp: new Date().toISOString(),
+        }),
       )
     }
 
