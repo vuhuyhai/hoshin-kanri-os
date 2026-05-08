@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-05-03 — post M-AICoach-Sensei-1 (SWOT Coaching Redesign theo Akao Method, 15 commits 4273d57→09b095d, ~13 tasks). HEAD `feb6ad3`. Touch 9 files: app/api/swot/coaching/route.ts + lib/swot/{coaching-prompts,strategic-memory,coaching-tracker,types,swot-session-store}.ts + components/swot/{SwotWorkshop,SwotWorkshopChat,SwotIngredientPanel,SwotIngredientCard}.tsx + plans/M-AICoach-Sensei-1-plan.md.
+> **Last verified**: 2026-05-09 — post M-Auth-MultiOrg-1 (Org Switcher UI + JWT metadata sync, 5 commits `0f6bcd4`→`b941b37`). HEAD `b941b37` (pre-push). Touch 6 files: `app/api/orgs/switch/route.ts` (NEW) + `components/layout/org-switcher.tsx` (NEW) + `plans/M-Auth-MultiOrg-1-plan.md` (NEW) + `app/dashboard/layout.tsx` + `components/layout/sidebar.tsx` + `components/layout/header.tsx`. Smoke test 6/6 PASS post-fix b941b37 (CheckCircle migrate đúng Member→CEO).
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -719,6 +719,18 @@ createAnthropicClient() // maxRetries: 3, timeout: 180_000
       - (d) Test: dispatch reset action → assert permission fields unchanged
     - **Pattern reusable**: M-Cleanup-7 reducer guard layer 2 (defer per Q2.4 plan §5) — guard sẽ check permission BEFORE applying mutation. Pitfall #29 là defense layer 1 UI-side, M-Cleanup-7 sẽ là layer 2 reducer-side. Cả 2 layer cần thiết, không thay thế nhau.
 
+30. **Supabase JWT user_metadata cache layer giữa updateUser + getUser** (learned 2026-05-09 M-Auth-MultiOrg-1 smoke test CASE 1, commit `b941b37`). `auth.updateUser({ data: {...} })` write metadata to DB nhưng JWT cookie carry CACHED user_metadata snapshot tại token issuance time. Subsequent `auth.getUser()` (kể cả full page reload) returns OLD metadata field từ JWT claim, NOT fresh DB read. Symptom: state stale dù DB write thành công, user thấy old value sau reload. Pre-fix hypothesis V5 ("auth.getUser() = network call → fresh metadata") was partially wrong — `getUser()` does hit `/auth/v1/user` but the claim it returns reflects the JWT's payload, which is stale until re-minted.
+    - **Fix pattern (apply trong commit b941b37)**: Call `supabase.auth.refreshSession()` sau updateUser để force JWT re-mint với fresh payload:
+```ts
+      await supabase.auth.updateUser({ data: { ...field } })
+      await supabase.auth.refreshSession()  // CRITICAL — JWT re-mint
+      // Now subsequent auth.getUser() returns fresh metadata
+```
+    - **Pattern reusable**: bất kỳ route mutate `user_metadata` + read sau đó MUST follow trio pattern (`updateUser` + `refreshSession` + full reload). Anti-pattern: skip `refreshSession` assume reload bypass cache → JWT cookie survives reload, metadata stale persists.
+    - **Defensive philosophy**: `refreshSession` failure logged nhưng KHÔNG return error — DB write succeeded, client full reload mints fresh JWT regardless. Failing API call would force user retry switch already succeeded (worse UX).
+    - **Cost**: ~100-200ms latency cho `refreshSession` call. Acceptable cho low-frequency mutations (org switch, profile update). KHÔNG dùng cho hot-path mutations (form save, draft auto-save) — batch metadata update ở phase boundary instead.
+    - **Reference**: `app/api/orgs/switch/route.ts` (M-Auth-MultiOrg-1 commit `b941b37`).
+
 ---
 
 ## 11. Dev Workflow
@@ -960,12 +972,12 @@ Khi Claude mới vào session:
 
 ---
 
-## 16. Current State Snapshot (2026-05-08 — post M-Cleanup-5)
+## 16. Current State Snapshot (2026-05-09 — post M-Auth-MultiOrg-1)
 
 - **Production URL**: https://chienluoc.org (custom domain on Vercel, verified 2026-05-01 post M-Cleanup-1 deploy `dpl_4UT4DfW85czkWGEecYnNe7e91y5K` READY)
 - **Repo**: PUBLIC since 2026-05-01 (M-Public-1). License: All rights reserved (no commercial use without written permission).
 - **HANDOFF auto-fetch URL**: `https://raw.githubusercontent.com/vuhuyhai/hoshin-kanri-os/master/HANDOFF.md` — em (AI) tự fetch đầu mỗi chat mới về Hoshin Kanri, KHÔNG cần Vũ Hải re-upload Project knowledge. Fastly CDN propagation ~5-15 min sau visibility flip (xem L22).
-- **Last verified**: 2026-05-08 — post M-Cleanup-5 (Tech debt sweep, 3 commits `920080b` plan → `40d3ca4` code → `6f789d6` docs close-out). HEAD = `6f789d6`. Touch 3 files code (-2 orphan SWOT routes 192 LOC + 1 migration .sql 7 LOC) + HANDOFF cleanup + plans/M-Cleanup-5-plan.md. Smoke test typecheck + build PASS clean (post `rm -rf .next` cache). Vercel deploy `dpl_H9EAUicovPWHRbw8ko6J1F7YF6ku` READY (build 29.2s clean, 0 error/warning, build logs 0 match cho 2 deleted routes). Production verify 4/5 PASS: build clean, runtime 0 errors 5 phút post-deploy, curl confirmed HTTP 404 cho `/api/swot/xray-context` + `/api/swot/prefill-from-xray`, migration 034 index intact (verified qua `/api/orgs/check-similar` reach DB without 500). Previous: M-Member-POV-1 (Canvas Member-POV Redesign, 6 commits 92a58b3→7570a61, deploy `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi`).
+- **Last verified**: 2026-05-09 — post M-Auth-MultiOrg-1 (Org Switcher UI + JWT metadata sync trio, 5 commits `0f6bcd4` plan → `370b72f` API → `ffc0714` component → `993fd14` data fetch → `b941b37` JWT sync fix). HEAD = `b941b37` (pre-push). Touch 6 files (3 NEW: `app/api/orgs/switch/route.ts` + `components/layout/org-switcher.tsx` + `plans/M-Auth-MultiOrg-1-plan.md`; 3 MODIFIED: `app/dashboard/layout.tsx` + `components/layout/sidebar.tsx` + `components/layout/header.tsx`). Smoke test 6/6 PASS post-fix `b941b37` (CASE 1 multi-org switch CheckCircle migrate đúng Member→CEO; CASE 3 RLS deny HTTP 403; CASE 6 rate limit 29×200 + 6×429 within threshold). Previous: M-Cleanup-5 (Tech debt sweep, 3 commits `920080b`→`6f789d6`, HEAD was `6f789d6`). Touch 3 files code (-2 orphan SWOT routes 192 LOC + 1 migration .sql 7 LOC) + HANDOFF cleanup + plans/M-Cleanup-5-plan.md. Smoke test typecheck + build PASS clean (post `rm -rf .next` cache). Vercel deploy `dpl_H9EAUicovPWHRbw8ko6J1F7YF6ku` READY (build 29.2s clean, 0 error/warning, build logs 0 match cho 2 deleted routes). Production verify 4/5 PASS: build clean, runtime 0 errors 5 phút post-deploy, curl confirmed HTTP 404 cho `/api/swot/xray-context` + `/api/swot/prefill-from-xray`, migration 034 index intact (verified qua `/api/orgs/check-similar` reach DB without 500). Previous: M-Member-POV-1 (Canvas Member-POV Redesign, 6 commits 92a58b3→7570a61, deploy `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi`).
 
   Previous: M-AICoach-ShortInput-1 (Bug 2 fix prompt fallback short-input < 5 từ, 2 commits 2b0e4eb→1dcfb53).
 
@@ -976,7 +988,53 @@ Khi Claude mới vào session:
 - **Components**: analytics (2), annual-review (6), blog (8), dashboard (AnnualReviewBanner + AnnualReviewCard), gemba (4 — GembaBanner + GembaCommentForm + GembaCommentThread + KpiGembaSection client wrapper), hansei (3 — HanseiBanner + HanseiForm + HanseiHistoryList), layout (4), providers (3), swot (35+), ui (15), x-matrix — top-level files xóa hoàn toàn ở M-Cleanup-1 (7 wizard files: XMatrixWizard + Step1-4 + WizardProgress + XMatrixReview). Còn lại: `components/x-matrix/canvas/` (XMatrixCanvasPage + CanvasGrid + CanvasHeader + CanvasMiniMap + CenterX + CoachPopover + EducationalTooltip + GembaModal + PrefillModal + SubmitBar + VisionEditor + cards/ + edges/ + modals/ + state/). Canvas là single source of truth cho `/dashboard/x-matrix/new`. Route-local Server Components: `app/dashboard/x-matrix/new/components/HoshinGembaSection.tsx` + `HoshinGembaSectionClient.tsx` (Context provider).
 - **Dashboard routes**: discovery (swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history), x-matrix/new (→ HoshinGembaSection wrap canvas), x-matrix/[year]/review, kpi (→ KpiHanseiSection wired ABOVE KpiDashboardClient), report, settings, help
 - **Admin routes**: customers, hoshin-explorer, blog (list/new/edit/categories/tags)
-- **Latest milestone**: M-Cleanup-5 (Tech debt sweep, 2 commits: `40d3ca4` code + docs close-out này, ~25 phút work). Trigger: 3 candidates pile-up §18 backlog (admin views Q1, orphan SWOT routes Q2, migration 034 backfill Q3) + 2 close-out items pre-existing debt (`<NEXT_HASH>` placeholder §16 line 1067, `M-AICoach-AutoFill-1` stale §18 — đã ship via M-AICoach-Sensei-1 Task 6D).
+- **Latest milestone**: M-Auth-MultiOrg-1 (Org Switcher UI + JWT metadata sync trio, 5 commits `0f6bcd4`→`b941b37`, 6 files, ~3h work). Trigger: M-OrgInvite-1 wired 50% multi-org infra (table `org_invites` + accept flow auto-set `last_org_id`) but missed 50% UI — user thật KHÔNG có cách CHỦ ĐỘNG switch giữa orgs đã join. Fallback `memberships[0]` (newest) là stopgap MVP. Sub-trigger: M-OrgInvite-1 deferred bug — `updateUser({ data: { last_org_id }})` không reflect vào session ngay (root cause discovered late: JWT metadata cache, pitfall #30).
+  - **Tasks shipped (5 commits)**:
+    1. Task 1 — Plan + design audit + 6 decision lock Q1-Q6 (commit `0f6bcd4`, `plans/M-Auth-MultiOrg-1-plan.md` 288 LOC)
+    2. Task 2A — POST `/api/orgs/switch` endpoint (commit `370b72f`, NEW 126 LOC). Auth + Zod schema + rate limit 30/5min/user + audit log `[audit:org-switch]` structured JSON + membership verify direct query (role for audit) + `auth.updateUser({ last_org_id })`.
+    3. Task 2B — `OrgSwitcher` component + sidebar wire (commit `ffc0714`, NEW component 145 LOC + sidebar.tsx integration). `@base-ui/react/menu` primitive, `DropdownMenuItem` + manual `<Check />` indicator (NOT RadioItem — semantic mismatch), Q1 α full org name truncate `max-w-[140px]`, Q2 γ render dropdown even 1 org. Optional props pattern: `orgId?` + `memberships?` với `showSwitcher` guard, falls back to legacy static block khi caller chưa wire data.
+    4. Task 2C — Wire data fetch in `app/dashboard/layout.tsx` + cascade qua Header (commit `993fd14`). 2-query split (`.in('id', orgIds)`) thay vì JOIN — match M-Cleanup-6 HANDOFF guidance, avoids type-cast pitfall. `membershipsForSwitcher` array shape `{ org_id, org_name, role }` derived từ Map. Header.tsx pass-through cho `MobileSidebarContent` (Q6 β-revised mobile parity zero-cost).
+    5. Task 2D-fix — `refreshSession()` after `updateUser` để JWT re-mint với fresh metadata (commit `b941b37`, +21/-3 LOC). Smoke test CASE 1 phát hiện CheckCircle indicator stale sau Member→CEO switch — root cause Supabase JWT cache layer giữa middleware + Server Component. V5 hypothesis (auth.getUser network call = fresh metadata) partially WRONG — getUser hits `/auth/v1/user` nhưng claim trả về reflects JWT payload, stale until re-minted. Decision Q4 γ refined → trio pattern `updateUser` + `refreshSession` + full reload.
+  - **6 decisions locked Task 1** (plans/M-Auth-MultiOrg-1-plan.md):
+    - Q1 α full: avatar 8x8 + full org name truncate `max-w-[140px]` (zero breaking change vs existing static block)
+    - Q2 γ render normal: dropdown click được kể cả khi 1 org (consistency UX, "+ Tạo org mới" CTA discover)
+    - Q3 β optimistic: zero loading state cho first paint (props từ Server Component synchronous), button disabled during POST = separate concern
+    - Q4 γ → REFINED post-smoke: full reload + `refreshSession` trio. V5 partial sai → trio pattern decision lock new
+    - Q5 α top: replace existing Org info block in-place line 89-96 sidebar.tsx (zero layout shift)
+    - Q6 β-revised: zero mobile-specific code, OrgSwitcher inherit qua MobileSidebarContent → Sheet drawer
+  - **Smoke test 6/6 PASS post-fix b941b37**:
+    | Case | Description | Result |
+    |---|---|---|
+    | 1 | Multi-org switch Member→CEO (CheckCircle migrate) | PASS |
+    | 2 | Single-org γ render (1 org user vẫn thấy dropdown + "+ Tạo org mới") | PASS |
+    | 3 | RLS deny non-member (POST với org_id KHÔNG thuộc) | PASS HTTP 403 |
+    | 4 | Mobile Sheet drawer (hamburger → drawer → OrgSwitcher click) | PASS |
+    | 5 | "+ Tạo org mới" navigation `/onboarding/setup-org` | PASS |
+    | 6 | Rate limit (35 requests, expect ~30 + ~5 429) | PASS 29/6/0 |
+  - **Files changed (3 NEW + 3 MODIFIED)**:
+    - NEW: `app/api/orgs/switch/route.ts` (126 LOC)
+    - NEW: `components/layout/org-switcher.tsx` (145 LOC)
+    - NEW: `plans/M-Auth-MultiOrg-1-plan.md` (288 LOC, design audit + decision lock)
+    - MODIFIED: `app/dashboard/layout.tsx` (+18/-6 LOC, build orgNameById Map + pass `orgId` + `memberships` to Sidebar/Header)
+    - MODIFIED: `components/layout/sidebar.tsx` (+34/-7 LOC, optional props + `showSwitcher` guard + OrgSwitcher invocation)
+    - MODIFIED: `components/layout/header.tsx` (+4/-2 LOC, cascade props to MobileSidebarContent)
+  - **Pattern lessons** (4 mới, đáng generalize):
+    1. **L37 — Trio pattern cho user_metadata sync** (REFINED post-smoke từ L37 anticipate "full reload bypass cookie staleness"): Mutate `user_metadata` + read sau đó MUST follow `updateUser` + `refreshSession` + full reload trio. `auth.getUser()` đi network call NHƯNG returns JWT claim, không fresh DB. `refreshSession` re-mints JWT với fresh payload bridge gap. Anti-pattern: skip refreshSession assume `getUser` = fresh.
+    2. **L38 — Sheet drawer mobile parity zero-cost** (proven validated trong M-Auth-MultiOrg-1 smoke test CASE 4): Khi mobile pattern dùng Sheet drawer rendering same content as desktop sidebar (existing `MobileSidebarContent` wraps `SidebarContent`), thêm component mới vào sidebar tự động available trên mobile. Zero mobile-specific code. Proven CASE 4 PASS (hamburger → drawer → OrgSwitcher click works identical desktop).
+    3. **L39 — Reader-uniform-pattern enables single-mutation switch** (proven validated): 19 reader files đều dùng pattern `find(m => m.org_id === lastOrgId) ?? memberships[0]` (V6 audit M-Auth-MultiOrg-1 plan). 1 metadata write → all 19 readers consistent behavior. Decision lock pattern: TRƯỚC khi build cross-cutting feature mutate state, audit reader pattern uniformity. Non-uniform readers = bugs from inconsistency.
+    4. **L40 — Optional props + fallback pattern cho phase boundary buildability** (M-Auth-MultiOrg-1 Task 2B → 2C transition): Khi component cần data chưa available ở caller (data fetch wired ở task sau), make new props OPTIONAL + render fallback. Sidebar Task 2B làm `orgId?` + `memberships?` với `showSwitcher = !!orgId && !!memberships` guard, fallback to legacy static block. Task 2C wire layout.tsx → guard trips → OrgSwitcher activates. Typecheck stays green qua phase boundary. Bonus: defensive cho future non-dashboard callers (admin layouts, etc.) — KHÔNG remove fallback sau khi data wired.
+  - **Constraints cho future AI sessions**:
+    - KHÔNG remove `refreshSession()` call sau `updateUser` trong `/api/orgs/switch` — JWT metadata cache regression guard (pitfall #30)
+    - KHÔNG modify Sidebar `orgId` + `memberships` props từ optional sang required mà không audit tất cả callers — defense layer for /admin và future routes (L40)
+    - KHÔNG dùng `auth.getUser()` expecting fresh `user_metadata` sau `updateUser` without `refreshSession` bridge — pattern L37 + pitfall #30
+    - KHI thêm route mới mutate `user_metadata` + read sau đó (vd profile_pic_url, theme_pref, locale), MUST follow trio pattern `updateUser` + `refreshSession` + full reload HOẶC redesign architecture (vd persist vào dedicated `users` table thay vì `auth.users.user_metadata`)
+    - KHÔNG dùng `router.push` thay `window.location.href` cho post-mutation reload khi mutation touches `user_metadata` — pattern bug M-OrgInvite-1 + M-Auth-MultiOrg-1 reaffirm (router.push preserve cookie state, full reload triggers middleware re-mint)
+    - KHÔNG dùng `DropdownMenuCheckboxItem` cho org list — semantic mismatch (checkbox = independent toggles, switcher = 1-of-N selection). Đã dùng `DropdownMenuItem` + manual `<Check />` indicator
+    - KHÔNG add OrgSwitcher vào `bottom-nav.tsx` — Q6 β-revised decision lock. Mobile UX qua Sheet drawer reuse SidebarContent
+    - KHÔNG render OrgSwitcher dropdown trong empty state với 0 memberships — layout.tsx redirect '/onboarding/setup-org' cho case này, switcher KHÔNG bao giờ thấy `memberships.length === 0`
+    - KHI extend `SidebarProps` với field mới, MUST cập nhật cả Sidebar + MobileSidebarContent + Header.tsx caller (cascade chain) — type checker enforce
+    - KHI add rate limit cho route mới authenticated, dùng `checkRateLimit` direct với key `<route>:${userId}` (per-user bucket), pattern matches `/api/orgs/check-similar` + `/api/orgs/switch`. Khi M-RateLimit-Generic-1 ship, migrate cùng commit
+- **Previous milestone**: M-Cleanup-5 (Tech debt sweep, 2 commits: `40d3ca4` code + docs close-out này, ~25 phút work). Trigger: 3 candidates pile-up §18 backlog (admin views Q1, orphan SWOT routes Q2, migration 034 backfill Q3) + 2 close-out items pre-existing debt (`<NEXT_HASH>` placeholder §16 line 1067, `M-AICoach-AutoFill-1` stale §18 — đã ship via M-AICoach-Sensei-1 Task 6D).
   - **Tasks shipped (2 commits)**:
     1. Task 1: Plan docs design audit + 6 decision lock (commit `920080b`, `plans/M-Cleanup-5-plan.md` 237 LOC)
     2. Task 2 commit 1: Code changes — remove 2 orphan SWOT routes + backfill migration 034 (commit `40d3ca4`, -192 LOC + 7 LOC migration .sql)
@@ -1008,7 +1066,7 @@ Khi Claude mới vào session:
     - Admin views 010 `LIMIT 1` pattern STATUS QUO (Q1 α defer) — revisit khi M-OrgInvite-1 actual generate org có >1 CEO + support team escalation. Future migration `036_admin_views_deterministic_ceo.sql` thay `LIMIT 1` → `ORDER BY om.created_at ASC LIMIT 1` (founding CEO semantic match `admin_customers_overview` view name)
     - KHI ship migration applied via Supabase dashboard SQL editor, MUST backfill `.sql` file vào `supabase/migrations/` cùng commit (Q3 decision lock pattern). KHÔNG defer next-schema-change touch table — debt rotates qua N milestones, repo state drift production
     - KHI HANDOFF có placeholder `<NEXT_HASH>` chưa thực thi, MUST update sau commit thật HOẶC remove khi plan deviate. KHÔNG để placeholder rot — pre-existing debt §16 line 1067 cleanup M-Cleanup-5
-- **Previous milestone**: M-Member-POV-1 (Canvas Member-POV Redesign, code commits 544ca5a→ceeeb1c + docs close-out, 6 commits total, ~4h work). Trigger: M-Hoshin-6 Q-canvas redirect Member /dashboard tạm thời 2026-04-30 + code comments explicit "future M-Hoshin-7 nới Member writer" → M-Member-POV-1 thực thi reservation đó. Akao Method bidirectional entry: Member là gemba observer cần thấy strategic chain (Vision → YearGoal → Hoshin → KPI) để comment đúng context.
+- **Earlier milestone**: M-Member-POV-1 (Canvas Member-POV Redesign, code commits 544ca5a→ceeeb1c + docs close-out, 6 commits total, ~4h work). Trigger: M-Hoshin-6 Q-canvas redirect Member /dashboard tạm thời 2026-04-30 + code comments explicit "future M-Hoshin-7 nới Member writer" → M-Member-POV-1 thực thi reservation đó. Akao Method bidirectional entry: Member là gemba observer cần thấy strategic chain (Vision → YearGoal → Hoshin → KPI) để comment đúng context.
   - **Tasks shipped (5 tasks → 6 commits)**:
     1. Task 1: Plan docs design audit + 8 decision lock (commit `92a58b3`, 329 LOC)
     2. Task 2A: Add canEdit field vào CanvasContext state (commit `544ca5a`, +31/-4 LOC, 1 file). Bonus catch CLEAR_DRAFT preserve canEdit (pitfall #29)
@@ -1644,6 +1702,43 @@ Khi Claude mới vào session:
 
 Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc constraint future work. Mỗi entry: ngày + scope + rationale + ràng buộc future code.
 
+### 2026-05-09 — Org Switcher UI + JWT metadata sync trio (M-Auth-MultiOrg-1)
+
+**Milestone**: M-Auth-MultiOrg-1 — Sidebar org switcher dropdown + multi-org metadata write/read sync.
+
+**Scope**: 5 commits (Task 1 plan `0f6bcd4` + Task 2A API `370b72f` + Task 2B component `ffc0714` + Task 2C data fetch `993fd14` + Task 2D-fix JWT sync `b941b37`). 6 files (3 NEW + 3 MODIFIED). ~3h work. Risk LOW (path A+α+I locked: sidebar dropdown + full reload + user_metadata storage). Driver: M-OrgInvite-1 wired 50% multi-org infra (table + accept flow auto-set `last_org_id`) but missed UI cho user CHỦ ĐỘNG switch — fallback `memberships[0]` newest stopgap MVP.
+
+**Methodology source**: M-OrgInvite-1 invite flow `auth.updateUser({ data: { last_org_id }})` precedent (commit `735c132`) + multi-tenant reality M-Hoshin-7 (9 orgs production users, KHÔNG pollution L8). Pattern lift `[audit:check-similar]` structured JSON từ M-OrgUX-1.
+
+**3 Architectural decisions locked**:
+
+1. **Sidebar dropdown TOP position (Q1+Q5 α)**: OrgSwitcher replace existing static "Org info" block in-place line 89-96 sidebar.tsx (zero layout shift). Slack pattern. Avatar 8x8 + full org name truncate `max-w-[140px]` + chevron-down. Mobile inherit qua MobileSidebarContent → Sheet drawer (Q6 β-revised zero-cost). Anti-pattern rejected: bottom-nav addition (5 cols saturated), settings-only redirect (UX regression).
+
+2. **Optional props + fallback pattern cho Sidebar (L40 buildable-standalone)**: `SidebarProps.orgId?` + `SidebarProps.memberships?` với `showSwitcher = !!orgId && !!memberships` guard inside SidebarContent. Renders OrgSwitcher khi data wired, fallback to legacy static block khi không. Defensive cho future non-dashboard callers (admin layouts, onboarding, etc.) — KHÔNG remove fallback sau Task 2C wire data. Pattern lift cho future component additions: optional + guard + fallback enables phase-boundary commits without breaking typecheck cascade.
+
+3. **`updateUser` + `refreshSession` + full reload TRIO cho metadata sync (Q4 γ refined)**: Original Q4 γ "full reload bypass cookie staleness" hypothesis (V5 static review claim "auth.getUser network call = fresh metadata") **partially invalidated** by smoke test CASE 1 empirical evidence — CheckCircle indicator stale sau Member→CEO switch dù DB write thành công + full reload triggered. Root cause: Supabase JWT user_metadata cache layer giữa middleware + Server Component. `auth.getUser()` hits `/auth/v1/user` BUT returns JWT claim payload (stale until re-minted). Fix: insert `auth.refreshSession()` sau `updateUser` để force JWT re-mint. Trio pattern decision lock new — applies to any route mutating `user_metadata` + reading sau đó.
+
+**Constraints cho future AI sessions**:
+
+- KHÔNG remove `refreshSession()` call sau `updateUser` trong `/api/orgs/switch` — JWT metadata cache regression guard (pitfall #30, smoke test CASE 1 evidence).
+- KHÔNG modify `SidebarProps.orgId` + `SidebarProps.memberships` từ optional sang required mà không audit tất cả callers — defense layer for /admin và future routes (L40 lock).
+- KHÔNG dùng `auth.getUser()` expecting fresh `user_metadata` sau `updateUser` without `refreshSession` bridge — pattern lesson L37 + pitfall #30. V5 hypothesis "getUser = fresh metadata" partially WRONG — claim mirrors JWT, stale until re-minted.
+- KHI thêm route mới mutate `user_metadata` + read sau đó (vd profile_pic_url, theme_pref, locale, notification_settings), MUST follow trio pattern `updateUser` + `refreshSession` + full reload HOẶC redesign architecture (vd persist vào dedicated `public.users` row thay vì `auth.users.user_metadata` — `users` table reads bypass JWT cache entirely).
+- KHÔNG dùng `router.push` thay `window.location.href` cho post-mutation reload khi mutation touches `user_metadata` — pattern bug M-OrgInvite-1 + M-Auth-MultiOrg-1 reaffirm. `router.push` preserves cookie state (no JWT re-mint qua middleware); `window.location.href` triggers full middleware pass.
+- KHÔNG dùng `DropdownMenuCheckboxItem` cho org list (hoặc bất kỳ 1-of-N selection nào) — semantic mismatch. Dùng `DropdownMenuItem` + manual `<Check />` HOẶC `DropdownMenuRadioGroup`+`DropdownMenuRadioItem`.
+- KHÔNG add OrgSwitcher vào `bottom-nav.tsx` — Q6 β-revised decision lock. Mobile UX qua Sheet drawer reuse SidebarContent wholesale.
+- KHI extend `SidebarProps`, MUST cascade props qua Header.tsx → MobileSidebarContent (chain) — type checker enforce.
+
+**Pattern lessons** (đáng generalize):
+
+1. **L37 — `updateUser` + `refreshSession` + full reload trio cho JWT metadata sync** (REFINED post-smoke từ L37 anticipate). `auth.updateUser({ data: {...} })` writes DB but JWT cookie carries stale user_metadata claim. `auth.getUser()` does network call BUT returns JWT payload (not fresh DB read). Fix: `auth.refreshSession()` re-mints JWT with fresh payload. Cost ~100-200ms acceptable cho low-frequency mutations. KHÔNG dùng cho hot-path mutations. Reference: `app/api/orgs/switch/route.ts` commit `b941b37`.
+
+2. **L38 — Sheet drawer mobile parity zero-cost** (proven validated CASE 4 PASS). Khi `MobileSidebarContent` wraps `SidebarContent`, thêm component vào sidebar tự động available trên mobile drawer. Zero mobile-specific code. Pattern cho future sidebar additions (notification bell, quick-action shortcut, etc.).
+
+3. **L39 — Reader-uniform-pattern enables single-mutation switch** (proven validated). 19 reader files đều dùng `find(m => m.org_id === lastOrgId) ?? memberships[0]` (V6 audit). 1 metadata write → all 19 readers consistent. Pattern: TRƯỚC khi build cross-cutting feature mutate state, audit reader pattern uniformity. Non-uniform readers = bugs from inconsistency.
+
+4. **L40 — Optional props + fallback pattern cho phase boundary buildability** (M-Auth-MultiOrg-1 Task 2B→2C transition). Khi component cần data chưa available ở caller (data fetch wired ở task sau), make new props OPTIONAL + render fallback to legacy/static. Typecheck stays green qua phase boundary. Bonus: defensive cho future non-target callers — KHÔNG remove fallback sau khi data wired.
+
 ### 2026-05-08 — Tech Debt Sweep (M-Cleanup-5)
 
 **Milestone**: M-Cleanup-5 — Tech debt sweep (admin views audit defer + orphan SWOT routes remove + migration 034 backfill + close-out).
@@ -2272,6 +2367,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
+- **M-Auth-MultiOrg-1 — Org Switcher UI + JWT metadata sync trio** ✅ SHIPPED 2026-05-09 (5 commits `0f6bcd4`→`b941b37`, 6 files: 3 NEW + 3 MODIFIED, ~3h work). Trigger: M-OrgInvite-1 wired multi-org infra (table + accept flow auto-set `last_org_id`) but missed UI cho user CHỦ ĐỘNG switch — fallback `memberships[0]` newest stopgap MVP. Path A+α+I locked: sidebar dropdown TOP + full reload + `user_metadata.last_org_id`. 6 decisions Q1-Q6 locked Task 1. 3 NEW files (`app/api/orgs/switch/route.ts` 126 LOC + `components/layout/org-switcher.tsx` 145 LOC + `plans/M-Auth-MultiOrg-1-plan.md` 288 LOC) + 3 MODIFIED (`app/dashboard/layout.tsx` 2-query split build orgNameById Map + `components/layout/sidebar.tsx` optional props + showSwitcher guard + `components/layout/header.tsx` cascade props). Smoke test 6/6 PASS post-fix `b941b37`: CASE 1 multi-org switch CheckCircle migrate Member→CEO, CASE 2 single-org γ render, CASE 3 RLS deny HTTP 403, CASE 4 mobile Sheet drawer, CASE 5 "+ Tạo org mới" navigation, CASE 6 rate limit 29×200 + 6×429 within threshold. CASE 1 root cause discovered post smoke: Supabase JWT user_metadata cache (pitfall #30 NEW) — `auth.updateUser` writes DB but JWT cookie carries stale claim, `auth.getUser` returns JWT payload not fresh DB. Fix `b941b37`: insert `auth.refreshSession()` after `updateUser` để force JWT re-mint. Q4 γ decision refined → `updateUser` + `refreshSession` + full reload trio. 4 pattern lessons L37-L40 (trio pattern, mobile parity zero-cost, reader-uniform single-mutation, optional props phase boundary). New pitfall §10 #30 (JWT metadata cache layer). See §16 + §17.
 - **M-Cleanup-5 — Tech Debt Sweep** ✅ SHIPPED 2026-05-08 (2 commits: `40d3ca4` code + docs close-out, 3 files code change + HANDOFF cleanup, ~25 phút work). 3 tasks combine: (A) admin views 010 lines 60-61 + 89-90 `LIMIT 1` → DEFER Q1 α (trigger condition rare), (B) 2 orphan SWOT routes (`/api/swot/xray-context` 76 LOC + `/api/swot/prefill-from-xray` 116 LOC) → REMOVE Q2 α (verified 0 caller toàn repo), (C) migration 034 `idx_organizations_lower_name_city.sql` BACKFILL Q3 α (production schema lock). Plus close-out D1+D2 (HANDOFF stale references: `M-AICoach-AutoFill-1` candidate đã ship via M-AICoach-Sensei-1 Task 6D; `<NEXT_HASH>` placeholder line 1067). 6 decisions locked plans/M-Cleanup-5-plan.md. Smoke test: `rm -rf .next && npm run typecheck && npm run build` PASS clean (pre-existing 2 lint errors verified isolation). 2 pattern lessons L34-L35 (stale `.next/` cache after route delete, pre-existing lint regression isolation). See §16 + §17.
 - **M-Member-POV-1 — Canvas Member-POV Redesign** ✅ SHIPPED 2026-05-08 (6 commits 92a58b3→7570a61, 11 files + 1 plan doc, ~520 LOC delta, ~4h work). Member access X-Matrix canvas read-only thay vì redirect /dashboard. Akao bidirectional entry: Member là gemba observer thấy strategic chain để comment context. 3 architectural changes (bidirectional access, Context single source of truth, canSubmit ≠ canModerate Q3 α). 8 decisions locked Task 1. Smoke test 8/8 PASS Phase A manual. Vercel deploy `dpl_DjxKkJS1tXHYqi2bc14vFDRHaJJi` READY (build 21s clean). Production verify Member POV chienluoc.org PASS. 3 pattern lessons L31-L33 (permission field reset audit, verify-first scope wider, bonus catch quality > spec literal). New pitfall §10 #29 (CLEAR_DRAFT preserve permission state). See §16 + §17.
 - **M-Cleanup-6 Phase 1 — Fix `.single()` anti-pattern + extract helper** ✅ shipped 2026-05-02 (1 commit, 8 files, ~30 phút work). Helper `lib/auth/getActiveMembership.ts` (typed shape `{ org_id, role } | null`) + 7 API routes refactor (`x-matrix/prefill`, `kpi/list`, `report/monthly` split JOIN → 2 queries, `discovery/vision-save`, `discovery/pain-mapper`, `x-ray/history`, `x-ray/score`). Smoke test KPI Tracker PASS. Phase 2 (12 dashboard inline sites refactor) deferred. See §16 + §17.
@@ -2300,7 +2396,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 ### Future milestones (TBD priority)
 
 - **M-Cleanup-6 Phase 2**: Refactor 12 dashboard inline call sites (`find(lastOrgId) ?? memberships[0]`) sang dùng `getActiveMembership` helper. Cost ~30 phút. Trigger: bất kỳ refactor cần touch dashboard pages, hoặc khi 1-2 inline sites cần modify.
-- **M-Auth-MultiOrg-1 (NEW from M-OrgInvite-1)**: Org switcher UI (sidebar dropdown) + `last_org_id` metadata write đúng khi switch. Trigger: user thật có >1 org complain nhầm org. Currently fallback `memberships[0]` (newest) là stopgap MVP — đủ cho beta nhưng UX gap khi user chủ động muốn switch giữa orgs.
+- ~~**M-Auth-MultiOrg-1 (NEW from M-OrgInvite-1)**~~ ✅ SHIPPED 2026-05-09. See "Shipped milestones (recent)" above + §16 + §17 architecture decision 2026-05-09.
 - **M-KPI-Mgmt-1**: Soft-delete UI cho KPI individual + restore mechanism. Endpoint `/api/kpi/[id]` DELETE method (soft `is_active=false`), KpiCard 3-dots menu với option "Xóa KPI", confirmation modal "Xóa sẽ ẩn khỏi dashboard nhưng giữ lịch sử. Tiếp tục?", optimistic update + toast. Edge cases: restore archived KPIs UI, allow delete khi có active hansei (soft delete preserve FK refs). Effort estimate ~120 dòng + 1 API + 1 modal + 30 phút smoke test. **Trigger conditions**: (1) user thật (không phải solo dev) cần manage KPIs, hoặc (2) data pollution lặp lại > 50 duplicate KPIs lần thứ 2.
 - **~~M-Cleanup-2 (CRITICAL)~~ REMOVED**: Original scope dựa trên assumption sai. Diagnose M-Hoshin-7 phát hiện 9 orgs là multi-tenant production users với owner khác nhau, KHÔNG phải pollution. KHÔNG cleanup. See §17 Architecture Decision 2026-04-30 + L8.
 - **M-Lint-Cleanup-1 (NEW from M-Cleanup-5 Task 2 lint isolation, LOW priority)**: Fix 2 pre-existing lint errors verified via git stash isolation (M-Cleanup-5 KHÔNG introduce):
