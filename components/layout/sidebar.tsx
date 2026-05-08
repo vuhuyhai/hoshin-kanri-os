@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react'
+import { OrgSwitcher } from '@/components/layout/org-switcher'
 
 interface NavItem {
   label: string
@@ -51,17 +52,25 @@ const NAV_GROUPS: NavGroup[] = [
 
 interface SidebarContentProps {
   userRole: string
+  orgId?: string
   orgName: string
   orgIndustry: string
   userName: string
   userEmail: string
+  memberships?: Array<{
+    org_id: string
+    org_name: string
+    role: string
+  }>
   onNavigate?: () => void
 }
 
 function SidebarContent({
+  orgId,
   orgName,
   userName,
   userEmail,
+  memberships,
   onNavigate,
 }: SidebarContentProps) {
   const pathname = usePathname()
@@ -69,6 +78,7 @@ function SidebarContent({
     .slice(0, 2)
     .toUpperCase()
   const orgInitial = orgName.charAt(0).toUpperCase()
+  const showSwitcher = !!orgId && !!memberships
 
   return (
     <div className="flex h-full flex-col bg-bg-dark">
@@ -85,15 +95,22 @@ function SidebarContent({
         </Link>
       </div>
 
-      {/* Org info */}
-      <div className="flex items-center border-b border-white/20 px-4 py-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-accent-brand font-display font-bold text-sm text-white">
-          {orgInitial}
+      {/* Org switcher (or static fallback before Task 2C wires data) */}
+      {showSwitcher ? (
+        <OrgSwitcher
+          currentOrg={{ id: orgId, name: orgName }}
+          memberships={memberships}
+        />
+      ) : (
+        <div className="flex items-center border-b border-white/20 px-4 py-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-accent-brand font-display font-bold text-sm text-white">
+            {orgInitial}
+          </div>
+          <span className="font-body text-[15px] text-white ml-3 truncate">
+            {orgName}
+          </span>
         </div>
-        <span className="font-body text-[15px] text-white ml-3 truncate">
-          {orgName}
-        </span>
-      </div>
+      )}
 
       {/* Nav groups */}
       <nav aria-label="Menu chính" className="flex-1 overflow-y-auto px-3 py-4">
@@ -199,10 +216,16 @@ function SidebarContent({
 
 export interface SidebarProps {
   userRole: string
+  orgId?: string
   orgName: string
   orgIndustry: string
   userName: string
   userEmail: string
+  memberships?: Array<{
+    org_id: string
+    org_name: string
+    role: string
+  }>
 }
 
 /** Desktop sidebar — rendered inside layout's fixed aside */
