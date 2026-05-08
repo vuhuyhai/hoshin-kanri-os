@@ -62,6 +62,8 @@ export function KpiUpdateForm({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const ne = e.nativeEvent as KeyboardEvent
+    if (ne.isComposing || ne.keyCode === 229) return
     if (e.key === 'Enter') handleSave()
     if (e.key === 'Escape') onCancel()
   }

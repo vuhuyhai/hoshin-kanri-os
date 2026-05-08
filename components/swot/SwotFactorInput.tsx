@@ -159,7 +159,11 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
               <input
                 value={newInput[q]}
                 onChange={(e) => setNewInput((p) => ({ ...p, [q]: e.target.value }))}
-                onKeyDown={(e) => e.key === 'Enter' && handleAdd(q)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                    handleAdd(q)
+                  }
+                }}
                 placeholder="Nhập yếu tố..."
                 className="flex-1 text-sm px-2 py-1 border-2 border-ink bg-white focus:outline-none font-body"
               />

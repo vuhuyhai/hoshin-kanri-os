@@ -57,7 +57,10 @@ export function SwotIngredientCard({
               onChange={(e) => setEditText(e.target.value)}
               onBlur={commitEdit}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEdit() }
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                  e.preventDefault()
+                  commitEdit()
+                }
                 else if (e.key === 'Escape') cancelEdit()
               }}
               rows={2}

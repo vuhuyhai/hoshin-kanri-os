@@ -83,7 +83,10 @@ export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngr
                     value={addText}
                     onChange={(e) => setAddText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitAdd() }
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                        e.preventDefault()
+                        commitAdd()
+                      }
                       else if (e.key === 'Escape') cancelAdd()
                     }}
                     rows={2}

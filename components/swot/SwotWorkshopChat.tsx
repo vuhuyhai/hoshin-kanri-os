@@ -168,7 +168,11 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
           <input
             value={extractText}
             onChange={(e) => setExtractText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleExtractAdd() }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                handleExtractAdd()
+              }
+            }}
             placeholder="Rút ý từ chat..."
             className="flex-1 min-w-0 border-2 border-ink bg-white px-2 py-1.5 font-display text-sm text-ink focus:outline-none"
           />
@@ -196,7 +200,10 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                e.preventDefault()
+                handleSend()
+              }
             }}
             rows={2}
             placeholder="Hỏi AI coach về chiến lược..."
