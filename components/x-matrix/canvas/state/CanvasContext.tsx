@@ -86,6 +86,11 @@ export interface CanvasUiState {
   correlationsLoading: boolean
   correlationsError: string | null
   coachCache: CoachCacheMap
+  // M-Member-POV-1: permission flag derived from membership.role at
+  // page level (CEO/Manager → true, Member → false). Seeded once via
+  // CanvasProvider prop, not mutated by reducer actions. Components
+  // subscribe via useCanEdit() instead of prop-drilling 4-5 levels.
+  canEdit: boolean
 }
 
 export interface CanvasState {
@@ -167,6 +172,7 @@ const initialUi: CanvasUiState = {
   correlationsLoading: false,
   correlationsError: null,
   coachCache: {},
+  canEdit: false,
 }
 
 const initialState: CanvasState = {
@@ -315,6 +321,9 @@ export function canvasReducer(
           ...initialUi,
           aiSuggestedFields: [],
           errors: new Map<FieldPath, string>(),
+          // Permission must survive draft clear — CEO clearing draft
+          // shouldn't lose edit affordances.
+          canEdit: state.ui.canEdit,
         },
       }
 
@@ -438,22 +447,32 @@ export function CanvasProvider({
   children,
   xMatrixId,
   initialData,
+  canEdit = false,
 }: {
   children: ReactNode
   xMatrixId?: string
   initialData?: XMatrixData
+  // Optional with defensive default `false` so the prop can land in
+  // Task 2A without breaking XMatrixCanvasPage's existing call site.
+  // Task 2B refactors the caller to pass the real role-derived value;
+  // until then any caller silently gets read-only state, which is the
+  // safe failure mode for permission flags.
+  canEdit?: boolean
 }) {
   // Seed reducer state from DB initialData (server-fetched matrix) when
   // present. Saved-matrix wins over localStorage draft because the user
   // has already committed it — see useLocalStorageSync, which checks
   // `dbHydrated` via context to skip its own hydrate path.
+  // canEdit seeds ui from CanvasProvider prop (derived from
+  // membership.role at page level). One-shot seed via reducer init
+  // function avoids the SET_CAN_EDIT-in-useEffect flash.
   const [state, dispatch] = useReducer(
     canvasReducer,
     initialState,
-    (seed) =>
-      initialData
-        ? { ...seed, data: dbToCanvas(initialData) }
-        : seed,
+    (seed) => ({
+      data: initialData ? dbToCanvas(initialData) : seed.data,
+      ui: { ...seed.ui, canEdit },
+    }),
   )
 
   const hasFetchedCorrelations = useRef(false)
@@ -497,6 +516,14 @@ export function useCanvas(): CanvasContextValue {
     throw new Error('useCanvas must be used within CanvasProvider')
   }
   return ctx
+}
+
+// M-Member-POV-1: subscribe directly to permission flag instead of
+// prop-drilling canEdit through 4-5 component levels (CanvasGrid →
+// edges → cards → modals). Default false honoured by initialUi seed
+// + CanvasProvider required prop.
+export function useCanEdit(): boolean {
+  return useCanvas().state.ui.canEdit
 }
 
 export async function setCorrelationOptimistic(
