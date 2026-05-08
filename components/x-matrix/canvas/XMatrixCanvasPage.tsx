@@ -22,9 +22,8 @@ function CanvasContent({
   orgId,
   members,
   xMatrixId,
-  canEdit,
   initialData,
-}: XMatrixCanvasPageProps) {
+}: Omit<XMatrixCanvasPageProps, 'canEdit'>) {
   const { state, dispatch } = useCanvas()
   const storageKey = `xmatrix-canvas-draft-${orgId}-${new Date().getFullYear()}`
 
@@ -52,7 +51,7 @@ function CanvasContent({
       <CanvasHeader storageKey={storageKey} />
       <VisionEditor />
       <CanvasMiniMap />
-      <CanvasGrid members={members} xMatrixId={xMatrixId} canEdit={canEdit} />
+      <CanvasGrid members={members} xMatrixId={xMatrixId} />
       <SubmitBar orgId={orgId} />
     </div>
   )
@@ -63,6 +62,7 @@ export function XMatrixCanvasPage(props: XMatrixCanvasPageProps) {
     <CanvasProvider
       xMatrixId={props.xMatrixId}
       initialData={props.initialData}
+      canEdit={props.canEdit}
     >
       <CanvasContent {...props} />
     </CanvasProvider>

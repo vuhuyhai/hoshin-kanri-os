@@ -6,6 +6,7 @@ import { EducationalTooltip } from './EducationalTooltip'
 import { CoachPopover } from './CoachPopover'
 import {
   useCanvas,
+  useCanEdit,
   getCorrelation,
   makeCorrelationKey,
   setCorrelationOptimistic,
@@ -37,11 +38,11 @@ const STRENGTH_LABELS: Record<CorrelationStrength, string> = {
 
 interface CenterXProps {
   xMatrixId?: string
-  canEdit?: boolean
 }
 
-export function CenterX({ xMatrixId, canEdit = false }: CenterXProps) {
+export function CenterX({ xMatrixId }: CenterXProps) {
   const { state, dispatch } = useCanvas()
+  const canEdit = useCanEdit()
   const { yearGoals, hoshins } = state.data
   const { correlations, correlationsLoading } = state.ui
   const { warnings } = useCanvasValidation(state.data, correlations)
