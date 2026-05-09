@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { SynthesisClient } from './components/SynthesisClient'
 
 export default async function SynthesisPage() {
@@ -9,25 +10,16 @@ export default async function SynthesisPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id, organizations(name, industry, city, headcount)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+  if (!membership) redirect('/onboarding/setup-org')
 
-  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const membership = lastOrgId
-    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-    : memberships[0]
-
-  const org = membership.organizations as {
-    name: string
-    industry: string
-    city: string
-    headcount: string
-  }
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name, industry, city, headcount')
+    .eq('id', membership.org_id)
+    .single()
+  if (!org) redirect('/onboarding/setup-org')
 
   return (
     <div className="w-full min-h-full p-6 lg:p-8">

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { VisionWorkshopClient } from './components/VisionWorkshopClient'
 
 export default async function VisionWorkshopPage() {
@@ -9,24 +10,16 @@ export default async function VisionWorkshopPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id, organizations(name, industry, headcount)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+  if (!membership) redirect('/onboarding/setup-org')
 
-  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const membership = lastOrgId
-    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-    : memberships[0]
-
-  const org = membership.organizations as {
-    name: string
-    industry: string
-    headcount: string
-  }
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name, industry, headcount')
+    .eq('id', membership.org_id)
+    .single()
+  if (!org) redirect('/onboarding/setup-org')
 
   const { data: existingSession } = await supabase
     .from('discovery_sessions')
