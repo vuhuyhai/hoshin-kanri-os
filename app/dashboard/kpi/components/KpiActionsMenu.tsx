@@ -116,7 +116,8 @@ export function KpiActionsMenu({
             <AlertDialogTitle>Xóa KPI &quot;{kpiName}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
               Xóa sẽ ẩn KPI khỏi dashboard nhưng giữ lại lịch sử cập nhật,
-              hansei và actuals. Bạn có thể khôi phục bằng cách liên hệ admin.
+              hansei và actuals. Bạn có thể khôi phục bằng cách vào{' '}
+              <strong>Cài đặt → KPIs đã archived</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

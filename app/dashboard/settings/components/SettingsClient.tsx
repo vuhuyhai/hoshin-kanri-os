@@ -20,6 +20,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useSwotStore } from '@/lib/swot/swot-session-store'
 import { fetchJson } from '@/lib/http/fetch-json'
+import { ArchivedKpisSection } from './ArchivedKpisSection'
 
 interface OrgData {
   name: string
@@ -416,6 +417,9 @@ export function SettingsClient({
           </p>
         )}
       </section>
+
+      {/* Archived KPIs — CEO-only restore self-service (M-KPI-Restore-1) */}
+      {isCeo && <ArchivedKpisSection />}
 
       {/* Data & sessions */}
       <section className="space-y-4">
