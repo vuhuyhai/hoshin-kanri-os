@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       .from('kpis')
       .select('id')
       .eq('id', kpiId)
+      .eq('is_active', true) // M-KPI-Mgmt-1: block mutations on archived KPI
       .single()
 
     if (!kpi) {
