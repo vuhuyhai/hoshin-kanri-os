@@ -7,12 +7,17 @@ import { KpiCard } from './KpiCard'
 import { Button } from '@/components/ui/button'
 import { trackKpiDashboardViewed } from '@/lib/analytics/events'
 import type { KpiWithEntries } from '@/app/api/kpi/list/route'
+import type { OrgRole } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
 import { fetchJson } from '@/lib/http/fetch-json'
 
 type ViewTab = 'company' | 'dept'
 
-export function KpiDashboardClient() {
+interface KpiDashboardClientProps {
+  userRole: OrgRole
+}
+
+export function KpiDashboardClient({ userRole }: KpiDashboardClientProps) {
   const router = useRouter()
   const [kpis, setKpis] = useState<KpiWithEntries[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -56,6 +61,14 @@ export function KpiDashboardClient() {
         }
       })
     )
+  }
+
+  const handleOptimisticDelete = (kpiId: string) => {
+    setKpis((prev) => prev.filter((k) => k.id !== kpiId))
+  }
+
+  const handleDeleteRollback = (kpi: KpiWithEntries) => {
+    setKpis((prev) => (prev.some((k) => k.id === kpi.id) ? prev : [...prev, kpi]))
   }
 
   const companyKpis = kpis.filter((k) => k.deptLevel === 'company')
@@ -165,6 +178,9 @@ export function KpiDashboardClient() {
                 key={kpi.id}
                 kpi={kpi}
                 onEntryAdded={handleEntryAdded}
+                userRole={userRole}
+                onOptimisticDelete={handleOptimisticDelete}
+                onDeleteRollback={handleDeleteRollback}
               />
             ))}
         </div>

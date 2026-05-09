@@ -45,7 +45,7 @@ export default async function KpiPage() {
           banner sau gemba (decision Task 1: 2 banner stack riêng). */}
       <KpiGembaSection orgId={orgId} role={role}>
         <KpiHanseiSection initialRedStreaks={redStreaks} />
-        <KpiDashboardClient />
+        <KpiDashboardClient userRole={role} />
       </KpiGembaSection>
     </div>
   )

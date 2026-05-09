@@ -8,7 +8,9 @@ import { KpiUpdateForm } from './KpiUpdateForm'
 import { GembaCommentForm } from '@/components/gemba/GembaCommentForm'
 import { GembaCommentThread } from '@/components/gemba/GembaCommentThread'
 import { useGembaComments } from './KpiGembaSectionClient'
+import { KpiActionsMenu } from './KpiActionsMenu'
 import type { KpiWithEntries } from '@/app/api/kpi/list/route'
+import type { OrgRole } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
 
 type TrafficLight = 'green' | 'yellow' | 'red'
@@ -66,9 +68,18 @@ function formatDate(iso: string): string {
 interface KpiCardProps {
   kpi: KpiWithEntries
   onEntryAdded: (kpiId: string, value: number, date: string) => void
+  userRole: OrgRole
+  onOptimisticDelete?: (kpiId: string) => void
+  onDeleteRollback?: (kpi: KpiWithEntries) => void
 }
 
-export function KpiCard({ kpi, onEntryAdded }: KpiCardProps) {
+export function KpiCard({
+  kpi,
+  onEntryAdded,
+  userRole,
+  onOptimisticDelete,
+  onDeleteRollback,
+}: KpiCardProps) {
   const [showForm, setShowForm] = useState(false)
   const { comments, canModerate } = useGembaComments(kpi.id)
 
@@ -127,6 +138,13 @@ export function KpiCard({ kpi, onEntryAdded }: KpiCardProps) {
               Cập nhật
             </Button>
           )}
+          <KpiActionsMenu
+            kpiId={kpi.id}
+            kpiName={kpi.name}
+            canDelete={userRole === 'CEO'}
+            onOptimisticDelete={() => onOptimisticDelete?.(kpi.id)}
+            onDeleteRollback={() => onDeleteRollback?.(kpi)}
+          />
         </div>
       </div>
 
