@@ -23,20 +23,25 @@ interface XRayHistoryChartProps {
   data: ChartDataPoint[]
 }
 
+function CustomDot(props: {
+  ink: string
+  cx?: number
+  cy?: number
+  payload?: ChartDataPoint
+}) {
+  const { ink, cx, cy, payload } = props
+  if (!cx || !cy || !payload) return null
+  return (
+    <Dot cx={cx} cy={cy} r={6} fill={resolveScoreToken(payload.tier)} stroke={ink} strokeWidth={2} />
+  )
+}
+
 export function XRayHistoryChart({ data }: XRayHistoryChartProps) {
   const ink = resolveToken('ink', '#1A1A1A')
   const muted = resolveToken('chart-4', '#8A8787')
   const scoreCritical = resolveScoreToken('critical')
   const scoreWeak = resolveScoreToken('weak')
   const scoreFair = resolveScoreToken('fair')
-
-  function CustomDot(props: { cx?: number; cy?: number; payload?: ChartDataPoint }) {
-    const { cx, cy, payload } = props
-    if (!cx || !cy || !payload) return null
-    return (
-      <Dot cx={cx} cy={cy} r={6} fill={resolveScoreToken(payload.tier)} stroke={ink} strokeWidth={2} />
-    )
-  }
 
   return (
     <div style={{ width: '100%', height: 220 }}>
@@ -77,7 +82,7 @@ export function XRayHistoryChart({ data }: XRayHistoryChartProps) {
             dataKey="score"
             stroke={ink}
             strokeWidth={2}
-            dot={<CustomDot />}
+            dot={<CustomDot ink={ink} />}
             activeDot={{ r: 8, stroke: scoreCritical, strokeWidth: 2 }}
           />
         </LineChart>

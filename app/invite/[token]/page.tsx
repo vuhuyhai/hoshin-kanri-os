@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { InviteAcceptClient } from './InviteAcceptClient'
 import type { InvitePublicInfo } from '@/lib/invites/types'
@@ -72,9 +73,9 @@ export default async function InvitePage({ params }: Props) {
           <p className="font-body text-[15px] text-text-2 mb-6">
             {result.message}
           </p>
-          <a href="/" className="btn-brutal-secondary inline-block">
+          <Link href="/" className="btn-brutal-secondary inline-block">
             Về trang chủ
-          </a>
+          </Link>
         </div>
       </div>
     )
