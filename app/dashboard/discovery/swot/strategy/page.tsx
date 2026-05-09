@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { TowsStrategyClient } from './TowsStrategyClient'
 
 export default async function SwotStrategyPage() {
@@ -9,18 +10,9 @@ export default async function SwotStrategyPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const membership = lastOrgId
-    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-    : memberships[0]
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+  if (!membership) redirect('/onboarding/setup-org')
 
   const { data: existingAnalysis } = await supabase
     .from('swot_analyses')

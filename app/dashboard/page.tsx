@@ -8,6 +8,7 @@ import {
 } from '@/lib/annual-review/queries'
 import { AnnualReviewBanner } from '@/components/dashboard/AnnualReviewBanner'
 import { AnnualReviewCard } from '@/components/dashboard/AnnualReviewCard'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 
 const DISCOVERY_STEPS = [
   { key: 'x-ray', label: 'Business X-Ray', href: '/x-ray' },
@@ -33,19 +34,8 @@ export default async function DashboardPage() {
     || user?.email?.split('@')[0]
     || 'bạn'
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', user!.id)
-    .order('created_at', { ascending: false })
-
-  const lastOrgId = user!.user_metadata?.last_org_id as string | undefined
-  const membership = memberships?.length
-    ? (lastOrgId
-        ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-        : memberships[0])
-    : null
-
+  const lastOrgId = (user!.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user!.id, lastOrgId)
   const orgId = membership?.org_id
 
   // Discovery sessions

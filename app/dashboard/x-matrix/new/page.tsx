@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { XMatrixCanvasPage } from '@/components/x-matrix/canvas/XMatrixCanvasPage'
 import { HoshinGembaSection } from './components/HoshinGembaSection'
 import type { OrgMember, XMatrixData } from '@/lib/x-matrix/types'
@@ -11,18 +12,9 @@ export default async function NewXMatrixPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id, role')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const membership = lastOrgId
-    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-    : memberships[0]
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+  if (!membership) redirect('/onboarding/setup-org')
 
   // canEdit excludes Member — Member-POV read-only canvas access shipped
   // M-Member-POV-1. Edit affordances gated UI-side via useCanEdit() Context

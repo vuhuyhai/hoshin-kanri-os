@@ -1,5 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { getReviewPageData } from '@/lib/annual-review/queries'
 import { ReviewClient } from './ReviewClient'
 
@@ -18,20 +19,11 @@ export default async function AnnualReviewPage({ params }: PageProps) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id, role')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+  if (!membership) redirect('/onboarding/setup-org')
 
-  if (!memberships || memberships.length === 0) redirect('/onboarding/setup-org')
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const orgMember = lastOrgId
-    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-    : memberships[0]
-
-  if (orgMember.role !== 'CEO') {
+  if (membership.role !== 'CEO') {
     return (
       <div className="card-brutal p-8 max-w-2xl mx-auto mt-8">
         <h1 className="font-display font-bold text-2xl mb-2">
@@ -45,7 +37,7 @@ export default async function AnnualReviewPage({ params }: PageProps) {
     )
   }
 
-  const data = await getReviewPageData(supabase, orgMember.org_id, year)
+  const data = await getReviewPageData(supabase, membership.org_id, year)
   if (!data) notFound()
 
   // Auto-create the draft review on first visit. Direct insert avoids a
@@ -67,7 +59,7 @@ export default async function AnnualReviewPage({ params }: PageProps) {
     // UNIQUE(x_matrix_id) constraint will reject the second insert; refetch
     // and continue.
     if (insertError) {
-      const refetch = await getReviewPageData(supabase, orgMember.org_id, year)
+      const refetch = await getReviewPageData(supabase, membership.org_id, year)
       if (!refetch?.review) {
         return (
           <div className="card-brutal p-8 max-w-2xl mx-auto mt-8">
@@ -82,7 +74,7 @@ export default async function AnnualReviewPage({ params }: PageProps) {
       return <ReviewClient data={refetch} userId={user.id} />
     }
 
-    const fullData = await getReviewPageData(supabase, orgMember.org_id, year)
+    const fullData = await getReviewPageData(supabase, membership.org_id, year)
     if (!fullData?.review) notFound()
     return <ReviewClient data={fullData} userId={user.id} />
   }

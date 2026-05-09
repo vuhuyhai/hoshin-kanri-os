@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getRedStreaks } from '@/lib/hansei/queries'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { KpiDashboardClient } from './components/KpiDashboardClient'
 import { KpiHanseiSection } from './components/KpiHanseiSection'
 import { KpiGembaSection } from './components/KpiGembaSection'
@@ -12,18 +13,8 @@ export default async function KpiPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id, role')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const membership = memberships?.length
-    ? (lastOrgId
-        ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-        : memberships[0])
-    : null
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
 
   const orgId = membership?.org_id ?? ''
   const role = (membership?.role ?? 'Member') as 'CEO' | 'Manager' | 'Member'

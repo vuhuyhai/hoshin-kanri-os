@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { XRayHistoryChart } from './XRayHistoryChart'
 import { getScoreTier } from '@/lib/design/chart-tokens'
+import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 
 function getScoreLabel(score: number): string {
   if (score <= 25) return 'Nguy hiểm'
@@ -36,18 +37,9 @@ export default async function XRayHistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: memberships } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (!memberships || memberships.length === 0) return null
-
-  const lastOrgId = user.user_metadata?.last_org_id as string | undefined
-  const membership = lastOrgId
-    ? (memberships.find((m) => m.org_id === lastOrgId) ?? memberships[0])
-    : memberships[0]
+  const lastOrgId = (user.user_metadata?.last_org_id as string | undefined) ?? null
+  const membership = await getActiveMembership(supabase, user.id, lastOrgId)
+  if (!membership) return null
 
   const { data: rawHistory, count } = await supabase
     .from('xray_results')
