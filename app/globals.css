@@ -43,34 +43,34 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* Neo-Brutalism colors */
-  --color-ink: #1A1A1A;
-  --color-text-2: #4A4848;
-  --color-text-3: #6B6868;
-  --color-accent-brand: #c73937;
-  --color-accent-dark: #9e1f1e;
-  --color-bg-warm: #FFFEF9;
-  --color-bg-muted-warm: #F5F0E8;
-  --color-bg-paper: #F5F0E8;
-  --color-bg-dark: #1A1A1A;
-  --color-accent-yellow: #F5E4B8;
-  --color-accent-cyan: #C4DEDC;
-  --color-accent-lime: #DDE4C5;
-  --color-accent-pink: #F0DCDD;
-  --color-accent-peach: #F0DCC0;
-  --color-accent-lavender: #DDD3EE;
+  /* Neo-Brutalism colors — REFERENCE :root for dark mode cascade (M-Design-Dark-1 Commit 2) */
+  --color-ink: var(--ink);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent-brand: var(--brand);
+  --color-accent-dark: var(--brand-dark);
+  --color-bg-warm: var(--bg);
+  --color-bg-muted-warm: var(--bg-muted);
+  --color-bg-paper: var(--bg-paper);
+  --color-bg-dark: var(--bg-dark);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-lime: var(--accent-lime);
+  --color-accent-pink: var(--accent-pink);
+  --color-accent-peach: var(--accent-peach);
+  --color-accent-lavender: var(--accent-lavender);
 
-  /* KPI status tokens — M-Design-3a (mirrors :root --kpi-*) */
-  --color-kpi-healthy: #DDE4C5;
-  --color-kpi-attention: #F5E4B8;
-  --color-kpi-warning: #F0DCDD;
-  --color-kpi-critical: #c73937;
-  --color-kpi-healthy-fg: #1A1A1A;
-  --color-kpi-attention-fg: #1A1A1A;
-  --color-kpi-warning-fg: #1A1A1A;
-  --color-kpi-critical-fg: #FFFFFF;
-  --color-kpi-healthy-strong: #16A34A;
-  --color-kpi-attention-strong: #D97706;
+  /* KPI status tokens — REFERENCE :root --kpi-* for dark mode cascade (M-Design-Dark-1 Commit 2) */
+  --color-kpi-healthy: var(--kpi-healthy);
+  --color-kpi-attention: var(--kpi-attention);
+  --color-kpi-warning: var(--kpi-warning);
+  --color-kpi-critical: var(--kpi-critical);
+  --color-kpi-healthy-fg: var(--kpi-healthy-fg);
+  --color-kpi-attention-fg: var(--kpi-attention-fg);
+  --color-kpi-warning-fg: var(--kpi-warning-fg);
+  --color-kpi-critical-fg: var(--kpi-critical-fg);
+  --color-kpi-healthy-strong: var(--kpi-healthy-strong);
+  --color-kpi-attention-strong: var(--kpi-attention-strong);
 
   /* Fonts */
   --font-display: "Space Grotesk", "Inter", sans-serif;
@@ -79,20 +79,20 @@
   --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
   --font-heading: "Space Grotesk", "Inter", sans-serif;
 
-  /* Shadows — Neo-Brutalism hard shadows */
-  --shadow-brutal-xs: 2px 2px 0 #1A1A1A;
-  --shadow-brutal-sm: 2px 2px 0 #1A1A1A;
-  --shadow-brutal-md: 6px 6px 0 #1A1A1A;
-  --shadow-brutal-lg: 8px 8px 0 #1A1A1A;
-  --shadow-brutal-xl: 12px 12px 0 #1A1A1A;
-  --shadow-brutal-tilt-l: -6px 6px 0 #1A1A1A;
-  --shadow-brutal-tilt-r: 6px 6px 0 #1A1A1A;
-  --shadow-brutal-accent: 6px 6px 0 #c73937;
-  --shadow-brutal-brand: 6px 6px 0 #c73937;
-  --shadow-brutal-yellow: 6px 6px 0 #F5E4B8;
-  --shadow-brutal-cyan: 6px 6px 0 #C4DEDC;
-  --shadow-brutal-pink: 6px 6px 0 #F0DCDD;
-  --shadow-brutal-double: 6px 6px 0 #F5E4B8, 12px 12px 0 #1A1A1A;
+  /* Shadows — Neo-Brutalism hard shadows — REFERENCE :root --shadow-* for dark mode cascade (M-Design-Dark-1 Commit 2) */
+  --shadow-brutal-xs: var(--shadow-xs);
+  --shadow-brutal-sm: var(--shadow-sm);
+  --shadow-brutal-md: var(--shadow-md);
+  --shadow-brutal-lg: var(--shadow-lg);
+  --shadow-brutal-xl: var(--shadow-xl);
+  --shadow-brutal-tilt-l: var(--shadow-tilt-l);
+  --shadow-brutal-tilt-r: var(--shadow-tilt-r);
+  --shadow-brutal-accent: 6px 6px 0 var(--brand);
+  --shadow-brutal-brand: 6px 6px 0 var(--brand);
+  --shadow-brutal-yellow: var(--shadow-yellow);
+  --shadow-brutal-cyan: var(--shadow-cyan);
+  --shadow-brutal-pink: var(--shadow-pink);
+  --shadow-brutal-double: var(--shadow-double);
 
   /* Radii — tempered NB v3.2 */
   --radius-sm: 3px;
