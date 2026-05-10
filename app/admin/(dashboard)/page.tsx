@@ -217,7 +217,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <span className="heading-overline">Admin</span>
+        <span className="overline">Admin</span>
         <h1 className="font-display font-black text-[32px] text-ink uppercase">
           Tổng quan hệ thống
         </h1>

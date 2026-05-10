@@ -93,7 +93,7 @@ export function CenterX({ xMatrixId }: CenterXProps) {
 
   const header = (
     <div className="mb-2 flex items-center justify-center gap-1">
-      <p className="heading-overline text-center text-xs">Ma trận liên kết</p>
+      <p className="overline text-center text-xs">Ma trận liên kết</p>
       <EducationalTooltip
         title="Ma trận liên kết để làm gì?"
         content={

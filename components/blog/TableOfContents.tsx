@@ -8,7 +8,7 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
       aria-label="Mục lục bài viết"
       className="card-brutal mb-10 bg-bg-muted-warm p-6"
     >
-      <p className="heading-overline mb-3">Mục lục</p>
+      <p className="overline mb-3">Mục lục</p>
       <ol className="space-y-2">
         {items.map((item) => (
           <li

@@ -205,7 +205,7 @@ export default async function BlogIndexPage({
       <main className="flex-1 bg-bg-warm">
         <section className="w-full border-b-[3px] border-ink">
           <div className="mx-auto max-w-[1440px] px-6 py-16 text-center lg:px-12 lg:py-24">
-            <p className="heading-overline mb-3">
+            <p className="overline mb-3">
               {activeCategory
                 ? `Danh mục: ${activeCategory.name}`
                 : activeTag

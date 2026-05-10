@@ -68,7 +68,7 @@ export function ConceptPanel({ concept, loading, loadingMessage, content, onConn
       {/* Header */}
       <div className="border-b-2 border-ink px-4 md:px-8 py-4 md:py-5 flex items-start justify-between gap-4">
         <div>
-          <span className="heading-overline">{concept.category}</span>
+          <span className="overline">{concept.category}</span>
           <h2 className="font-display font-black text-xl md:text-2xl text-ink mt-1">{concept.kanji} {concept.name}</h2>
           <p className="font-body text-[14px] text-text-3 mt-1">{concept.desc}</p>
           <div className="flex gap-2 mt-2 flex-wrap">
@@ -86,7 +86,7 @@ export function ConceptPanel({ concept, loading, loadingMessage, content, onConn
           <FeynmanSection level1={content.level1} level2={content.level2} level3={content.level3} />
 
           <div className="border-b-2 border-ink bg-bg-muted-warm">
-            <div className="heading-overline px-4 md:px-8 py-3 border-b border-bg-muted-warm">ỨNG DỤNG THỰC TẾ — VŨ HẢI</div>
+            <div className="overline px-4 md:px-8 py-3 border-b border-bg-muted-warm">ỨNG DỤNG THỰC TẾ — VŨ HẢI</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 md:p-5">
               <div className="card-brutal p-4 md:p-5">
                 <div className="font-display font-semibold text-[11px] uppercase tracking-wider text-text-3 mb-2">🏋️ Ladysfit Franchise</div>
@@ -100,7 +100,7 @@ export function ConceptPanel({ concept, loading, loadingMessage, content, onConn
           </div>
 
           <div className="border-b-2 border-ink" style={{ borderLeftWidth: 4, borderLeftStyle: 'solid', borderLeftColor: '#c73937' }}>
-            <div className="heading-overline px-4 md:px-8 py-3 text-accent-brand">⚠ ĐIỂM MÙ / GIỚI HẠN</div>
+            <div className="overline px-4 md:px-8 py-3 text-accent-brand">⚠ ĐIỂM MÙ / GIỚI HẠN</div>
             <div className="px-4 md:px-8 pb-4 font-body text-[14px] md:text-[16px] leading-relaxed text-text-2">{content.critical_point}</div>
           </div>
 

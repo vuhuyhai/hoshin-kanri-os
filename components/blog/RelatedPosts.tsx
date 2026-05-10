@@ -15,7 +15,7 @@ export function RelatedPosts({ posts }: { posts: BlogPostSummary[] }) {
 
   return (
     <section className="mt-16 border-t-[3px] border-ink pt-10">
-      <p className="heading-overline mb-3">Bài viết liên quan</p>
+      <p className="overline mb-3">Bài viết liên quan</p>
       <h2 className="mb-8 font-display text-2xl font-black uppercase text-ink">
         Đọc tiếp
       </h2>

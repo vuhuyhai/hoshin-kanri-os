@@ -15,7 +15,7 @@ export function NorthEdge() {
   return (
     <section id="canvas-edge-north" className="flex h-full flex-col gap-1">
       <div className="flex items-center gap-1">
-        <h2 className="heading-overline text-xs">🎯 Mục tiêu năm (3-5 năm)</h2>
+        <h2 className="overline text-xs">🎯 Mục tiêu năm (3-5 năm)</h2>
         <EducationalTooltip
           title="Mục tiêu năm là gì?"
           content={

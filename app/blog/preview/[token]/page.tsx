@@ -83,7 +83,7 @@ export default async function BlogPreviewPage({ params }: Props) {
       <main className="flex-1 bg-bg-warm">
         <article className="mx-auto max-w-3xl px-6 py-16 lg:py-24">
           <header className="mb-10 border-b-[3px] border-ink pb-8">
-            <p className="heading-overline mb-4">Preview bài viết</p>
+            <p className="overline mb-4">Preview bài viết</p>
             {post.category && (
               <span className="badge-brutal mb-4 inline-block border-accent-brand text-accent-brand">
                 {post.category.name}

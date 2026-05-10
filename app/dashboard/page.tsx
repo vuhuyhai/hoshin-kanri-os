@@ -89,7 +89,7 @@ export default async function DashboardPage() {
     <div className="w-full min-h-full p-6 lg:p-8">
       {/* Page header */}
       <div className="mb-8 pb-6 border-b-[3px] border-ink">
-        <p className="heading-overline mb-1">Dashboard</p>
+        <p className="overline mb-1">Dashboard</p>
         <h1 className="font-display font-black text-3xl md:text-4xl text-ink uppercase">
           Chào {displayName}
         </h1>

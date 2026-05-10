@@ -15,7 +15,7 @@ export function SouthEdge() {
   return (
     <section id="canvas-edge-south" className="flex h-full flex-col gap-1">
       <div className="flex items-center gap-1">
-        <h2 className="heading-overline text-xs">🚀 Hoshins (năm nay)</h2>
+        <h2 className="overline text-xs">🚀 Hoshins (năm nay)</h2>
         <EducationalTooltip
           title="Hoshin là gì?"
           content={

@@ -70,7 +70,7 @@ export default async function LandingPage() {
         <section className="w-full bg-bg-muted-warm">
           <div className="mx-auto max-w-[1440px] px-6 py-16 lg:px-12 lg:py-24">
             <div className="mb-12 text-center">
-              <p className="heading-overline mb-2">Quy trình</p>
+              <p className="overline mb-2">Quy trình</p>
               <h2 className="font-display text-3xl font-black uppercase text-ink md:text-4xl">
                 3 bước tới chiến lược rõ ràng
               </h2>
@@ -104,7 +104,7 @@ export default async function LandingPage() {
         <section className="w-full bg-bg-warm">
           <div className="mx-auto max-w-[1440px] px-6 py-16 lg:px-12 lg:py-24">
             <div className="mb-12 text-center">
-              <p className="heading-overline mb-2">Tính năng</p>
+              <p className="overline mb-2">Tính năng</p>
               <h2 className="font-display text-3xl font-black uppercase text-ink md:text-4xl">
                 Mọi thứ bạn cần
               </h2>

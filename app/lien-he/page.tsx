@@ -42,7 +42,7 @@ export default function LienHePage() {
       {/* Hero */}
       <section className="w-full bg-bg-warm">
         <div className="mx-auto max-w-[1440px] px-6 py-16 lg:px-12 lg:py-24 text-center">
-          <p className="heading-overline mb-3">Liên hệ</p>
+          <p className="overline mb-3">Liên hệ</p>
           <h1 className="font-display text-3xl font-black uppercase text-ink md:text-4xl">
             Chúng tôi ở đây để lắng nghe
           </h1>

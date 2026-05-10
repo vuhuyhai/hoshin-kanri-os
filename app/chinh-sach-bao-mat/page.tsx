@@ -36,7 +36,7 @@ export default function ChinhSachBaoMatPage() {
       {/* Content */}
       <main className="flex-1 bg-bg-warm">
         <div className="mx-auto max-w-[800px] px-6 py-16 lg:py-24">
-          <p className="heading-overline mb-3">Pháp lý</p>
+          <p className="overline mb-3">Pháp lý</p>
           <h1 className="font-display text-3xl font-black uppercase text-ink md:text-4xl">
             Chính sách bảo mật
           </h1>

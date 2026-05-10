@@ -46,7 +46,7 @@ export default function BlogPostNotFound() {
 
       <main className="flex flex-1 items-center justify-center bg-bg-muted-warm px-6 py-20">
         <div className="card-brutal mx-auto max-w-xl p-10 text-center">
-          <p className="heading-overline mb-3">404</p>
+          <p className="overline mb-3">404</p>
           <h1
             className="font-display font-black uppercase text-ink leading-[1.05]"
             style={{ fontSize: 'clamp(28px, 4vw, 44px)' }}

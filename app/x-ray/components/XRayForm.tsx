@@ -208,7 +208,7 @@ export function XRayForm() {
       <XRayProgress currentStep={state.currentStep} />
       <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
         <div className="space-y-1 text-center">
-          <p className="heading-overline mb-1">Chẩn đoán miễn phí</p>
+          <p className="overline mb-1">Chẩn đoán miễn phí</p>
           <h1 className="font-display text-2xl font-black uppercase tracking-wider text-ink md:text-3xl">
             Business X-Ray
           </h1>

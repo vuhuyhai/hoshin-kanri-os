@@ -72,7 +72,7 @@ export default function HoshinExplorerPage() {
       {/* Header */}
       <div className="flex items-end justify-between px-4 md:px-8 py-4 md:py-6 border-b-2 border-ink">
         <div>
-          <span className="heading-overline">Knowledge Base</span>
+          <span className="overline">Knowledge Base</span>
           <h1 className="font-display font-black text-[clamp(24px,3vw,36px)] text-ink uppercase mt-1">
             Hoshin Kanri Explorer
           </h1>

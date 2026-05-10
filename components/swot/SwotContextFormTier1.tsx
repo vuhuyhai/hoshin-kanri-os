@@ -44,7 +44,7 @@ export function SwotContextFormTier1({
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2">
-          <span className="heading-overline">Bước 1 / 3</span>
+          <span className="overline">Bước 1 / 3</span>
           <h2 className="font-display font-extrabold text-2xl text-ink mt-1">
             Cung cấp bối cảnh doanh nghiệp
           </h2>

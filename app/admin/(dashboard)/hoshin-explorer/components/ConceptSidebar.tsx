@@ -53,7 +53,7 @@ export function ConceptSidebar({ selectedId, onSelect, mobile }: ConceptSidebarP
       {filtered.map((cat) => (
         <div key={cat.category}>
           <div className="flex items-center gap-3 py-2 px-3 mt-4 mb-1 border-b border-bg-muted-warm">
-            <span className="heading-overline text-[10px]">{cat.category}</span>
+            <span className="overline text-[10px]">{cat.category}</span>
             <span className="font-body text-[12px] text-text-3 ml-auto">{cat.items.length} khái niệm</span>
           </div>
           {cat.items.map((c) => {

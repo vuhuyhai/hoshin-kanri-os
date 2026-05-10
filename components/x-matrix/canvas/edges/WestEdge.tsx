@@ -16,7 +16,7 @@ export function WestEdge() {
   return (
     <section id="canvas-edge-west" className="flex h-full flex-col gap-1">
       <div className="flex items-center gap-1">
-        <h2 className="heading-overline text-xs">👥 Owners</h2>
+        <h2 className="overline text-xs">👥 Owners</h2>
         <EducationalTooltip
           title="Owner là gì?"
           content={

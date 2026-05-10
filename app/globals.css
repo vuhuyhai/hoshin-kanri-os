@@ -714,15 +714,6 @@ main > * {
    ============================================================ */
 @layer components {
 
-  .heading-overline {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--brand);
-  }
-
   /* Buttons */
   .btn-primary {
     font-family: var(--font-display);

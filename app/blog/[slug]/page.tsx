@@ -172,7 +172,7 @@ export default async function BlogPostPage({ params }: Props) {
           </div>
 
           <header className="mb-10 border-b-[3px] border-ink pb-8">
-            <p className="heading-overline mb-4">Bài viết</p>
+            <p className="overline mb-4">Bài viết</p>
             {post.category && (
               <Link
                 href={`/blog?category=${post.category.slug}`}
