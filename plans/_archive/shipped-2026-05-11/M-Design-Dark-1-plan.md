@@ -354,7 +354,7 @@ shadcn mappings lines 14-44 (`--color-* : var(--*)`):
 | 4 | `6ba6e03` | Saturated 6 tokens (Score 4 + KPI-strong 2) + `--border-heavy` REFERENCE Path R1 | ~35min | ~35min | within |
 | 5 | `293e6b0` | 6 Pastel `.dark` mute Q5 α | ~30min | ~25min | ahead |
 | 6 | `d29fc03` | Toggle UI 3-option (Phase 6A inline script + 6B enableSystem + 6C DropdownMenu + 6D ThemeCacheBridge wire) | ~50min | ~70min | over (+20min Phase 6E idempotent guard discovered) |
-| 7 | `<C7-HASH>` | Smoke 8 cases Phase A + close-out HANDOFF §16/§17/§18 + plan archive | ~60min | ~50min | ahead |
+| 7 | `74b1c65` | Smoke 8 cases Phase A + close-out HANDOFF §16/§17/§18 + plan archive | ~60min | ~50min | ahead |
 | **Total** | — | 7 commits | **~4h40min** | **~4h40min** | within Q1 γ FULL ~6-8h budget với ~1h20min spare |
 
 **Verify-first audit reduction**: Pre-Commit 4 audit phát hiện KPI base direct `.dark` override claim "14 tokens" → actual 0 needed (REFERENCE form auto-cascade qua Pastel + brand + ink + white). Reduces scope 14→0 tokens. Pattern L48 lần 18 reinforced.
@@ -371,5 +371,5 @@ shadcn mappings lines 14-44 (`--color-* : var(--*)`):
 - **Pattern lessons captured**: L52 (5-layer cascade architecture), L53 (verify-first audit ROI proven 4 milestones cumulative), L54 (idempotent guard Edit tool)
 - **8 decisions Q1-Q8 locked** + 5 mid-milestone Q-decisions (Q-shadow Accept 3px mobile, Q-push-timing batch cuối milestone, Q-c6-visual-verify PASS 4 paths, Q-smoke-scope Full 8 cases, Q-toggle-scope 3-option full)
 - **Smoke test 8/8 Phase A**: PASS pending Vũ Hải verify manual post-push 2026-05-11 (template trong HANDOFF §16 entry)
-- **Production verify chain reference**: post-push HEAD `<C7-HASH>` — Vũ Hải run Vercel verify chain Claude Desktop MCP separate session
+- **Production verify chain reference**: post-push HEAD `74b1c65` — Vũ Hải run Vercel verify chain Claude Desktop MCP separate session
 - **Archive location**: `plans/_archive/shipped-2026-05-11/M-Design-Dark-1-plan.md` (this file)
