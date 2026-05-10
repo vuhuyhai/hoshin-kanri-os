@@ -155,9 +155,12 @@
   --sidebar-ring: #c73937;
 
   /* ── Design System Raw Tokens ──
-     NOTE: --brand (not --accent) to avoid collision with shadcn's
-     --accent:#ECEAE6 used for hover states in menus/sidebar.
-     Use var(--brand) in utility classes, var(--primary) in components. */
+     Brand emphasis tokens — explicit semantic separation từ shadcn neutral.
+     --accent (line 136) = shadcn neutral pastel (#F5F0E8) cho menu/dropdown
+     hover states. --brand explicit cho CTA, hero emphasis, primary button.
+     --accent-brand (@theme line 50) là Tailwind class escape hatch khi cần
+     brand-as-accent (vd sidebar nav active state). M-Design-Tokens-Cleanup-1
+     decision lock 2026-05-10 — KHÔNG re-add --accent: var(--brand) reassign. */
   --ink: #1A1A1A;
   --text-2: #4A4848;
   --text-3: #6B6868;
@@ -168,8 +171,6 @@
   --bg-paper: #F5F0E8;
   --bg-dark: #1A1A1A;
   --white: #FFFFFF;
-  --accent: #c73937;
-  --accent-dark: #9e1f1e;
   --accent-yellow: #F5E4B8;
   --accent-cyan: #C4DEDC;
   --accent-lime: #DDE4C5;
@@ -231,7 +232,6 @@
   --shadow-xl: 12px 12px 0 var(--ink);
   --shadow-tilt-l: -6px 6px 0 var(--ink);
   --shadow-tilt-r: 6px 6px 0 var(--ink);
-  --shadow-accent: 6px 6px 0 var(--accent);
   --shadow-hover: 2px 2px 0 var(--ink);
   --shadow-yellow: 6px 6px 0 var(--accent-yellow);
   --shadow-cyan: 6px 6px 0 var(--accent-cyan);
@@ -720,7 +720,7 @@ main > * {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    color: var(--accent);
+    color: var(--brand);
   }
 
   /* Buttons */
@@ -730,7 +730,7 @@ main > * {
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    background: var(--accent);
+    background: var(--brand);
     color: var(--white);
     border: 2px solid var(--ink);
     border-radius: var(--radius-md);
@@ -798,7 +798,7 @@ main > * {
   .input-brutal::placeholder { color: var(--text-3); font-style: normal; }
 
   /* Badge variants */
-  .badge-accent { background: var(--accent);   color: var(--white); }
+  .badge-accent { background: var(--brand);    color: var(--white); }
   .badge-ink    { background: var(--ink);      color: var(--white); }
   .badge-muted  { background: var(--bg-muted); color: var(--ink);   }
 
