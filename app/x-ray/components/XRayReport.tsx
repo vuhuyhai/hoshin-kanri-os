@@ -669,7 +669,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
                 <Link
                   href="/dashboard/discovery/swot"
                   className="btn-primary mt-6 inline-block"
-                  style={{ boxShadow: '5px 5px 0 var(--accent)' }}
+                  style={{ boxShadow: '5px 5px 0 var(--brand)' }}
                 >
                   Vào Dashboard →
                 </Link>
@@ -685,7 +685,7 @@ export function XRayReport({ result, savedSuccessfully }: XRayReportProps) {
                 <button
                   onClick={handleStartPlanning}
                   className="btn-primary mt-6"
-                  style={{ boxShadow: '5px 5px 0 var(--accent)' }}
+                  style={{ boxShadow: '5px 5px 0 var(--brand)' }}
                 >
                   Tạo tài khoản miễn phí →
                 </button>
