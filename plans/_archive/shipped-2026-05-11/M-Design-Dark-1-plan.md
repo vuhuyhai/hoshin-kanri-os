@@ -341,3 +341,35 @@ shadcn mappings lines 14-44 (`--color-* : var(--*)`):
 ---
 
 **END Plan Doc Task 1.** Đợi Vũ Hải review Q4-Q8 + confirm path α default hoặc γ fallback. Em build Commit 2-7 atomic prompts SAU khi anh decide.
+
+---
+
+## Section 5 — Implementation outcomes (post-ship 2026-05-11)
+
+| Commit | Hash | Description | Estimate | Actual | Drift |
+|---|---|---|---|---|---|
+| 1 | `bbdca2d` | Plan doc Task 1 (343 LOC) | ~45min | ~45min | within |
+| 2 | `5ed573a` | LITERAL→REFERENCE refactor 38 tokens (NB colors 15 + KPI 10 + shadows 13) | ~30min | ~30min | within |
+| 3 | `22cd969` | Brand foundation 10 tokens `.dark` (ink/bg/text/brand/etc.) | ~30min | ~25min | ahead |
+| 4 | `6ba6e03` | Saturated 6 tokens (Score 4 + KPI-strong 2) + `--border-heavy` REFERENCE Path R1 | ~35min | ~35min | within |
+| 5 | `293e6b0` | 6 Pastel `.dark` mute Q5 α | ~30min | ~25min | ahead |
+| 6 | `d29fc03` | Toggle UI 3-option (Phase 6A inline script + 6B enableSystem + 6C DropdownMenu + 6D ThemeCacheBridge wire) | ~50min | ~70min | over (+20min Phase 6E idempotent guard discovered) |
+| 7 | `<C7-HASH>` | Smoke 8 cases Phase A + close-out HANDOFF §16/§17/§18 + plan archive | ~60min | ~50min | ahead |
+| **Total** | — | 7 commits | **~4h40min** | **~4h40min** | within Q1 γ FULL ~6-8h budget với ~1h20min spare |
+
+**Verify-first audit reduction**: Pre-Commit 4 audit phát hiện KPI base direct `.dark` override claim "14 tokens" → actual 0 needed (REFERENCE form auto-cascade qua Pastel + brand + ink + white). Reduces scope 14→0 tokens. Pattern L48 lần 18 reinforced.
+
+---
+
+## Section 6 — Close-out summary
+
+- **Milestone status**: ✅ SHIPPED 2026-05-11
+- **Total commits**: 7 (5 pushed in batch C3-C7 close-out; C1-C2 already pushed earlier)
+- **Total LOC delta**: ~+386 net across 5 files (1 NEW theme-cache-bridge.tsx + 4 MODIFIED globals.css + layout.tsx + theme-provider.tsx + header.tsx)
+- **Total time**: ~4h40min (within Q1 γ FULL ~6-8h budget với ~1h20min spare buffer)
+- **Q1 γ budget compliance**: Within budget, ahead schedule nhờ verify-first audit reduce KPI direct override scope 14→0 tokens
+- **Pattern lessons captured**: L52 (5-layer cascade architecture), L53 (verify-first audit ROI proven 4 milestones cumulative), L54 (idempotent guard Edit tool)
+- **8 decisions Q1-Q8 locked** + 5 mid-milestone Q-decisions (Q-shadow Accept 3px mobile, Q-push-timing batch cuối milestone, Q-c6-visual-verify PASS 4 paths, Q-smoke-scope Full 8 cases, Q-toggle-scope 3-option full)
+- **Smoke test 8/8 Phase A**: PASS pending Vũ Hải verify manual post-push 2026-05-11 (template trong HANDOFF §16 entry)
+- **Production verify chain reference**: post-push HEAD `<C7-HASH>` — Vũ Hải run Vercel verify chain Claude Desktop MCP separate session
+- **Archive location**: `plans/_archive/shipped-2026-05-11/M-Design-Dark-1-plan.md` (this file)
