@@ -220,7 +220,7 @@
   --score-good: #16A34A;                 /* >75 — Tốt */
 
   /* Composite borders */
-  --border-heavy: 3px solid #1A1A1A;
+  --border-heavy: 3px solid var(--ink);   /* M-Design-Dark-1 Commit 4 — Path R1 LITERAL→REFERENCE refactor cho dark mode cascade auto-flip */
   --border-accent: 2px solid var(--brand);
   --border-subtle: 1px solid var(--bg-muted);
 
@@ -304,6 +304,18 @@
   --white: #FFFFFF;        /* Stay — semantic "high-contrast text on saturated brand surface" */
   --brand: #E84947;        /* Q4 β align shadcn --primary brighter dark, AA-normal contrast 5.8:1 */
   --brand-dark: #C73937;   /* Dark hover/active = light base color pattern */
+
+  /* ── Saturated foundation override — M-Design-Dark-1 Commit 4 ──
+     KPI-strong + Score 4-tier brighten dark cho AA contrast trên dark bg.
+     Q3 α Tailwind palette lighten 1 step (500 series).
+     Q2 --score-critical cascade var(--brand) semantic align với --kpi-critical.
+     KPI base tokens (lines 188-195) ALL REFERENCE → auto-cascade qua Pastel + brand + ink + white. */
+  --kpi-healthy-strong: #22C55E;     /* Tailwind green-500 brighten cho dark (light #16A34A green-600) */
+  --kpi-attention-strong: #F59E0B;   /* Tailwind amber-500 brighten cho dark (light #D97706 amber-600) */
+  --score-critical: var(--brand);    /* Cascade --brand Commit 3 #E84947 dark, semantic align --kpi-critical */
+  --score-weak: #F59E0B;             /* Match --kpi-attention-strong parallel hue */
+  --score-fair: #3B82F6;             /* Tailwind blue-500 brighten cho dark (light #2563EB blue-600) */
+  --score-good: #22C55E;             /* Match --kpi-healthy-strong parallel hue */
 }
 
 /* ============================================================
