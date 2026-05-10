@@ -111,7 +111,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k="hoshin-theme-v2";var t=localStorage.getItem(k);var resolved="light";if(t==="dark"){resolved="dark"}else if(t==="system"){resolved=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}else if(!t){localStorage.setItem(k,"light")}document.documentElement.classList.remove("light","dark");document.documentElement.classList.add(resolved);document.documentElement.setAttribute("data-theme",resolved)}catch(e){}})()`,
+            __html: `(function(){var k="hoshin-theme-v2";try{var t=localStorage.getItem(k);if(!t||t==="system"||t==="dark"){localStorage.setItem(k,"light")}document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");document.documentElement.setAttribute("data-theme","light")}catch(e){}})();`,
           }}
         />
         <script
@@ -151,7 +151,7 @@ export default function RootLayout({
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
-            enableSystem={true}
+            enableSystem={false}
             storageKey="hoshin-theme-v2"
             disableTransitionOnChange
           >
