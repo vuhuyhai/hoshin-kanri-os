@@ -1056,8 +1056,21 @@ Khi Claude mới vào session:
     - PRESERVED: [components/providers/theme-provider.tsx](components/providers/theme-provider.tsx) (thin wrapper unchanged — receives props from layout.tsx)
     - PRESERVED: [app/globals.css](app/globals.css) `.dark { ... }` block ~80 LOC (dead CSS, runtime never apply do force light, cascade preserved 5-layer architecture)
 
-  - **Pattern lessons** (1 mới L56):
+  - **Pattern lessons** (2 mới L56 + L57):
     1. **L56 NEW — Aesthetic decision verify chỉ post-ship**: Q5 α dark mute pastel decision lock Phase 3A M-Design-Dark-1 propose 3 candidates α/β/γ + Cursor recommend default α + Vũ Hải accept blind (no visual sample preview). Subjective aesthetic verification CHỈ available post-ship (~5h45min infrastructure work + production deploy). Apply universally future design milestones aesthetic-heavy: propose HTML mockup hoặc visual sample TRƯỚC Cursor apply commit. Verify-first audit-first chỉ catch technical drift (token count, REFERENCE form, cascade chain), KHÔNG catch aesthetic preference drift. Cost ~30 phút sample preview save risk full milestone revert (M-Design-Dark-1 ~5h45min infrastructure work hidden post-ship).
+    2. **L57 NEW — Reversible deprecation pattern** (Claude Desktop verify chain catch post-push): Right pattern khi user feedback feature ship cần remove/disable: gỡ UI layer + entry point (toggle UI, force default snippet) — GIỮ infrastructure layer dormant (CSS tokens, helper components, runtime providers conservative defaults). Re-enable cost ~30 phút vs fresh re-implementation ~5h45min. Antipatterns rejected: hard revert chain N commits (lose infrastructure) + aggressive cleanup uninstall deps (force fresh re-implementation). Apply universally future feature deprecation/re-enable cycles. Bundle size +~2-3 KB gzipped acceptable trade-off cho preserve future option. See §17 detail full pattern + cost-benefit analysis.
+
+  - **Production verify post-push (2026-05-11)**:
+    - Vercel deploy `dpl_EN5WQzgEGNZUSxh2uma48U67e42f` state=READY ✓
+    - githubCommitSha `4b281785dd29d63ff96f2e5b205fd24941545504` ✓ match HEAD post placeholder fix `4b28178`
+    - Build PASS 16.7s + 77/77 static pages + 1 known Lightning CSS warning (Tailwind v4 `data-[*]:bg-accent` infrastructure noise, NOT regression)
+    - Runtime 30 phút window 0 error/fatal
+    - CSS bundle hash NEW `8b0762f839367bc1.css` (cache busting OK — user browsers fetch fresh)
+    - Force-light inline script SSR active: `<html class="... light">` server-side rendered
+    - 3-layer defense verified: localStorage overwrite ('system'|'dark' → 'light') + classList flip (.remove('dark') + .add('light')) + `enableSystem:false`
+    - 5-layer cascade infrastructure PRESERVED dormant: `.dark` block + ThemeCacheBridge + CSS tokens REFERENCE form intact
+    - UI toggle button GONE: 0 Sun/Moon/Monitor icons + 0 DropdownMenu theme + 0 setTheme + 0 Vietnamese labels Sáng/Tối/Hệ thống trong header.tsx
+    - Pattern L57 NEW captured: Reversible deprecation pattern proven viable execution model
 
   - **Constraints cho future AI sessions**:
     - KHÔNG remove `components/providers/theme-cache-bridge.tsx` (preserve future re-enable option — dead code OK).
@@ -2191,9 +2204,31 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 2. **Aesthetic verify chỉ post-ship (L56 NEW)**: Subjective aesthetic decisions (color palette, hue choice, mute lightness drop) chỉ verified post-ship khi user thấy production. Verify-first audit-first chỉ catch technical drift, KHÔNG catch aesthetic preference. Apply universally future design milestones aesthetic-heavy: propose visual sample TRƯỚC Cursor apply commit để reduce risk full milestone hidden/revert.
 
-**Constraint preserve**: 5-layer cascade architecture (Pattern L52) + LITERAL→REFERENCE `@theme inline` foundation (Commit 2) + ThemeCacheBridge wire pattern (Phase 6D) — all preserved cho future design system extensions hoặc dark mode re-enable.
+**Constraint preserve**: 5-layer cascade architecture (Pattern L52) + LITERAL→REFERENCE `@theme inline` foundation (Commit 2) + ThemeCacheBridge wire pattern (Phase 6D) — all preserved cho future design system extensions hoặc dark mode re-enable. See Pattern L57 NEW — Reversible deprecation pattern (cumulative from this milestone hotfix).
 
-**Pattern lessons** (1 mới L56): xem §16 entry detail.
+**Pattern lessons** (2 mới L56 + L57): xem §16 entry detail + L57 detail dưới.
+
+---
+
+**Pattern L57 NEW — Reversible deprecation pattern** (Claude Desktop verify chain catch post-push M-Design-Dark-1.5):
+
+Khi user feedback feature ship cần "remove/disable", có 2 antipattern + 1 right pattern:
+
+- **Antipattern 1 (Hard revert)**: `git revert` chain N commits → lose N hours infrastructure work + cannot re-enable easily.
+- **Antipattern 2 (Aggressive cleanup)**: remove ALL infrastructure code + npm uninstall deps + rollback HANDOFF entries → fresh re-implementation required nếu user change mind.
+
+- **Right pattern (Reversible deprecation)**: Gỡ UI layer + entry point (toggle UI, force default snippet) — GIỮ infrastructure layer dormant (CSS tokens, helper components, runtime providers configured conservative). Re-enable cost N phút (~30 phút for design system) vs fresh re-implementation cost N hours (~5h45min for design system).
+
+Apply universally future feature deprecation/re-enable cycles:
+- Feature flag toggle pattern preserve infrastructure
+- ThemeProvider/Provider config conservative defaults (`enableSystem:false` thay vì uninstall next-themes)
+- CSS `.dark` block dead code preserve cascade architecture
+- Helper components (ThemeCacheBridge, etc.) dormant — no runtime cost light-only mode
+- HANDOFF entries note "SHIPPED → HIDDEN UI <date>" status change thay vì rollback entries
+
+Cost-benefit: Bundle size +~2-3 KB gzipped acceptable cho preserve future option. Bundle bloat reasonable trade-off vs potential re-implementation cost.
+
+Pattern reinforced cumulative: M-Design-Dark-1.5 hotfix Phase 1B Route A Soft hide UI proven viable execution model.
 
 ---
 
@@ -3093,7 +3128,7 @@ Log các quyết định kiến trúc lớn ảnh hưởng nhiều layer hoặc 
 
 ### Shipped milestones (recent)
 
-- **M-Design-Dark-1.5 — Soft hide dark mode UI** ✅ SHIPPED 2026-05-11 (1 commit `67919e0`, 2 files MODIFIED, ~30 phút work). Aesthetic feedback Q5 α dark mute pastel "trùng màu không nhìn rõ" → decision Route A Soft hide UI: revert inline script force light + `enableSystem={false}` + remove DropdownMenu Sun/Moon/Monitor toggle entirely. KEEP infrastructure (`.dark` block + `theme-cache-bridge.tsx` + foundation REFERENCE form). Future re-enable cost ~1 commit. NEW pattern lesson L56 (aesthetic decision verify chỉ post-ship). See §16 + §17.
+- **M-Design-Dark-1.5 — Soft hide dark mode UI** ✅ SHIPPED 2026-05-11 + production verify PASS (Vercel deploy `dpl_EN5WQzgEGNZUSxh2uma48U67e42f` READY 16.7s build clean, runtime 30min 0 error, force-light SSR active, UI toggle GONE). 2 commits `67919e0` hotfix + `4b28178` placeholder fix, ~30 phút work. Aesthetic feedback Q5 α dark mute pastel "trùng màu không nhìn rõ" → decision Route A Soft hide UI: revert inline script force light + `enableSystem={false}` + remove DropdownMenu Sun/Moon/Monitor toggle entirely. KEEP infrastructure (`.dark` block + `theme-cache-bridge.tsx` + foundation REFERENCE form). Future re-enable cost ~1 commit. 2 NEW pattern lessons: L56 (aesthetic decision verify chỉ post-ship) + **L57 (Reversible deprecation pattern proven viable — gỡ UI layer + entry point, GIỮ infrastructure layer dormant; re-enable ~30 phút vs fresh ~5h45min)**. See §16 + §17 detail.
 - **M-Design-Dark-1 — Dark mode foundation full ship** ✅ SHIPPED 2026-05-11 → ⚠️ HIDDEN UI 2026-05-11 (M-Design-Dark-1.5 hotfix Route A — infrastructure preserved cho future re-enable). 7 commits `bbdca2d` plan → `5ed573a` refactor → `22cd969` brand foundation → `6ba6e03` saturated + border → `293e6b0` Pastel mute → `d29fc03` toggle UI + cache bridge → `74b1c65` close-out, 1 NEW + 4 MODIFIED + 1 plan doc archived, ~+386 net LOC, ~5h45min cumulative work. Trigger: M-Design-3a/3b/Tokens-Cleanup-1 foundation shipped NHƯNG `.dark` block thiếu ~30+ NB v3.2 custom tokens — brand foundation gap CATASTROPHIC (`--ink #1A1A1A` trên `--bg #1A1A1A` = text invisible). Path γ FULL locked Q1 + Q2 invert lab + Q4 β `--brand #E84947` align shadcn + Q5 α dark mute pastel + Q6 γ refactor LITERAL→REFERENCE shadows + Q7 α useEffect listen `useTheme().resolvedTheme` + Q8 α 7 commits no split + 5 mid-milestone Q-decisions. 3 architectural changes (5-layer cascade architecture, 2-hop cascade Pastel→KPI base→consumer proven, chart-tokens cache invalidation wire). Smoke test 8/8 Phase A PASS (template — Vũ Hải verify manual post-push 2026-05-11). 3 pattern lessons mới L52 (5-layer cascade architecture), L53 (verify-first audit ROI proven 4 milestones cumulative), L54 (idempotent guard Edit tool). See §16 + §17.
 - **M-Design-Tokens-Cleanup-1 — `--accent` collision cleanup + `.heading-overline` consolidation** ✅ SHIPPED 2026-05-10 (4 commits: 3 code `eb34541`→`2c6f976` + 1 close-out HANDOFF, 26 files: 1 NEW + 25 MODIFIED, ~1.5h work). Trigger: M-Design-3a foundation discovered comment line 158 cảnh báo collision NHƯNG line 171 reassign `--accent: #c73937` contradict — visible regression dropdown menu hover flash brand red gây eye-fatigue (Vũ Hải screenshot 2026-05-10 KPI dropdown + org switcher). Path β REVERT shadcn default lock với evidence distribution Phần D 7:17:0 (Nhóm A intentional brand : Nhóm B accidental shadcn : Nhóm C ambiguous) + layout team pioneer pattern `--accent-brand` token riêng. Smoke test Phase A 5/5 PASS visual (CASE 1 KPI dropdown hover neutral beige eye-fatigue fix + CASE 2 org switcher selected brand red preserved qua bg-accent-brand + CASE 3 X-Ray selected option brand red + CASE 4 XRayReport CTA shadow brand red + CASE 5 dark mode skip Q3 A defer). 3 architectural changes (foundation cleanup eliminate collision, `--accent-brand` token riêng, atomic commit boundary discipline Path C). 7 decisions Q1-Q7 locked direct trong HANDOFF entry (NOT plan file riêng vì scope LOW). NEW pattern lesson L50 (atomic commit boundary discipline cho cleanup milestone scope creep) + L42 reinforced lần 6 + L29/L32/L45/L48/L49 reinforced lần 8. **Production verify (4/4 PASS post-deploy `dpl_3PiiGz5AjhixkMdVX2iUYM95JBqm` 2026-05-10)**: Vercel deploy `a389632` READY 72.7s build clean (0 error, 1 minor CSS warning Tailwind v4 `data-[*]:bg-accent` Lightning CSS noise known infrastructure, NOT milestone regression). Step 1 list_deployments state READY ✓ + production aliases chienluoc.org/www.chienluoc.org/hoshin-kanri-os.vercel.app. Step 2 build logs CLEAN: ✓ Compiled 19.1s + TypeScript 18.4s + 77/77 static pages 2.6s. Step 3 runtime logs 30 phút window: 1 TypeError /dashboard 307 trigger bởi curl Step 4 unauthenticated (status 307 redirect đúng → user-facing impact = 0, log noise only — log candidate M-Dashboard-NullGuard-1 DEFER LOW pattern L51). Step 4 smoke 3 routes: GET / 200 OK + GET /dashboard 307 → /login + POST /api/swot/coaching 401 auth gate (GET /api/swot/coaching trả 405 Method Not Allowed correct behavior — route chỉ define POST handler). Visual change M-Design-Tokens-Cleanup-1 shipped vào production qua HEAD `af03dfc` (close-out chain a389632 + af03dfc placeholder fix). Pattern L41 reinforced lần 3 (Vercel log expire deploy cũ → pre-existing TypeError verify INCONCLUSIVE acceptable for log noise non-blocking issues). See §16 + §17.
 - **M-Cleanup-batch-2026-05-09 — M-Cleanup-6 Phase 2 + M-Lint-Cleanup-1 combo** ✅ SHIPPED 2026-05-09 (4 commits `11c6193` plan → `f7087cd` 8 drop-in sites → `96c7db6` 3 JOIN sites split-query → `73abf59` 2 lint fixes, 13 files refactored + 1 plan doc, ~1h40min work). Trigger: M-Cleanup-6 Phase 1 deferred 12 dashboard inline call sites (`find(lastOrgId) ?? memberships[0]`) + 2 pre-existing lint errors verified isolation M-Cleanup-5 (zero baseline regression). Combo opportunity gộp 2 LOW-risk milestones cùng session, share verify-first audit + docs close-out. 5 decisions Q1-Q5 locked Task 1 (β 3 commits domain / α split-query / β 4-page smoke / α separate lint commit). 11/12 inline sites migrated sang `getActiveMembership(supabase, userId, lastOrgId)` helper (8 drop-in + 3 JOIN-split with race-safe `if (!org) redirect` guard); layout.tsx (#1) defer M-Cleanup-6-P3 vì dual-purpose query (single + array for switcher). 2 lint errors fixed canonical hoist (CustomDot module-level + `ink` prop thread, invite `<a>` → `<Link>`). Net code −67 LOC. Smoke test 4/4 PASS Phase A (dropin kpi + JOIN-split benchmark + chart xray-history + invite Link). Bonus catches verify-first: HANDOFF prose drift "invite href=/login" actual `href="/"`, layout dual-purpose query complication discovered via Read full file, user decision Q4 α `useCallback` empirically REJECTED bởi rule (fall back β hoist) — 3 drift caught pre-ship. 1 pattern lesson L46 (AST static rules ≠ runtime memoization, hoist canonical). NEW pitfall §10 #32 (`react-hooks/static-components` không accept useCallback/useMemo). See §16 + §17.
