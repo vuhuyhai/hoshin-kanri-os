@@ -147,7 +147,7 @@ export default async function DiscoveryPage() {
                 return (
                   <div
                     key={step.key}
-                    className="bg-[var(--bg)] border border-gray-200 shadow-sm p-5 flex flex-col min-h-[160px] transition-all duration-150 hover:border-gray-400 hover:shadow-md"
+                    className="bg-[var(--bg)] border border-border shadow-sm p-5 flex flex-col min-h-[160px] transition-all duration-150 hover:border-foreground hover:shadow-md"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-3xl">{step.icon}</span>
@@ -174,7 +174,7 @@ export default async function DiscoveryPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full border-gray-300 text-gray-600 bg-white hover:bg-gray-50"
+                          className="w-full border-border text-muted-foreground bg-background hover:bg-muted"
                         >
                           Xem báo cáo
                         </Button>
@@ -183,7 +183,7 @@ export default async function DiscoveryPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full border-gray-300 text-gray-600 bg-white hover:bg-gray-50 text-xs"
+                          className="w-full border-border text-muted-foreground bg-background hover:bg-muted text-xs"
                         >
                           Chạy lại →
                         </Button>
@@ -198,8 +198,8 @@ export default async function DiscoveryPage() {
                   key={step.key}
                   className={`bg-[var(--bg)] border shadow-sm p-5 flex flex-col min-h-[160px] transition-all duration-150 ${
                     isNext
-                      ? 'border-gray-400 hover:shadow-md'
-                      : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
+                      ? 'border-foreground hover:shadow-md'
+                      : 'border-border hover:border-foreground hover:shadow-md'
                   } ${isLocked ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -244,7 +244,7 @@ export default async function DiscoveryPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full border-gray-300 text-gray-600 bg-white hover:bg-gray-50"
+                          className="w-full border-border text-muted-foreground bg-background hover:bg-muted"
                         >
                           Xem lại
                         </Button>
@@ -252,7 +252,7 @@ export default async function DiscoveryPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider"
+                          className="w-full bg-ink text-bg-warm hover:bg-ink/90 font-display font-bold uppercase text-xs py-2 tracking-wider"
                           disabled={isLocked}
                         >
                           Bắt đầu →
@@ -268,16 +268,16 @@ export default async function DiscoveryPage() {
 
         {/* Right: Progress summary — sticky */}
         <div className="lg:col-span-1">
-          <div className="bg-[var(--bg)] border border-gray-200 shadow-sm p-6 lg:sticky lg:top-24">
-            <h3 className="font-display text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">
+          <div className="bg-[var(--bg)] border border-border shadow-sm p-6 lg:sticky lg:top-24">
+            <h3 className="font-display text-sm font-bold uppercase tracking-widest text-foreground mb-4">
               Tiến độ khám phá
             </h3>
 
             {/* Progress bar */}
             <div className="mb-5">
-              <div className="h-3 w-full border border-gray-200 bg-gray-200">
+              <div className="h-3 w-full border border-border bg-muted">
                 <div
-                  className="h-full bg-gray-800 transition-all duration-500"
+                  className="h-full bg-accent-brand transition-all duration-500"
                   style={{
                     width: `${(completedCount / DISCOVERY_STEPS.length) * 100}%`,
                   }}
@@ -302,17 +302,17 @@ export default async function DiscoveryPage() {
                     {done ? (
                       <span style={{ color: 'var(--score-good)' }}>✓</span>
                     ) : isLocked ? (
-                      <span className="text-gray-300">○</span>
+                      <span className="text-muted-foreground/50">○</span>
                     ) : (
                       <span>⏳</span>
                     )}
                     <span
                       className={
                         done
-                          ? 'text-gray-400 line-through'
+                          ? 'text-muted-foreground line-through'
                           : isLocked
-                            ? 'text-gray-300'
-                            : 'text-gray-900 font-medium'
+                            ? 'text-muted-foreground/50'
+                            : 'text-foreground font-medium'
                       }
                     >
                       {step.label}
@@ -324,7 +324,7 @@ export default async function DiscoveryPage() {
 
             {/* Next step CTA */}
             {nextStep && (
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-border pt-4">
                 <p className="font-display text-[11px] font-bold uppercase tracking-widest text-text-3 mb-2">
                   Bước tiếp theo
                 </p>
@@ -335,7 +335,7 @@ export default async function DiscoveryPage() {
                   href={nextStep.href}
                   target={nextStep.external ? '_blank' : undefined}
                 >
-                  <Button variant="ghost" className="w-full bg-gray-900 text-white hover:bg-gray-700 font-display font-bold uppercase text-xs py-2 tracking-wider">
+                  <Button variant="ghost" className="w-full bg-ink text-bg-warm hover:bg-ink/90 font-display font-bold uppercase text-xs py-2 tracking-wider">
                     Tiếp tục →
                   </Button>
                 </Link>
@@ -343,7 +343,7 @@ export default async function DiscoveryPage() {
             )}
 
             {completedCount === DISCOVERY_STEPS.length && (
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-border pt-4">
                 <p className="font-display text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--score-good)' }}>
                   Hoàn thành!
                 </p>
