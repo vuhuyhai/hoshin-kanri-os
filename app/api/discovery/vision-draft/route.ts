@@ -8,7 +8,7 @@ import type {
 import { AI_MODELS } from '@/lib/ai/models'
 import { streamClaudeJson } from '@/lib/ai/stream-json'
 import { parseBody, visionDraftSchema } from '@/lib/validation'
-import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
   if (!user)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const rl = await requireAiRateLimit(user.id, { bucket: 'discovery', limit: 50 })
+  const rl = await requireRateLimit(user.id, {
+    bucket: 'ai:discovery',
+    limit: 50,
+    message: 'Bạn đang gọi AI quá nhanh. Vui lòng đợi vài phút rồi thử lại.',
+  })
   if (!rl.ok) return rl.response
 
   const body = await parseBody(request, visionDraftSchema)

@@ -18,7 +18,7 @@ import type {
   CoachingContext,
 } from '@/lib/swot/types'
 import { parseBody, swotCoachingSchema } from '@/lib/validation'
-import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 import { getActiveMembership } from '@/lib/auth/getActiveMembership'
 import { loadStrategicMemory } from '@/lib/swot/strategic-memory'
 import { mapXRayToSwotSeed } from '@/lib/swot/xray-to-swot-mapper'
@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    const rl = await requireRateLimit(user.id, {
+      bucket: 'ai:swot',
+      limit: 50,
+      message: 'Bạn đang gọi AI quá nhanh. Vui lòng đợi vài phút rồi thử lại.',
+    })
     if (!rl.ok) return rl.response
 
     const bodyParsed = await parseBody(request, swotCoachingSchema)

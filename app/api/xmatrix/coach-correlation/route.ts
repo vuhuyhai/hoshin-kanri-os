@@ -3,7 +3,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { AI_MODELS } from '@/lib/ai/models'
-import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 import { parseBody, coachCorrelationSchema } from '@/lib/validation'
 
 const SENSEI_REST = 'Sensei đang nghỉ. Thử lại sau nhé.'
@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const rl = await requireAiRateLimit(user.id, { bucket: 'coach', limit: 50 })
+    const rl = await requireRateLimit(user.id, {
+      bucket: 'ai:coach',
+      limit: 50,
+      message: 'Bạn đang gọi AI quá nhanh. Vui lòng đợi vài phút rồi thử lại.',
+    })
     if (!rl.ok) return rl.response
 
     const bodyParsed = await parseBody(request, coachCorrelationSchema)

@@ -6,7 +6,7 @@ import type { SwotContextCardsInput } from '@/lib/validation/schemas'
 import { AI_MODELS } from '@/lib/ai/models'
 import { createAnthropicClient } from '@/lib/ai/client'
 import { parseBody, swotContextCardsSchema } from '@/lib/validation'
-import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 
 const CONTEXT_CARDS_SYSTEM_PROMPT = `
 Bạn là chuyên gia phân tích thị trường cho SME Việt Nam.
@@ -79,7 +79,11 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    const rl = await requireRateLimit(user.id, {
+      bucket: 'ai:swot',
+      limit: 50,
+      message: 'Bạn đang gọi AI quá nhanh. Vui lòng đợi vài phút rồi thử lại.',
+    })
     if (!rl.ok) return rl.response
 
     const parsed = await parseBody(request, swotContextCardsSchema)

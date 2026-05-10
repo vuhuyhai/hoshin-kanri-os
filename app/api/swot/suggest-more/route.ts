@@ -13,7 +13,7 @@ import type {
   AnalysisFramework,
 } from '@/lib/swot/coaching-types'
 import { parseBody, swotSuggestMoreSchema } from '@/lib/validation'
-import { requireAiRateLimit } from '@/lib/ai/rate-limit-helper'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 
 interface RawSuggestItem {
   statement: string
@@ -70,7 +70,11 @@ export async function POST(request: NextRequest) {
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const rl = await requireAiRateLimit(user.id, { bucket: 'swot', limit: 50 })
+    const rl = await requireRateLimit(user.id, {
+      bucket: 'ai:swot',
+      limit: 50,
+      message: 'Bạn đang gọi AI quá nhanh. Vui lòng đợi vài phút rồi thử lại.',
+    })
     if (!rl.ok) return rl.response
 
     const parsed = await parseBody(request, swotSuggestMoreSchema)
