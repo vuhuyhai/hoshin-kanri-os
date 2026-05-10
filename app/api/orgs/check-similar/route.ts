@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { parseBody } from '@/lib/validation'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 
 const RATE_LIMIT = 10
 const RATE_WINDOW_SECONDS = 60
@@ -31,21 +31,12 @@ export async function POST(request: NextRequest) {
     if (!parsed.ok) return parsed.response
     const { name, city } = parsed.data
 
-    const rl = await checkRateLimit({
-      key: `orgs:check-similar:${user.id}`,
+    const rl = await requireRateLimit(user.id, {
+      bucket: 'orgs:check-similar',
       limit: RATE_LIMIT,
       windowSeconds: RATE_WINDOW_SECONDS,
     })
-    if (!rl.allowed) {
-      const retryAfter = Math.max(
-        1,
-        Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000),
-      )
-      return NextResponse.json(
-        { error: 'Quá nhiều request', retryAfter },
-        { status: 429, headers: { 'Retry-After': String(retryAfter) } },
-      )
-    }
+    if (!rl.ok) return rl.response
 
     const admin = createAdminClient()
     const nameLower = name.toLowerCase()

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { parseBody } from '@/lib/validation'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { requireRateLimit } from '@/lib/http/rate-limit-helper'
 
 const RATE_LIMIT = 30
 const RATE_WINDOW_SECONDS = 300
@@ -25,21 +25,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const rl = await checkRateLimit({
-      key: `orgs:switch:${user.id}`,
+    const rl = await requireRateLimit(user.id, {
+      bucket: 'orgs:switch',
       limit: RATE_LIMIT,
       windowSeconds: RATE_WINDOW_SECONDS,
+      extras: { requestId },
     })
-    if (!rl.allowed) {
-      const retryAfter = Math.max(
-        1,
-        Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000),
-      )
-      return NextResponse.json(
-        { error: 'Quá nhiều request', retryAfter, requestId },
-        { status: 429, headers: { 'Retry-After': String(retryAfter) } },
-      )
-    }
+    if (!rl.ok) return rl.response
 
     const parsed = await parseBody(request, switchOrgSchema)
     if (!parsed.ok) return parsed.response
