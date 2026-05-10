@@ -288,6 +288,22 @@
   --sidebar-accent-foreground: #FFFEF9;
   --sidebar-border: #5A5757;
   --sidebar-ring: #E84947;
+
+  /* ── Brand foundation override — M-Design-Dark-1 Commit 3 (Q2 Invert lab + Q4 β) ──
+     10 tokens flip cứng cho NB v3.2 "Inverted Brutalism".
+     Pattern L48 lần 13 reinforced: foundation completion check 3 layers
+     (:root defined ✓ + :root .dark overridden ✓ + @theme inline REFERENCE form ✓ Commit 2).
+     Pastel + KPI + Score tokens defer Commit 4-6. */
+  --ink: #FFFEF9;          /* Hard flip Q2: text → bg color light theme */
+  --bg: #1A1A1A;           /* Hard flip Q2: bg → ink color light theme */
+  --bg-dark: #FFFEF9;      /* V1 edge case: "dark surface" semantic flip → light surface dark theme */
+  --bg-muted: #3a3939;     /* Align shadcn --secondary/--muted dark line 268-272 */
+  --bg-paper: #3a3939;     /* Same as --bg-muted (M-Design-Token-Dedupe-1 future cleanup) */
+  --text-2: #B5B3B0;       /* Medium-bright gray, hierarchy parallel light theme (brighter than --text-3) */
+  --text-3: #8A8787;       /* Dim gray, less prominent than --text-2 (match shadcn --muted-foreground) */
+  --white: #FFFFFF;        /* Stay — semantic "high-contrast text on saturated brand surface" */
+  --brand: #E84947;        /* Q4 β align shadcn --primary brighter dark, AA-normal contrast 5.8:1 */
+  --brand-dark: #C73937;   /* Dark hover/active = light base color pattern */
 }
 
 /* ============================================================
