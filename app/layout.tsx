@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { ThemeCacheBridge } from '@/components/providers/theme-cache-bridge'
 import { PHProvider } from '@/components/providers/posthog-provider'
 import { Toaster } from 'sonner'
 import { AuthListener } from '@/components/providers/auth-listener'
@@ -110,7 +111,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k="hoshin-theme-v2";var t=localStorage.getItem(k);if(!t||t==="system"||t==="dark"){localStorage.setItem(k,"light")}document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");document.documentElement.setAttribute("data-theme","light")}catch(e){}})()`,
+            __html: `(function(){try{var k="hoshin-theme-v2";var t=localStorage.getItem(k);var resolved="light";if(t==="dark"){resolved="dark"}else if(t==="system"){resolved=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}else if(!t){localStorage.setItem(k,"light")}document.documentElement.classList.remove("light","dark");document.documentElement.classList.add(resolved);document.documentElement.setAttribute("data-theme",resolved)}catch(e){}})()`,
           }}
         />
         <script
@@ -150,10 +151,11 @@ export default function RootLayout({
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
-            enableSystem={false}
+            enableSystem={true}
             storageKey="hoshin-theme-v2"
             disableTransitionOnChange
           >
+            <ThemeCacheBridge />
             <AuthListener />
             {children}
             <FooterCopyright />
