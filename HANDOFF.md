@@ -2,7 +2,7 @@
 
 > **Mục đích**: Tài liệu này là "one-shot context pack" để bất kỳ Claude session mới nào hiểu đầy đủ về kiến trúc, code conventions, pitfalls đã gặp và trạng thái hiện tại của repo. Đọc file này trước khi code.
 >
-> **Last verified**: 2026-05-10 — post M-RateLimit-Generic-1 (Generic rate limit helper + 15 sites migrate, 3 commits `e36d140`→`97fd391`). HEAD `97fd391` (pre-push). Touch 17 files (2 NEW: `plans/M-RateLimit-Generic-1-plan.md` + `plans/M-RateLimit-Generic-1-verify-audit.md` + `lib/http/rate-limit-helper.ts` 53 LOC; 1 DELETED: `lib/ai/rate-limit-helper.ts` 51 LOC; 14 MODIFIED: 13 AI routes + 2 non-AI routes — net +9/-26 LOC commit 2 + +131/-77 LOC commit 1). Smoke test Phase A typecheck + build PASS cả 2 checkpoint giữa commit 1 + sau commit 2. Phase B 3-route smoke deferred Vũ Hải reactive verify.
+> **Last verified**: 2026-05-10 — post M-RateLimit-Generic-1 (Generic rate limit helper + 15 sites migrate, 3 commits `e36d140`→`97fd391` + close-out `50058a2`). HEAD `50058a2` (production verified). Touch 17 files (2 NEW: `plans/M-RateLimit-Generic-1-plan.md` + `plans/M-RateLimit-Generic-1-verify-audit.md` + `lib/http/rate-limit-helper.ts` 53 LOC; 1 DELETED: `lib/ai/rate-limit-helper.ts` 51 LOC; 14 MODIFIED: 13 AI routes + 2 non-AI routes — net +9/-26 LOC commit 2 + +131/-77 LOC commit 1). Smoke test Phase A typecheck + build PASS cả 2 checkpoint. Production verify 4/4 PASS post-deploy `dpl_HLJcUDCW3Ax7qGDRNn88etLAzYAd` READY (build 72s clean, 0 error/FAIL, ✓ Compiled 18.1s + TS 18.9s + 77/77 static pages, runtime 0 crash 30 phút window, smoke 3 routes 1.0-1.5s/req return HTTP 401 confirm helper signature swap clean). L41 alias propagation lag reinforced lần 2 (build READY ≠ traffic cycle ~5-10 phút).
 > **Branch**: `master` (solo dev, không PR flow)
 > **Deployment**: Vercel auto-deploy từ `master` push
 > **Repo path**: `c:/Users/ASUS/Desktop/Hoshin Kanri by Vũ Hải/hoshin-kanri-os/`
@@ -1068,12 +1068,16 @@ Khi Claude mới vào session:
     - Q5 α DROP default bucket required `bucket: string` (V3 13/13 explicit)
     - Q6 β 2 commits domain split (atomic revert unit per concern)
     - Q7 Phase A only typecheck + build (mechanical refactor, no business logic)
-  - **Smoke test Phase A 2/2 PASS**:
+  - **Smoke test Phase A 2/2 PASS + Production verify 4/4 PASS**:
 
-    | Checkpoint | Description | Result |
-    |---|---|---|
-    | 1 | typecheck + build sau commit 1 (helper rewrite + 13 AI sites mechanical rename) | PASS |
-    | 2 | typecheck + build sau commit 2 (2 non-AI sites migrate) | PASS |
+    | Phase | Checkpoint | Description | Result |
+    |---|---|---|---|
+    | A | 1 | typecheck + build sau commit 1 (helper rewrite + 13 AI sites mechanical rename) | PASS |
+    | A | 2 | typecheck + build sau commit 2 (2 non-AI sites migrate) | PASS |
+    | Prod | 1 | Vercel deploy `dpl_HLJcUDCW3Ax7qGDRNn88etLAzYAd` READY (build 72s clean) | PASS |
+    | Prod | 2 | Build logs grep CLEAN (0 error/FAIL, ✓ Compiled 18.1s, TS 18.9s, 77/77 static pages) | PASS |
+    | Prod | 3 | Runtime logs CLEAN 30 phút window (0 crash, L41 alias propagation lag expected) | PASS |
+    | Prod | 4 | Smoke 3 routes production HTTP 401 (1× SWOT + 1× orgs/check-similar + 1× orgs/switch, 1.0-1.5s/req) | PASS |
 
   - **Files changed (3 NEW + 1 DELETED + 14 MODIFIED + 1 plan doc)**:
     - NEW: `lib/http/rate-limit-helper.ts` (53 LOC, generic helper)
@@ -1086,6 +1090,7 @@ Khi Claude mới vào session:
     - **L49 NEW — Generic helper API stable + minimal + caller compose extras**: Refactor pattern khi extract cross-cutting helper từ domain-specific original (vd AI-only → generic). Apply: (a) drop hardcoded prefix/default sang required param caller-side (Q5 α), (b) preserve discriminated union shape protect callers blast radius (D1), (c) optional `message` + default cho callers không override (Q3 β), (d) `extras?: Record<string, unknown>` merge body cho route-specific fields (Q4 α). Anti-pattern: extend helper với optional params per-route (signature bloat) hoặc callback-build response (over-engineered, defeat helper purpose). Reusable cho future cross-cutting helpers (audit log, feature flag, telemetry trace).
     - **L42 reinforced lần 5 — Phase A typecheck + build coverage acceptable cho mechanical refactor**: M-RateLimit-Generic-1 Phase B 3-route smoke deferred Vũ Hải (Q7) — refactor mechanical rename + signature preserve + no business logic touch + 4 evidence-locked decisions (no shape change) + 7 path α/β consistent low-blast-radius = sufficient evidence Phase A. Pattern proven 5 lần (M-KPI-Mgmt-1 → M-KPI-Restore-1 → M-Design-Tailwind-Cleanup-1 → M-Cleanup-batch-2026-05-09 → M-RateLimit-Generic-1). Apply: mechanical refactor ship-ready với typecheck + build PASS, defer reactive Phase B verify.
     - **L29/L32/L45/L48 reinforced lần 7 — Verify-first invalidate plan claim**: M-RateLimit-Generic-1 Task 1 audit phát hiện 4 deviations vs HANDOFF §18 candidate text: (a) off-by-one count 13+2=15 not 14, (b) 7 additional eligible sites scope creep risk MEDIUM, (c) 0 DB migration needed (HANDOFF prose ambiguous), (d) `'ai:'` literal chỉ trong helper file (no caller, no audit log, no dashboard). Pattern: TRƯỚC khi commit decision dựa trên candidate prose, verify-first qua grep + view file minimum 5-10 sites. Cost ~30 phút audit, prevent rollback debt + scope creep.
+    - **L41 reinforced lần 2 — Vercel alias propagation lag post-READY**: M-RateLimit-Generic-1 production verify confirm pattern L41 từ M-Auth-MultiOrg-1 (2026-05-09). Build deploy READY (72s) ≠ production traffic cycle qua immediately. Runtime logs API 30 phút window post-READY return 0 entries — KHÔNG bug, alias DNS/edge cache propagation lag ~5-10 phút expected behavior. Verify production reachable qua user-facing URL (chienluoc.org) curl smoke: nếu route trả expected codes (401/200/404) → alias eventually cycle, milestone close-out OK. Anti-pattern: panic redeploy hoặc trigger rebuild khi runtime logs empty post-READY. Pattern proven 2 lần (M-Auth-MultiOrg-1 + M-RateLimit-Generic-1) → escalate convention default cho mọi production verify post-deploy: build READY + smoke route reachable = ship-able, runtime logs verify defer 10-15 phút sau hoặc reactive trigger via authenticated request.
   - **Constraints cho future AI sessions**:
     - KHÔNG dùng `requireAiRateLimit` (đã DELETED) — pattern: `requireRateLimit` từ `lib/http/rate-limit-helper.ts`
     - KHÔNG hardcode prefix `'ai:'` trong helper file mới — caller pass full bucket string. Anti-pattern: re-introduce hardcoded prefix → block non-AI route adoption (regression M-OrgUX-1 → M-Auth-MultiOrg-1 → M-RateLimit-Generic-1 cascade)
