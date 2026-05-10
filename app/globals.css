@@ -316,6 +316,21 @@
   --score-weak: #F59E0B;             /* Match --kpi-attention-strong parallel hue */
   --score-fair: #3B82F6;             /* Tailwind blue-500 brighten cho dark (light #2563EB blue-600) */
   --score-good: #22C55E;             /* Match --kpi-healthy-strong parallel hue */
+
+  /* ── 6 Pastel accents dark mute — M-Design-Dark-1 Commit 5 (Q5 α) ──
+     Preserve hue, drop lightness ~50%+ cho subtle dark UI matches inverted brutalism.
+     White text auto-cascade qua --ink Commit 3 (#FFFEF9) trên dark mute pastel = ~7:1 AA pass.
+     KPI base tokens (lines 188-191) ALL REFERENCE form auto-cascade qua Pastel:
+       --kpi-healthy → var(--accent-lime) → .dark #3D4530 olive dark mute
+       --kpi-attention → var(--accent-yellow) → .dark #4A4530 warm yellow mute
+       --kpi-warning → var(--accent-pink) → .dark #4A3839 mauve dark mute
+     Pattern L48 lần 16 reinforced: 2-hop cascade architecture (Pastel → KPI base → consumer). */
+  --accent-yellow: #4A4530;     /* warm dark yellow mute */
+  --accent-cyan: #2E4644;       /* deep teal mute */
+  --accent-lime: #3D4530;       /* olive dark mute */
+  --accent-pink: #4A3839;       /* mauve dark mute */
+  --accent-peach: #4A3D2E;      /* warm brown mute */
+  --accent-lavender: #3D364A;   /* deep purple mute */
 }
 
 /* ============================================================
