@@ -30,20 +30,20 @@ const LIGHT_CONFIG: Record<
   green: {
     label: '≥90%',
     badgeClass:
-      'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200',
-    dotClass: 'bg-green-500',
+      'bg-kpi-healthy text-kpi-healthy-fg border border-kpi-healthy',
+    dotClass: 'bg-kpi-healthy-strong',
   },
   yellow: {
     label: '70–90%',
     badgeClass:
-      'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-200',
-    dotClass: 'bg-yellow-500',
+      'bg-kpi-attention text-kpi-attention-fg border border-kpi-attention',
+    dotClass: 'bg-kpi-attention-strong',
   },
   red: {
     label: '<70%',
     badgeClass:
-      'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-200',
-    dotClass: 'bg-red-500',
+      'bg-kpi-warning text-kpi-warning-fg border border-kpi-warning',
+    dotClass: 'bg-destructive',
   },
 }
 
@@ -100,7 +100,7 @@ export function KpiCard({
     <div
       className={cn(
         'border rounded-xl p-4 space-y-3 transition-all',
-        light === 'red' && 'border-red-200 dark:border-red-900'
+        light === 'red' && 'border-kpi-warning'
       )}
     >
       {/* Header row */}
@@ -153,9 +153,9 @@ export function KpiCard({
         <div>
           <p
             className={cn('text-2xl font-bold tabular-nums', {
-              'text-green-600 dark:text-green-400': light === 'green',
-              'text-yellow-600 dark:text-yellow-400': light === 'yellow',
-              'text-red-600 dark:text-red-400': light === 'red',
+              'text-kpi-healthy-strong': light === 'green',
+              'text-kpi-attention-strong': light === 'yellow',
+              'text-destructive': light === 'red',
             })}
           >
             {kpi.latestValue !== null

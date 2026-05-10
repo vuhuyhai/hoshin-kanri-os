@@ -69,6 +69,8 @@
   --color-kpi-attention-fg: #1A1A1A;
   --color-kpi-warning-fg: #1A1A1A;
   --color-kpi-critical-fg: #FFFFFF;
+  --color-kpi-healthy-strong: #16A34A;
+  --color-kpi-attention-strong: #D97706;
 
   /* Fonts */
   --font-display: "Space Grotesk", "Inter", sans-serif;
