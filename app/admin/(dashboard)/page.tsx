@@ -107,7 +107,7 @@ function RecentTable({ rows }: { rows: CustomerOverview[] }) {
                 <td className="px-4 py-3">
                   <PlanBadge plan={c.plan} />
                 </td>
-                <td className="px-4 py-3 font-body text-[15px] text-emerald-600">
+                <td className="px-4 py-3 font-body text-[15px] text-kpi-healthy-strong">
                   {c.sub_status}
                 </td>
                 <td className="px-4 py-3 font-body text-[16px] text-ink">

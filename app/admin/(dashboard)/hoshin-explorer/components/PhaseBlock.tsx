@@ -67,7 +67,7 @@ export function PhaseBlock({ phase }: { phase: HKPhase }) {
 
       {/* Warning */}
       {phase.warn && (
-        <div className="mb-6 border-2 border-ink bg-red-50" style={{ borderLeftWidth: 5, borderLeftColor: '#c73937' }}>
+        <div className="mb-6 border-2 border-ink bg-kpi-warning" style={{ borderLeftWidth: 5, borderLeftColor: '#c73937' }}>
           <div className="overline px-4 md:px-5 py-2 text-accent-brand">⚠ BẪY PHỔ BIẾN</div>
           <div className="px-4 md:px-5 pb-3 font-body text-[16px] md:text-[17px] leading-[1.75] text-text-2"><RichText text={phase.warn} /></div>
         </div>
