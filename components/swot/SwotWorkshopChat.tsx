@@ -139,7 +139,7 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
   }
 
   return (
-    <div className="flex flex-col w-full h-full max-h-full min-h-0 bg-white">
+    <div className="flex flex-col w-full h-full max-h-full min-h-0 bg-card">
       <div
         ref={messagesContainerRef}
         className="flex-1 overflow-y-scroll overflow-x-hidden p-4 space-y-3 min-h-0 chat-scrollbar"
@@ -174,12 +174,12 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
               }
             }}
             placeholder="Rút ý từ chat..."
-            className="flex-1 min-w-0 border-2 border-ink bg-white px-2 py-1.5 font-display text-sm text-ink focus:outline-none"
+            className="flex-1 min-w-0 border-2 border-ink bg-card px-2 py-1.5 font-display text-sm text-ink focus:outline-none"
           />
           <select
             value={extractQuadrant}
             onChange={(e) => setExtractQuadrant(e.target.value as SwotQuadrant)}
-            className="border-2 border-ink bg-white px-2 py-1.5 font-display text-sm text-ink focus:outline-none appearance-none"
+            className="border-2 border-ink bg-card px-2 py-1.5 font-display text-sm text-ink focus:outline-none appearance-none"
           >
             {QUADRANT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -188,7 +188,7 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
           <button
             type="button"
             onClick={handleExtractAdd}
-            className="border-2 border-ink bg-green-600 text-white p-1.5 hover:bg-green-700 transition-colors"
+            className="border-2 border-ink bg-kpi-healthy-strong text-white p-1.5 hover:bg-kpi-healthy transition-colors"
             aria-label="Thêm vào nguyên liệu"
           >
             <Plus className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function SwotWorkshopChat({ orgId, onAddIngredient }: SwotWorkshopChatPro
             }}
             rows={2}
             placeholder="Hỏi AI coach về chiến lược..."
-            className="flex-1 border-2 border-ink bg-white px-2 py-1.5 font-display text-sm text-ink focus:outline-none resize-none"
+            className="flex-1 border-2 border-ink bg-card px-2 py-1.5 font-display text-sm text-ink focus:outline-none resize-none"
           />
           <button
             type="button"

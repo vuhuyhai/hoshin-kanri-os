@@ -33,7 +33,7 @@ function ProgressIndicator({ current }: { current: SwotWorkshopStep }) {
         const active = i === currentIdx
         return (
           <div key={s.key} className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 border-2 border-ink px-3 py-1 font-body font-bold uppercase text-[11px] tracking-wider ${active ? 'bg-ink text-white' : done ? 'bg-green-600 text-white' : 'bg-white text-text-3'}`}>
+            <div className={`flex items-center gap-1.5 border-2 border-ink px-3 py-1 font-body font-bold uppercase text-[11px] tracking-wider ${active ? 'bg-ink text-white' : done ? 'bg-kpi-healthy-strong text-white' : 'bg-card text-text-3'}`}>
               {done ? (
                 <Check className="w-3 h-3" />
               ) : (

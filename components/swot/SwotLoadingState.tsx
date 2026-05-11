@@ -32,7 +32,7 @@ export function SwotLoadingState({ selectedFrameworks }: SwotLoadingStateProps) 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div
-        className="w-full max-w-md border-2 border-ink bg-white p-6"
+        className="w-full max-w-md border-2 border-ink bg-card p-6"
         style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
       >
         <h3 className="font-display font-black text-lg uppercase mb-4 text-ink">
@@ -42,7 +42,7 @@ export function SwotLoadingState({ selectedFrameworks }: SwotLoadingStateProps) 
           {messages.map((msg, i) => (
             <div key={msg} className="flex items-center gap-3">
               {i < currentIndex ? (
-                <Check className="w-5 h-5 text-[#c73937] shrink-0" />
+                <Check className="w-5 h-5 text-accent-brand shrink-0" />
               ) : i === currentIndex ? (
                 <Loader2 className="w-5 h-5 animate-spin text-ink shrink-0" />
               ) : (

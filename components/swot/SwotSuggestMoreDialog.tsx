@@ -78,12 +78,12 @@ export function SwotSuggestMoreDialog({
   return (
     <div
       ref={dialogRef}
-      className="absolute top-full left-0 right-0 z-50 mt-1 border-2 border-ink bg-white p-4 space-y-3"
+      className="absolute top-full left-0 right-0 z-50 mt-1 border-2 border-ink bg-card p-4 space-y-3"
       style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
     >
       <div className="flex items-center justify-between">
         <h4 className="font-display font-bold text-sm text-ink inline-flex items-center gap-1">
-          <Sparkles className="w-4 h-4 text-[#c73937]" />
+          <Sparkles className="w-4 h-4 text-accent-brand" />
           Gợi thêm cho &ldquo;{label}&rdquo;
         </h4>
         <button
@@ -101,7 +101,7 @@ export function SwotSuggestMoreDialog({
         placeholder="Ví dụ: tập trung vào năng lực công nghệ, hoặc để AI tự chọn nếu để trống"
         rows={2}
         disabled={isLoading}
-        className="border-2 border-ink bg-white resize-none text-sm"
+        className="border-2 border-ink bg-card resize-none text-sm"
       />
       <div className="flex justify-end gap-2">
         <Button

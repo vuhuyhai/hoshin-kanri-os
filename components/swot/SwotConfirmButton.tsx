@@ -72,9 +72,9 @@ export function SwotConfirmButton({ draft, onConfirm, isConfirming }: SwotConfir
       <Button
         onClick={handleClick}
         disabled={isConfirming}
-        className="flex-1 border-2 border-ink bg-white text-ink font-display font-bold text-sm py-5 shadow-[4px_4px_0_#f59e0b] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+        className="flex-1 border-2 border-ink bg-card text-ink font-display font-bold text-sm py-5 shadow-[4px_4px_0_#f59e0b] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
       >
-        <AlertTriangle className="mr-1 w-4 h-4 text-[#f59e0b]" />
+        <AlertTriangle className="mr-1 w-4 h-4 text-kpi-attention-strong" />
         Có {count} điểm cần xem lại — Bấm lần nữa để xác nhận
       </Button>
     )

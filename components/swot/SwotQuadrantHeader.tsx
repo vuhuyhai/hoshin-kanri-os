@@ -42,7 +42,7 @@ export function SwotQuadrantHeader({
           <button
             type="button"
             onClick={onAddItem}
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 border-2 border-ink bg-white hover:bg-[#F7F5F2] transition-colors font-display font-bold text-ink"
+            className="inline-flex items-center gap-1 text-xs px-2 py-1 border-2 border-ink bg-card hover:bg-bg-warm transition-colors font-display font-bold text-ink"
           >
             <Plus className="w-3 h-3" /> Thêm
           </button>
@@ -50,7 +50,7 @@ export function SwotQuadrantHeader({
             type="button"
             onClick={() => setShowSuggest(true)}
             title={isOverLimit ? 'Đã có nhiều items, cân nhắc trước khi thêm' : undefined}
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 border-2 border-ink bg-white hover:bg-[#F7F5F2] transition-colors font-display font-bold text-ink"
+            className="inline-flex items-center gap-1 text-xs px-2 py-1 border-2 border-ink bg-card hover:bg-bg-warm transition-colors font-display font-bold text-ink"
           >
             <Sparkles className="w-3 h-3" /> AI
           </button>

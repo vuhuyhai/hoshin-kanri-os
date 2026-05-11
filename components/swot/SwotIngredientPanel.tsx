@@ -22,10 +22,10 @@ interface QuadrantMeta {
 }
 
 const QUADRANTS: QuadrantMeta[] = [
-  { key: 'S', label: 'Điểm mạnh', addLabel: 'Thêm điểm mạnh', boxCls: 'bg-green-50 border-green-600', headerCls: 'bg-green-600 text-white' },
-  { key: 'W', label: 'Điểm yếu', addLabel: 'Thêm điểm yếu', boxCls: 'bg-red-50 border-red-600', headerCls: 'bg-red-600 text-white' },
-  { key: 'O', label: 'Cơ hội', addLabel: 'Thêm cơ hội', boxCls: 'bg-blue-50 border-blue-600', headerCls: 'bg-blue-600 text-white' },
-  { key: 'T', label: 'Thách thức', addLabel: 'Thêm thách thức', boxCls: 'bg-orange-50 border-orange-600', headerCls: 'bg-orange-600 text-white' },
+  { key: 'S', label: 'Điểm mạnh', addLabel: 'Thêm điểm mạnh', boxCls: 'bg-accent-lime border-ink', headerCls: 'bg-accent-lime text-ink' },
+  { key: 'W', label: 'Điểm yếu', addLabel: 'Thêm điểm yếu', boxCls: 'bg-accent-yellow border-ink', headerCls: 'bg-accent-yellow text-ink' },
+  { key: 'O', label: 'Cơ hội', addLabel: 'Thêm cơ hội', boxCls: 'bg-accent-cyan border-ink', headerCls: 'bg-accent-cyan text-ink' },
+  { key: 'T', label: 'Thách thức', addLabel: 'Thêm thách thức', boxCls: 'bg-accent-pink border-ink', headerCls: 'bg-accent-pink text-ink' },
 ]
 
 export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngredientPanelProps) {
@@ -77,7 +77,7 @@ export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngr
                 />
               ))}
               {isAdding ? (
-                <div className="border-2 border-ink bg-white p-2 shadow-[3px_3px_0_#2C2B2B]">
+                <div className="border-2 border-ink bg-card p-2 shadow-[3px_3px_0_#2C2B2B]">
                   <textarea
                     autoFocus
                     value={addText}
@@ -91,7 +91,7 @@ export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngr
                     }}
                     rows={2}
                     placeholder="Nhập nội dung..."
-                    className="w-full border-2 border-ink bg-white px-2 py-1 font-display text-sm text-ink focus:outline-none resize-none"
+                    className="w-full border-2 border-ink bg-card px-2 py-1 font-display text-sm text-ink focus:outline-none resize-none"
                   />
                   <div className="mt-1.5 flex gap-1.5">
                     <button
@@ -104,7 +104,7 @@ export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngr
                     <button
                       type="button"
                       onClick={cancelAdd}
-                      className="border-2 border-ink bg-white p-1 hover:bg-bg-warm transition-colors"
+                      className="border-2 border-ink bg-card p-1 hover:bg-bg-warm transition-colors"
                       aria-label="Hủy"
                     >
                       <X className="w-3.5 h-3.5 text-ink" />
@@ -115,7 +115,7 @@ export function SwotIngredientPanel({ showCheckbox, onEvidenceSearch }: SwotIngr
                 <button
                   type="button"
                   onClick={() => { setAddingQuadrant(meta.key); setAddText('') }}
-                  className="w-full inline-flex items-center justify-center gap-1 border-2 border-dashed border-ink/40 bg-white/50 py-2 font-body font-bold uppercase text-[11px] tracking-wider text-ink hover:bg-white hover:border-ink transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-1 border-2 border-dashed border-ink/40 bg-card/50 py-2 font-body font-bold uppercase text-[11px] tracking-wider text-ink hover:bg-card hover:border-ink transition-colors"
                 >
                   <Plus className="w-3 h-3" />
                   {meta.addLabel}

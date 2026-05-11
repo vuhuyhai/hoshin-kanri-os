@@ -14,10 +14,10 @@ interface SwotIngredientCardProps {
 }
 
 const SOURCE_CLS: Record<IngredientSource, { label: string; cls: string }> = {
-  ai_draft: { label: 'AI', cls: 'bg-blue-100 text-blue-800 border-blue-600' },
-  manual: { label: 'Manual', cls: 'bg-green-100 text-green-800 border-green-600' },
-  chat_extract: { label: 'Chat', cls: 'bg-purple-100 text-purple-800 border-purple-600' },
-  ai_auto: { label: 'AI Auto', cls: 'bg-amber-100 text-amber-800 border-amber-600' },
+  ai_draft: { label: 'AI', cls: 'bg-accent-cyan text-ink border-accent-cyan' },
+  manual: { label: 'Manual', cls: 'bg-accent-lime text-ink border-accent-lime' },
+  chat_extract: { label: 'Chat', cls: 'bg-accent-lavender text-ink border-accent-lavender' },
+  ai_auto: { label: 'AI Auto', cls: 'bg-accent-yellow text-ink border-accent-yellow' },
 }
 
 export function SwotIngredientCard({
@@ -38,7 +38,7 @@ export function SwotIngredientCard({
   const hasEvidence = ingredient.evidence.length > 0
 
   return (
-    <div className="border-2 border-ink bg-white p-3 shadow-[3px_3px_0_#2C2B2B]">
+    <div className="border-2 border-ink bg-card p-3 shadow-[3px_3px_0_#2C2B2B]">
       <div className="flex items-start gap-2">
         {showCheckbox && onToggleSelect && (
           <input
@@ -64,7 +64,7 @@ export function SwotIngredientCard({
                 else if (e.key === 'Escape') cancelEdit()
               }}
               rows={2}
-              className="w-full border-2 border-ink bg-white px-2 py-1 font-display text-sm text-ink focus:outline-none resize-none"
+              className="w-full border-2 border-ink bg-card px-2 py-1 font-display text-sm text-ink focus:outline-none resize-none"
             />
           ) : (
             <p className="font-display text-sm text-ink break-words">{ingredient.statement}</p>
@@ -88,7 +88,7 @@ export function SwotIngredientCard({
         <button
           type="button"
           onClick={() => setIsEditing(true)}
-          className="border-2 border-ink bg-white p-1 hover:bg-bg-warm transition-colors"
+          className="border-2 border-ink bg-card p-1 hover:bg-bg-warm transition-colors"
           aria-label="Sửa"
         >
           <Pencil className="w-3.5 h-3.5 text-ink" />
@@ -96,16 +96,16 @@ export function SwotIngredientCard({
         <button
           type="button"
           onClick={() => onDelete(ingredient.id)}
-          className="border-2 border-ink bg-white p-1 hover:bg-red-50 transition-colors"
+          className="border-2 border-ink bg-card p-1 hover:bg-accent-pink transition-colors"
           aria-label="Xóa"
         >
-          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+          <Trash2 className="w-3.5 h-3.5 text-destructive" />
         </button>
         {hasEvidence && (
           <button
             type="button"
             onClick={() => onSearchEvidence(ingredient.id)}
-            className="ml-auto inline-flex items-center gap-1 border-2 border-ink bg-green-100 px-2 py-1 font-body font-bold uppercase text-[11px] tracking-wider text-green-800 hover:bg-green-200 transition-colors"
+            className="ml-auto inline-flex items-center gap-1 border-2 border-ink bg-accent-lime px-2 py-1 font-body font-bold uppercase text-[11px] tracking-wider text-ink hover:bg-accent-lime/80 transition-colors"
           >
             <Paperclip className="w-3 h-3" />
             {ingredient.evidence.length} nguồn

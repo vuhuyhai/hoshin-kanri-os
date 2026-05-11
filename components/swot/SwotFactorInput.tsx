@@ -137,9 +137,9 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
                     <button onClick={() => handleToggleKey(q, f)} className="shrink-0 size-4 border-2 border-ink flex items-center justify-center" style={{ background: f.is_key_factor ? cfg.color : 'white' }}>
                       {f.is_key_factor && <Check className="size-3 text-white" />}
                     </button>
-                    <span className="text-[10px] font-mono font-bold px-1 border border-ink/40 bg-white">{f.code}</span>
+                    <span className="text-[10px] font-mono font-bold px-1 border border-ink/40 bg-card">{f.code}</span>
                     <span className="text-sm font-body flex-1">{f.content}</span>
-                    <button onClick={() => handleQualityCheck(q, f)} disabled={!!loadingCheck[f.id]} className="shrink-0 text-[10px] px-1.5 py-0.5 border border-ink/40 hover:bg-white/80">
+                    <button onClick={() => handleQualityCheck(q, f)} disabled={!!loadingCheck[f.id]} className="shrink-0 text-[10px] px-1.5 py-0.5 border border-ink/40 hover:bg-card/80">
                       {loadingCheck[f.id] ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                     </button>
                     {f.quality_score != null && (
@@ -147,7 +147,7 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
                         {f.quality_score}/5
                       </span>
                     )}
-                    <button onClick={() => handleDelete(q, f.id)} className="shrink-0 text-ink/50 hover:text-red-600">
+                    <button onClick={() => handleDelete(q, f.id)} className="shrink-0 text-ink/50 hover:text-destructive">
                       <X className="size-3.5" />
                     </button>
                   </div>
@@ -165,9 +165,9 @@ export function SwotFactorInput({ analysisId, onFactorsChange }: Props) {
                   }
                 }}
                 placeholder="Nhập yếu tố..."
-                className="flex-1 text-sm px-2 py-1 border-2 border-ink bg-white focus:outline-none font-body"
+                className="flex-1 text-sm px-2 py-1 border-2 border-ink bg-card focus:outline-none font-body"
               />
-              <button onClick={() => handleAdd(q)} className="px-2 py-1 border-2 border-ink bg-white hover:bg-ink hover:text-white transition-colors">
+              <button onClick={() => handleAdd(q)} className="px-2 py-1 border-2 border-ink bg-card hover:bg-ink hover:text-white transition-colors">
                 <Plus className="size-4" />
               </button>
             </div>
