@@ -108,7 +108,7 @@ export function TransitionPreviewModal({
             {carriedHoshins.length > 0 ? (
               <section>
                 <h3 className="font-display font-bold text-lg mb-3 flex items-center gap-2">
-                  <ArrowRight className="w-5 h-5 text-green-700" />
+                  <ArrowRight className="w-5 h-5 text-kpi-healthy-strong" />
                   Carry sang {newYear} ({carriedHoshins.length})
                 </h3>
                 <div className="space-y-3">
@@ -134,7 +134,7 @@ export function TransitionPreviewModal({
                           <div className="font-display font-bold text-ink">
                             {h.newTitle}
                           </div>
-                          <span className="inline-block mt-1 text-xs bg-white border border-ink px-2 py-0.5">
+                          <span className="inline-block mt-1 text-xs bg-card border border-ink px-2 py-0.5">
                             CARRY AS-IS
                           </span>
                         </div>

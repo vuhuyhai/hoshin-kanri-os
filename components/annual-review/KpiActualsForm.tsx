@@ -51,9 +51,9 @@ export function KpiActualsForm({ kpis, actuals, onChange, disabled }: Props) {
   }
 
   const colorForPct = (pct: number): string => {
-    if (pct >= 100) return 'text-green-700 bg-green-50'
-    if (pct >= 70) return 'text-yellow-700 bg-yellow-50'
-    return 'text-red-700 bg-red-50'
+    if (pct >= 100) return 'text-kpi-healthy-fg bg-kpi-healthy'
+    if (pct >= 70) return 'text-kpi-attention-fg bg-kpi-attention'
+    return 'text-kpi-warning-fg bg-kpi-warning'
   }
 
   if (kpis.length === 0) {

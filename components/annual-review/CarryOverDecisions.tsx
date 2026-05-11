@@ -97,28 +97,28 @@ export function CarryOverDecisions({
             <div
               key={flag.hoshinId}
               className={`border-2 border-ink p-4 ${
-                isFlagged ? 'bg-red-50' : 'bg-bg-paper'
+                isFlagged ? 'bg-kpi-warning' : 'bg-bg-paper'
               }`}
             >
               <header className="flex items-start gap-2 mb-3">
                 {isFlagged ? (
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                 ) : (
-                  <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-5 h-5 text-kpi-healthy-strong shrink-0 mt-0.5" />
                 )}
                 <div className="flex-1">
                   <h3 className="font-display font-bold text-ink">
                     {flag.hoshinTitle}
                   </h3>
                   {isFlagged ? (
-                    <p className="text-red-700 text-xs mt-1">
+                    <p className="text-destructive text-xs mt-1">
                       {flag.redKpis.length} KPI &lt; 70%:{' '}
                       {flag.redKpis
                         .map((k) => `${k.kpiName} (${k.achievementPct}%)`)
                         .join(', ')}
                     </p>
                   ) : (
-                    <p className="text-green-700 text-xs mt-1">
+                    <p className="text-kpi-healthy-strong text-xs mt-1">
                       Đạt target — gợi ý drop natural
                     </p>
                   )}

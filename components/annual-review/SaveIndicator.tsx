@@ -23,7 +23,7 @@ export function SaveIndicator({ status, lastSavedAt }: Props) {
 
   if (status === 'error') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-red-600 text-xs">
+      <span className="inline-flex items-center gap-1.5 text-destructive text-xs">
         <AlertCircle className="w-3 h-3" />
         Lỗi lưu
       </span>
@@ -38,7 +38,7 @@ export function SaveIndicator({ status, lastSavedAt }: Props) {
         })
       : '—'
     return (
-      <span className="inline-flex items-center gap-1.5 text-green-700 text-xs">
+      <span className="inline-flex items-center gap-1.5 text-kpi-healthy-strong text-xs">
         <Check className="w-3 h-3" />
         Đã lưu lúc {time}
       </span>

@@ -190,7 +190,7 @@ export function CompleteButton(props: Props) {
           </h3>
           {errors.length > 0 ? (
             <details className="mt-2">
-              <summary className="text-red-700 text-sm font-medium cursor-pointer">
+              <summary className="text-destructive text-sm font-medium cursor-pointer">
                 Còn {errors.length} mục cần hoàn tất (click xem)
               </summary>
               <ul className="mt-2 space-y-1 text-xs text-text-2">
@@ -205,7 +205,7 @@ export function CompleteButton(props: Props) {
               </ul>
             </details>
           ) : (
-            <p className="text-green-700 text-sm mt-1">✓ Sẵn sàng hoàn tất</p>
+            <p className="text-kpi-healthy-strong text-sm mt-1">✓ Sẵn sàng hoàn tất</p>
           )}
         </div>
         <button
