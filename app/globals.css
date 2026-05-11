@@ -805,9 +805,15 @@ main > * {
   .btn-secondary:hover  { transform: translate(-3px,-3px); box-shadow: var(--shadow-md); }
   .btn-secondary:active { transform: translate(2px,2px);   box-shadow: none; }
 
-  /* Cards — subtle tier */
+  /* Cards — subtle tier
+     M-Design-Tangential-Cleanup-1 Commit 1: background var(--white) → var(--card).
+     --card (shadcn neutral surface) is the correct semantic for elevated card
+     backgrounds. --white is reserved per Tokens-Cleanup-1 §17 constraint as
+     "high-contrast text on saturated brand surface" (e.g. --kpi-critical-fg).
+     L48 foundation completion: --card has :root + .dark override + @theme mirror,
+     so future dark re-enable cascades automatically without touching this rule. */
   .card-subtle {
-    background: var(--white);
+    background: var(--card);
     border: 1px solid var(--bg-muted);
     transition: background 0.15s ease;
   }
