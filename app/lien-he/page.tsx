@@ -138,7 +138,7 @@ export default function LienHePage() {
                   id="name"
                   name="name"
                   required
-                  className="w-full border-2 border-ink bg-white px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent"
+                  className="w-full border-2 border-ink bg-card px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent"
                 />
               </div>
 
@@ -152,7 +152,7 @@ export default function LienHePage() {
                   id="email"
                   name="email"
                   required
-                  className="w-full border-2 border-ink bg-white px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent"
+                  className="w-full border-2 border-ink bg-card px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent"
                 />
               </div>
 
@@ -165,7 +165,7 @@ export default function LienHePage() {
                   type="text"
                   id="company"
                   name="company"
-                  className="w-full border-2 border-ink bg-white px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent"
+                  className="w-full border-2 border-ink bg-card px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent"
                 />
               </div>
 
@@ -177,7 +177,7 @@ export default function LienHePage() {
                 <select
                   id="subject"
                   name="subject"
-                  className="w-full border-2 border-ink bg-white px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent appearance-none cursor-pointer"
+                  className="w-full border-2 border-ink bg-card px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent appearance-none cursor-pointer"
                 >
                   <option value="demo">Tìm hiểu sản phẩm / Demo</option>
                   <option value="support">Hỗ trợ kỹ thuật</option>
@@ -198,7 +198,7 @@ export default function LienHePage() {
                   name="message"
                   rows={5}
                   required
-                  className="w-full border-2 border-ink bg-white px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent resize-y"
+                  className="w-full border-2 border-ink bg-card px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent resize-y"
                 />
               </div>
 
