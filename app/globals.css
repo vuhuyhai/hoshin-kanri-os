@@ -819,12 +819,19 @@ main > * {
   }
   .card-subtle:hover { background: var(--bg-muted); }
 
-  /* Input */
+  /* Input
+     M-Design-Tangential-Cleanup-1 Commit 4: background var(--white) → var(--card).
+     Parallel fix to .card-subtle Commit 1 (b0edc91): --card (shadcn neutral
+     surface) is the correct semantic for elevated input backgrounds. --white
+     is reserved per Tokens-Cleanup-1 §17 constraint as "high-contrast text on
+     saturated brand surface" (e.g. --kpi-critical-fg).
+     L48 foundation completion: --card has :root + .dark override + @theme mirror,
+     so future dark re-enable cascades automatically without touching this rule. */
   .input-brutal {
     font-family: var(--font-body);
     font-size: 18px;
     line-height: 1.75;
-    background: var(--white);
+    background: var(--card);
     color: var(--ink);
     border: 2px solid var(--ink);
     border-radius: var(--radius-md);
