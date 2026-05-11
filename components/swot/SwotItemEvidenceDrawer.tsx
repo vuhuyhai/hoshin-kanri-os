@@ -88,7 +88,7 @@ export function SwotItemEvidenceDrawer({ ingredientId, onClose }: SwotItemEviden
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-[480px] border-l-2 border-ink bg-bg-warm p-0 flex flex-col">
-        <SheetHeader className="border-b-2 border-ink bg-white p-4">
+        <SheetHeader className="border-b-2 border-ink bg-card p-4">
           <div className="flex items-center gap-2">
             <Search className="w-5 h-5 text-ink" />
             <SheetTitle className="font-body font-black uppercase tracking-wider text-ink">
@@ -101,7 +101,7 @@ export function SwotItemEvidenceDrawer({ ingredientId, onClose }: SwotItemEviden
         </SheetHeader>
 
         {queryStr && (
-          <div className="border-b-2 border-ink bg-white px-4 py-3">
+          <div className="border-b-2 border-ink bg-card px-4 py-3">
             <p className="font-body font-bold uppercase text-[11px] tracking-wider text-text-3 mb-1">
               Query AI đã tạo
             </p>
@@ -121,7 +121,7 @@ export function SwotItemEvidenceDrawer({ ingredientId, onClose }: SwotItemEviden
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="border-2 border-ink bg-white p-3 shadow-[3px_3px_0_#2C2B2B] animate-pulse">
+              <div key={i} className="border-2 border-ink bg-card p-3 shadow-[3px_3px_0_#2C2B2B] animate-pulse">
                 <div className="h-4 bg-bg-warm w-3/4 mb-2" />
                 <div className="h-3 bg-bg-warm w-full mb-1" />
                 <div className="h-3 bg-bg-warm w-5/6" />
@@ -136,7 +136,7 @@ export function SwotItemEvidenceDrawer({ ingredientId, onClose }: SwotItemEviden
               const added = !!ingredient && ingredient.evidence.some((e) => e.url === r.url)
               const dateStr = formatDate(r.published_date)
               return (
-                <div key={r.url + i} className="border-2 border-ink bg-white p-3 shadow-[3px_3px_0_#2C2B2B]">
+                <div key={r.url + i} className="border-2 border-ink bg-card p-3 shadow-[3px_3px_0_#2C2B2B]">
                   <a
                     href={r.url}
                     target="_blank"
@@ -157,7 +157,7 @@ export function SwotItemEvidenceDrawer({ ingredientId, onClose }: SwotItemEviden
                     type="button"
                     onClick={() => addToIngredient(r)}
                     disabled={added}
-                    className="mt-2 inline-flex items-center gap-1 border-2 border-ink bg-bg-warm px-2 py-1 font-body font-bold uppercase text-[11px] tracking-wider text-ink hover:bg-accent-brand hover:text-white disabled:bg-green-100 disabled:text-green-800 disabled:cursor-default transition-colors"
+                    className="mt-2 inline-flex items-center gap-1 border-2 border-ink bg-bg-warm px-2 py-1 font-body font-bold uppercase text-[11px] tracking-wider text-ink hover:bg-accent-brand hover:text-white disabled:bg-accent-lime disabled:text-ink disabled:cursor-default transition-colors"
                   >
                     {added ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                     {added ? 'Đã thêm' : 'Thêm vào nguyên liệu'}

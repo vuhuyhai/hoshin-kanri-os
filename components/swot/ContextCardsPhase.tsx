@@ -73,7 +73,7 @@ export function ContextCardsPhase({ orgContext, summary, onBack, onContinue }: C
     return (
       <div className="mx-auto max-w-lg py-12 text-center space-y-6">
         <div
-          className="inline-flex items-center justify-center w-20 h-20 border-2 border-ink bg-white"
+          className="inline-flex items-center justify-center w-20 h-20 border-2 border-ink bg-card"
           style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
         >
           <Loader2 className="w-10 h-10 text-ink animate-spin" />
@@ -95,10 +95,10 @@ export function ContextCardsPhase({ orgContext, summary, onBack, onContinue }: C
     return (
       <div className="mx-auto max-w-lg py-12 text-center space-y-6">
         <div
-          className="inline-flex items-center justify-center w-20 h-20 border-2 border-ink bg-white"
+          className="inline-flex items-center justify-center w-20 h-20 border-2 border-ink bg-card"
           style={{ boxShadow: '4px 4px 0 #2C2B2B' }}
         >
-          <AlertTriangle className="w-10 h-10 text-[#c73937]" />
+          <AlertTriangle className="w-10 h-10 text-destructive" />
         </div>
         <div className="space-y-2">
           <h2 className="font-display font-black text-xl uppercase text-ink">
@@ -137,7 +137,7 @@ export function ContextCardsPhase({ orgContext, summary, onBack, onContinue }: C
 
       <div className="text-center space-y-2">
         <div
-          className="inline-flex items-center justify-center w-14 h-14 border-2 border-ink bg-white"
+          className="inline-flex items-center justify-center w-14 h-14 border-2 border-ink bg-card"
           style={{ boxShadow: '3px 3px 0 #2C2B2B' }}
         >
           <Globe className="w-7 h-7 text-ink" />

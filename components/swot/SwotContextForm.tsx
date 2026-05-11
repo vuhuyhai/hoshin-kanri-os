@@ -50,7 +50,7 @@ interface SwotContextFormProps {
 }
 
 const LABEL = 'font-body font-bold uppercase text-sm tracking-wider text-ink mb-1.5 block'
-const INPUT = 'w-full border-2 border-ink bg-white px-3 py-2.5 font-display text-[15px] text-ink placeholder:text-text-3/70 focus:outline-none focus:shadow-[3px_3px_0_#2C2B2B] transition-shadow'
+const INPUT = 'w-full border-2 border-ink bg-card px-3 py-2.5 font-display text-[15px] text-ink placeholder:text-text-3/70 focus:outline-none focus:shadow-[3px_3px_0_#2C2B2B] transition-shadow'
 const HINT = 'font-display text-sm text-text-2 italic'
 
 function GroupHeader({ icon, title }: { icon: string; title: string }) {
@@ -63,7 +63,7 @@ function GroupHeader({ icon, title }: { icon: string; title: string }) {
 
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null
-  return <p className="font-body text-xs text-red-600 mt-1">{msg}</p>
+  return <p className="font-body text-xs text-destructive mt-1">{msg}</p>
 }
 
 export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContextFormProps) {
@@ -92,7 +92,7 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
   const [errors, setErrors] = useState<Record<string, string>>({})
   const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((p) => ({ ...p, [k]: v }))
-  const errCls = (k: string) => (errors[k] ? ' border-red-500' : '')
+  const errCls = (k: string) => (errors[k] ? ' border-destructive' : '')
 
   const handleSubmit = () => {
     const result = schema.safeParse({
@@ -132,14 +132,14 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
 
       <div>
         <GroupHeader icon="🏛️" title="Nền tảng doanh nghiệp" />
-        <div className="border-2 border-t-0 border-ink bg-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-[5px_5px_0_#2C2B2B]">
+        <div className="border-2 border-t-0 border-ink bg-card p-4 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-[5px_5px_0_#2C2B2B]">
           <div data-field="industry">
-            <label className={LABEL}>Ngành kinh doanh <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Ngành kinh doanh <span className="text-destructive">*</span></label>
             <input value={form.industry} onChange={(e) => update('industry', e.target.value)} placeholder="F&B, Fitness..." className={INPUT + errCls('industry')} />
             <FieldError msg={errors.industry} />
           </div>
           <div data-field="headcount">
-            <label className={LABEL}>Quy mô nhân sự <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Quy mô nhân sự <span className="text-destructive">*</span></label>
             <select value={form.headcount} onChange={(e) => update('headcount', e.target.value as Headcount)} className={INPUT + ' appearance-none' + errCls('headcount')}>
               <option value="" disabled>-- Chọn quy mô --</option>
               <option value="1-10">1 – 10 người</option>
@@ -149,7 +149,7 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
             <FieldError msg={errors.headcount} />
           </div>
           <div data-field="mainMarket" className="md:col-span-2">
-            <label className={LABEL}>Thị trường chính <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Thị trường chính <span className="text-destructive">*</span></label>
             <input value={form.mainMarket} onChange={(e) => update('mainMarket', e.target.value)} placeholder="TP.HCM, Hà Nội, cả nước..." className={INPUT + errCls('mainMarket')} />
             <FieldError msg={errors.mainMarket} />
           </div>
@@ -158,10 +158,10 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
 
       <div>
         <GroupHeader icon="📊" title="Bức tranh kinh doanh" />
-        <div className="border-2 border-t-0 border-ink bg-white p-4 space-y-4 shadow-[5px_5px_0_#2C2B2B]">
+        <div className="border-2 border-t-0 border-ink bg-card p-4 space-y-4 shadow-[5px_5px_0_#2C2B2B]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div data-field="revenueRange">
-              <label className={LABEL}>Doanh thu năm gần nhất <span className="text-red-500">*</span></label>
+              <label className={LABEL}>Doanh thu năm gần nhất <span className="text-destructive">*</span></label>
               <select value={form.revenueRange} onChange={(e) => update('revenueRange', e.target.value as Revenue)} className={INPUT + ' appearance-none' + errCls('revenueRange')}>
                 <option value="" disabled>-- Chọn khoảng --</option>
                 {REVENUES.map((r) => <option key={r} value={r}>{REVENUE_LABELS[r]}</option>)}
@@ -169,12 +169,12 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
               <FieldError msg={errors.revenueRange} />
             </div>
             <div data-field="revenueTrend">
-              <label className={LABEL}>Xu hướng doanh thu <span className="text-red-500">*</span></label>
+              <label className={LABEL}>Xu hướng doanh thu <span className="text-destructive">*</span></label>
               <div className="grid grid-cols-3 gap-2">
                 {TREND_OPTIONS.map(({ value, label, Icon }) => {
                   const active = form.revenueTrend === value
                   return (
-                    <button key={value} type="button" onClick={() => update('revenueTrend', value)} className={`border-2 border-ink px-2 py-2 font-body font-bold uppercase text-[11px] tracking-wider flex flex-col items-center gap-1 transition-all ${active ? 'bg-ink text-white shadow-[3px_3px_0_#2C2B2B]' : 'bg-white text-ink hover:bg-bg-warm'}`}>
+                    <button key={value} type="button" onClick={() => update('revenueTrend', value)} className={`border-2 border-ink px-2 py-2 font-body font-bold uppercase text-[11px] tracking-wider flex flex-col items-center gap-1 transition-all ${active ? 'bg-ink text-white shadow-[3px_3px_0_#2C2B2B]' : 'bg-card text-ink hover:bg-bg-warm'}`}>
                       <Icon className="w-4 h-4" /> {label}
                     </button>
                   )
@@ -184,12 +184,12 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
             </div>
           </div>
           <div data-field="coreProducts">
-            <label className={LABEL}>Sản phẩm / Dịch vụ chính <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Sản phẩm / Dịch vụ chính <span className="text-destructive">*</span></label>
             <textarea value={form.coreProducts} onChange={(e) => update('coreProducts', e.target.value)} rows={3} placeholder="VD: PT 1-1 (~60% DT), Lớp nhóm (~40%)" className={INPUT + ' resize-none' + errCls('coreProducts')} />
             <FieldError msg={errors.coreProducts} />
           </div>
           <div data-field="targetCustomers">
-            <label className={LABEL}>Khách hàng mục tiêu <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Khách hàng mục tiêu <span className="text-destructive">*</span></label>
             <textarea value={form.targetCustomers} onChange={(e) => update('targetCustomers', e.target.value)} rows={2} placeholder="VD: NVVP 25-40 tuổi tại Hà Nội, cần kết quả nhanh và lịch linh hoạt" className={INPUT + ' resize-none' + errCls('targetCustomers')} />
             <FieldError msg={errors.targetCustomers} />
           </div>
@@ -199,24 +199,24 @@ export function SwotContextForm({ orgData, xrayContext, onComplete }: SwotContex
 
       <div>
         <GroupHeader icon="⚔️" title="Cạnh tranh & Nội tại" />
-        <div className="border-2 border-t-0 border-ink bg-white p-4 space-y-4 shadow-[5px_5px_0_#2C2B2B]">
+        <div className="border-2 border-t-0 border-ink bg-card p-4 space-y-4 shadow-[5px_5px_0_#2C2B2B]">
           <div data-field="mainCompetitors">
-            <label className={LABEL}>Đối thủ cạnh tranh chính <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Đối thủ cạnh tranh chính <span className="text-destructive">*</span></label>
             <textarea value={form.mainCompetitors} onChange={(e) => update('mainCompetitors', e.target.value)} rows={3} placeholder={'VD: California Fitness – cơ sở vật chất lớn, thương hiệu mạnh\nStudio ABC – giá thấp hơn 30%'} className={INPUT + ' resize-none' + errCls('mainCompetitors')} />
             <FieldError msg={errors.mainCompetitors} />
           </div>
           <div data-field="competitiveAdvantage">
-            <label className={LABEL}>Lý do khách hàng chọn bạn <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Lý do khách hàng chọn bạn <span className="text-destructive">*</span></label>
             <textarea value={form.competitiveAdvantage} onChange={(e) => update('competitiveAdvantage', e.target.value)} rows={2} placeholder="VD: HLV certified quốc tế, tỷ lệ giữ khách 70%+, tư vấn dinh dưỡng" className={INPUT + ' resize-none' + errCls('competitiveAdvantage')} />
             <FieldError msg={errors.competitiveAdvantage} />
           </div>
           <div data-field="yearGoal">
-            <label className={LABEL}>Mục tiêu năm nay <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Mục tiêu năm nay <span className="text-destructive">*</span></label>
             <textarea value={form.yearGoal} onChange={(e) => update('yearGoal', e.target.value)} rows={2} placeholder="Tăng doanh thu 40%, mở 2 chi nhánh mới..." className={INPUT + ' resize-none' + errCls('yearGoal')} />
             <FieldError msg={errors.yearGoal} />
           </div>
           <div data-field="topChallenges">
-            <label className={LABEL}>Thách thức lớn nhất <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Thách thức lớn nhất <span className="text-destructive">*</span></label>
             <textarea value={form.topChallenges} onChange={(e) => update('topChallenges', e.target.value)} rows={3} placeholder="Chi phí vận hành tăng, khó tuyển nhân sự, cạnh tranh gay gắt..." className={INPUT + ' resize-none' + errCls('topChallenges')} />
             <FieldError msg={errors.topChallenges} />
           </div>

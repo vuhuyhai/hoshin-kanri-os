@@ -65,7 +65,7 @@ export function SwotDraftCard({
   return (
     <div
       data-item-id={item.id}
-      className="group border-2 border-ink bg-white p-3 transition-shadow hover:shadow-[2px_2px_0_#2C2B2B]"
+      className="group border-2 border-ink bg-card p-3 transition-shadow hover:shadow-[2px_2px_0_#2C2B2B]"
       style={{ borderLeft: `4px solid ${confidenceAccent}` }}
     >
       {isEditing ? (
@@ -76,7 +76,7 @@ export function SwotDraftCard({
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={2}
-            className="w-full font-body text-sm border-2 border-ink bg-white p-2 resize-none focus:outline-none"
+            className="w-full font-body text-sm border-2 border-ink bg-card p-2 resize-none focus:outline-none"
           />
           <div className="flex gap-2 text-xs">
             <button
@@ -87,7 +87,7 @@ export function SwotDraftCard({
             </button>
             <button
               onClick={handleCancel}
-              className="px-2 py-1 bg-white text-ink border-2 border-ink font-display font-bold"
+              className="px-2 py-1 bg-card text-ink border-2 border-ink font-display font-bold"
             >
               Huỷ
             </button>
@@ -106,7 +106,7 @@ export function SwotDraftCard({
                 </span>
               )}
               {item.isUserAdded && (
-                <span className="font-display font-bold text-[10px] px-1.5 py-0.5 border-2 border-ink bg-white text-ink">
+                <span className="font-display font-bold text-[10px] px-1.5 py-0.5 border-2 border-ink bg-card text-ink">
                   Tự thêm
                 </span>
               )}
@@ -122,7 +122,7 @@ export function SwotDraftCard({
               </button>
               <button
                 onClick={onDelete}
-                className="text-text-2 hover:text-[#c73937] hover:bg-bg-warm p-1"
+                className="text-text-2 hover:text-destructive hover:bg-bg-warm p-1"
                 title="Xoá"
               >
                 <XIcon className="w-3 h-3" />

@@ -20,7 +20,7 @@ export function SwotConflictBadge({
 
   return (
     <div
-      className="mt-2 p-2 text-xs border-2 border-ink bg-white"
+      className="mt-2 p-2 text-xs border-2 border-ink bg-card"
       style={{ boxShadow: '2px 2px 0 #2C2B2B' }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -38,7 +38,7 @@ export function SwotConflictBadge({
         </div>
         <button
           onClick={onDismiss}
-          className="shrink-0 text-[10px] px-1.5 py-0.5 border-2 border-ink font-display font-bold text-ink bg-white hover:bg-[#F7F5F2] transition-colors"
+          className="shrink-0 text-[10px] px-1.5 py-0.5 border-2 border-ink font-display font-bold text-ink bg-card hover:bg-bg-warm transition-colors"
         >
           Bỏ qua
         </button>

@@ -24,7 +24,7 @@ export function ContextCardItem({ card }: ContextCardItemProps) {
 
   return (
     <div
-      className="bg-white border-2 border-ink p-4 space-y-2"
+      className="bg-card border-2 border-ink p-4 space-y-2"
       style={{
         boxShadow: '4px 4px 0 #2C2B2B',
         borderLeft: `8px solid ${qConfig.accent}`,
@@ -45,7 +45,7 @@ export function ContextCardItem({ card }: ContextCardItemProps) {
         {card.insight}
       </p>
       <div className="flex items-center gap-2">
-        <span className="font-display font-bold text-[10px] uppercase px-2 py-0.5 border-2 border-ink bg-white text-ink">
+        <span className="font-display font-bold text-[10px] uppercase px-2 py-0.5 border-2 border-ink bg-card text-ink">
           {typeLabel}
         </span>
         {card.relevance_score >= 0.8 && (

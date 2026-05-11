@@ -158,20 +158,20 @@ export function SwotFrameworkPicker({
 
       <div className="border-2 border-ink/20 bg-bg-warm p-3 space-y-1.5">
         <div className="flex items-center gap-2 text-xs">
-          {swValid ? <Check className="w-3 h-3 text-[#10b981]" /> : <Square className="w-3 h-3 text-text-3" />}
+          {swValid ? <Check className="w-3 h-3 text-kpi-healthy-strong" /> : <Square className="w-3 h-3 text-text-3" />}
           <span className={`font-body ${swValid ? 'text-ink font-medium' : 'text-text-3'}`}>
             Đã chọn {swCount} yếu tố SW
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          {otValid ? <Check className="w-3 h-3 text-[#10b981]" /> : <Square className="w-3 h-3 text-text-3" />}
+          {otValid ? <Check className="w-3 h-3 text-kpi-healthy-strong" /> : <Square className="w-3 h-3 text-text-3" />}
           <span className={`font-body ${otValid ? 'text-ink font-medium' : 'text-text-3'}`}>
             Đã chọn {otCount} yếu tố OT
           </span>
         </div>
       </div>
 
-      {error && <p className="font-body text-sm text-[#c73937] font-medium">{error}</p>}
+      {error && <p className="font-body text-sm text-destructive font-medium">{error}</p>}
     </div>
   )
 }

@@ -29,7 +29,7 @@ interface Tier1Props {
 
 function ErrorMsg({ msg }: { msg?: string }) {
   if (!msg) return null
-  return <p className="font-body text-xs text-[#c73937]">{msg}</p>
+  return <p className="font-body text-xs text-destructive">{msg}</p>
 }
 
 export function SwotContextFormTier1({

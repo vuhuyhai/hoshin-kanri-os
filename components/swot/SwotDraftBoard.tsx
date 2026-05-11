@@ -126,7 +126,7 @@ function QuadrantSection({
   const Icon = config.Icon
   return (
     <div
-      className="border-2 border-ink bg-white p-4 relative"
+      className="border-2 border-ink bg-card p-4 relative"
       style={{ boxShadow: '4px 4px 0 #2C2B2B', borderLeft: `8px solid ${config.accent}` }}
     >
       {contextInput ? (

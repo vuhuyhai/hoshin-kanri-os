@@ -25,17 +25,17 @@ export function SwotGuideStep({
       {/* Step indicator + connector */}
       <div className="hidden lg:flex flex-col items-center shrink-0">
         <div
-          className="w-10 h-10 flex items-center justify-center bg-black text-white font-display font-black text-lg border-2 border-black"
+          className="w-10 h-10 flex items-center justify-center bg-ink text-white font-display font-black text-lg border-2 border-ink"
           aria-hidden="true"
         >
           {stepNumber}
         </div>
-        {!isLast && <div className="w-0.5 flex-1 bg-gray-300 mt-1" />}
+        {!isLast && <div className="w-0.5 flex-1 bg-bg-muted-warm mt-1" />}
       </div>
 
       {/* Card */}
       <div
-        className="flex-1 bg-white border-2 p-6 transition-all duration-150 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+        className="flex-1 bg-card border-2 p-6 transition-all duration-150 hover:translate-x-[-2px] hover:translate-y-[-2px]"
         style={{
           borderColor: '#2C2B2B',
           boxShadow: '4px 4px 0px #2C2B2B',
@@ -49,7 +49,7 @@ export function SwotGuideStep({
       >
         {/* Mobile step number */}
         <div className="lg:hidden mb-3 flex items-center gap-2">
-          <div className="w-8 h-8 flex items-center justify-center bg-black text-white font-display font-black text-sm border-2 border-black">
+          <div className="w-8 h-8 flex items-center justify-center bg-ink text-white font-display font-black text-sm border-2 border-ink">
             {stepNumber}
           </div>
           <span className="font-display font-bold text-xs uppercase tracking-widest text-text-3">
@@ -105,7 +105,7 @@ export function SwotGuideStep({
             backgroundColor: '#FFF5F5',
           }}
         >
-          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-[#c73937]" />
+          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-accent-brand" />
           <span className="text-text-2">{tip}</span>
         </div>
       </div>

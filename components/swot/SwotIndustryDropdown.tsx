@@ -64,7 +64,7 @@ export function SwotIndustryDropdown({
           />
         </button>
         {isOpen && (
-          <div className="absolute top-full left-0 w-full bg-white border-2 border-ink shadow-brutal-md z-50 max-h-64 overflow-y-auto">
+          <div className="absolute top-full left-0 w-full bg-card border-2 border-ink shadow-brutal-md z-50 max-h-64 overflow-y-auto">
             {INDUSTRY_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -87,7 +87,7 @@ export function SwotIndustryDropdown({
           </div>
         )}
       </div>
-      {error && <p className="font-body text-xs text-[#c73937]">{error}</p>}
+      {error && <p className="font-body text-xs text-destructive">{error}</p>}
     </div>
   )
 }
