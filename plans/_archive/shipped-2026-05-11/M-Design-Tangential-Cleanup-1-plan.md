@@ -419,3 +419,134 @@ Q1 (commit cadence), Q2 (mapping table + Q2-sub-α/β white-alpha + Q2-sub on `-
 | Task 1.5 corrected | 2026-05-11 | `0d6a792` | 306 raw + 32 arbitrary hex / 72 files (post-shadcn-exclude) |
 | Task 7 Auth audit-fix | 2026-05-11 | `b6846a6` | 9 occ predicted → 5× text-red-600 → text-destructive + 1× hover:bg-gray-50 → hover:bg-bg-muted. 4 keep-raw (1× bg-white Google btn + 3× text-white/N on dark panel). Net 6 migrations / 4 audit-fix. |
 | Task 8 X-Ray audit-fix | 2026-05-11 | `b6846a6` | 10 occ predicted → **0 migrated**. All 10 fall under keep-raw precedents (Q2-sub-α + Q2 ext saturated brand/dark + Ambiguous 1 C elevated white card). Doc-only commit recording decision. |
+
+---
+
+## Close-out 2026-05-11
+
+**Status**: ✅ SHIPPED — 14 sub-bucket commits + 2 foundation + 1 audit-fix + 1 plan-doc close-out (this section). Branch `master` ahead `origin/master` by 17 commits pending push batch.
+
+### Final cumulative metrics
+
+| Metric | Value |
+|---|---|
+| Total commits | 14 atomic + 2 foundation (1 + 4) + 1 audit-fix (5) + 1 plan-doc (this close-out) = **15 in-milestone commits** (Task 1 plan `85fbcc5` pre-existed) |
+| Real migrations cumulative | **~200 occurrences across ~65 files / 9 consumer buckets** |
+| Keep-raw cumulative | **~70 occurrences documented** (Q2-sub-α dark surface + Q2 extended saturated-brand + Ambiguous 1 C elevated cards on warm cream + Hoshin Explorer 2-color category + AI sparkle hex) |
+| Migration ratio (real ÷ baseline) | **~65%** avg cumulative (200 ÷ 304 baseline) — semantic-context per-occurrence audit reveal keep-raw justified majority cases |
+| Foundation tokens introduced | **0 net-new tokens** (L48 verified — all consumes existing `--bg-warm/--bg-muted/--bg-paper/--ink/--text-2/--text-3/--brand/--accent-{yellow,cyan,lime,pink,peach,lavender}/--card/--kpi-*` family) |
+| Business logic / state / JSX structure delta | **0 change** — pure styling refactor |
+| `dark:*` variants touched | **0** (V6 confirmed 0 in repo cross-milestone) |
+
+### Final bucket ratio table
+
+| Bucket | Files | Real migration | Keep-raw | Ratio | Commit hash |
+|---|---:|---:|---:|---:|---|
+| Foundation `.card-subtle` | 1 CSS | 1 | 0 | — | `b0edc91` Commit 1 |
+| lien-he | 1 | 5 | 0 | 100% | `0d220cc` Commit 2 |
+| Foundation `.input-brutal` | 1 CSS | 1 | 0 | — | `0d6a792` Commit 4 |
+| Task 1.5 audit doc | — | — | — | — | `a922ed3` Commit 5 |
+| X-Matrix canvas | 3 | 1 | 4 | 20% | `947a2c4` Commit 6 |
+| Auth | 4 | 6 | 4 (Ambig 1C + dark panel) | 67% | `b6846a6` Commit 7 |
+| X-Ray (doc-only) | 3 | 0 | 10 (Q2-sub-α + ext saturated + Ambig 1C) | 0% | `955036a` Commit 8 |
+| Annual-review | 5 | 14 | 3 | 82% | `ce17b7d` Commit 9 |
+| Admin | 7 | 2 | 18 (Hoshin Explorer 2-color category keep-raw) | 10% | `29fe6f5` Commit 10 |
+| Dashboard 11a Surface | partial | ~20 | ~5 | — | `3a3a883` Commit 11a |
+| Dashboard 11b KPI status | partial | ~14 | ~2 | — | `cb4a365` Commit 11b |
+| Dashboard 11c Discovery | partial | ~13 | ~5 | — | `0825f2c` Commit 11c |
+| **Dashboard total** | 14 | 47 | 19 (incl. AI sparkle hex keep-raw) | **71%** | (sum) |
+| SWOT 9a Workshop+Chat | partial | 39 | ~17 | 70% | `c8a8e01` Commit 12 |
+| SWOT 9b Context+Drafts+Canvas | partial | 60 | ~15 | 80% | `276307c` Commit 13 |
+| SWOT 9c TOWS+Synthesis+Finalize | partial | 31 | ~15 | 67% | `4a8de48` Commit 14 |
+| **SWOT total** | 32 | 130 | ~47 | **74%** | (sum) |
+| **TOTAL** | **~65** | **~200** | **~70** | **~65%** | — |
+
+### 14 commits list
+
+1. `85fbcc5` — Task 1 plan
+2. `b0edc91` — Commit 1 `.card-subtle` foundation `var(--white)` → `var(--card)`
+3. `0d220cc` — Commit 2 lien-he 5× `bg-white` → `bg-card`
+4. `0d6a792` — Commit 4 `.input-brutal` foundation `var(--white)` → `var(--card)`
+5. `a922ed3` — Commit 5 Task 1.5 corrected re-audit + revised V3 + bucket order
+6. `947a2c4` — Commit 6 X-Matrix canvas `amber-600` → `kpi-attention-strong`
+7. `b6846a6` — Commit 7 Auth (6 migrations / 4 keep-raw audit-fix)
+8. `955036a` — Commit 8 X-Ray 0-net-migration doc-only
+9. `ce17b7d` — Commit 9 Annual-review (14 migrations / 3 keep-raw)
+10. `29fe6f5` — Commit 10 Admin (Hoshin Explorer 2-color category keep-raw scope)
+11. `3a3a883` — Commit 11a Dashboard surface
+12. `cb4a365` — Commit 11b Dashboard KPI status
+13. `0825f2c` — Commit 11c Dashboard discovery decoration
+14. `c8a8e01` — Commit 12 SWOT 9a Workshop+Chat
+15. `276307c` — Commit 13 SWOT 9b Context+Drafts+Canvas
+16. `4a8de48` — Commit 14 SWOT 9c TOWS+Synthesis+Finalize (FINAL pre close-out)
+17. `<close-out hash>` — this close-out docs commit (HANDOFF §16/§17/§18 + plan archive + plans/README update)
+
+### Smoke test status — deferred manual Phase A
+
+Per L42 partial coverage convention reinforced lần 8 (cumulative across M-KPI-Mgmt-1 → M-KPI-Restore-1 → M-Design-Tailwind-Cleanup-1 → M-Cleanup-batch-2026-05-09 → M-RateLimit-Generic-1 → M-Design-Tokens-Cleanup-1 → M-Design-Dark-1 → this), Phase A visual smoke deferred manual anh Vũ Hải khi tiện cross 10 routes (high-priority user-facing first):
+
+| Priority | Route | Bucket | Verify |
+|---|---|---|---|
+| HIGH | `/lien-he` | lien-he | 5 form inputs `bg-card` warm card |
+| HIGH | `/login` + `/register` + `/update-password` + `/reset-password` | Auth | Red error inline + Google btn elevated card + dark panel `text-white/N` preserved |
+| HIGH | `/dashboard` | Dashboard 11a top-level | Surface tokens render NB v3.2 warm |
+| HIGH | `/dashboard/kpi` | Dashboard 11b KPI status | KpiCard 3-tier render + threshold gradient |
+| MEDIUM | `/dashboard/settings` | Dashboard 11a (settings subset) | Form inputs + section dividers |
+| MEDIUM | `/dashboard/discovery` (+ swot/pain-mapper/vision-workshop/synthesis/benchmark/xray-history) | Dashboard 11c | Gradient stickers + CTA brand red + status pills |
+| MEDIUM | `/dashboard/x-matrix/new` | X-Matrix canvas | CenterX KPI badge `kpi-attention-strong` color + HoshinEditModal warning |
+| MEDIUM | `/dashboard/discovery/swot` workshop entry | SWOT 9a Workshop+Chat | SwotWorkshopChat + SwotChatComposer color hierarchy |
+| MEDIUM | `/dashboard/discovery/swot` draft + canvas | SWOT 9b Context+Drafts+Canvas | TowsCanvas + SwotContextForm + SwotFrameworkPicker render |
+| MEDIUM | `/dashboard/discovery/synthesis` | SWOT 9c TOWS+Synthesis+Finalize | TowsStrategy 4-quadrant + SwotFinalizeList |
+| LOW | `/admin/hoshin-explorer` | Admin (super-admin) | 2-color category keep-raw preserved |
+
+Phase B Cursor self-verify implicit qua build + typecheck PASS cross all 14 atomic commits (L42 partial coverage).
+
+### Pattern lessons captured
+
+**NEW patterns (2)**:
+
+- **L58 NEW — Pre-decision lock pattern cho large bucket milestone save ambiguous round-trips**: 7 Q-cases pre-locked cross 3 SWOT sub-buckets (9a/9b/9c) saved ~10 round-trip ambiguous prompts. Pattern: BEFORE start sub-bucket execution, enumerate ambiguous decisions (semantic surface ambiguity, keep-raw vs migrate boundary, gradient handling, dynamic hex from data) + resolve cross-bucket consistent (Q2-sub-α dark surface + Q2 extended saturated-brand + Ambiguous 1 C elevated cards on warm cream). Apply universally future large-scope cleanup milestones (≥5 sub-buckets). Cost ~10-15 phút decision lock, save ~30-60 phút avoid round-trip mid-execution.
+- **L59 NEW — Baseline grep count ≠ migration count, real ratio ~60-65% cumulative avg**: Task 1.5 corrected re-audit (306 raw + 32 arbitrary hex = 338 baseline) → actual migrations ~200 (65% ratio). Per-occurrence semantic context audit (NOT bulk grep replace) reveal keep-raw justified majority cases: Q2-sub-α dark surface (~30 occ) + Q2 extended saturated-brand (~15 occ) + Ambiguous 1 C elevated cards on warm cream (~8 occ) + Hoshin Explorer 2-color category data-driven (~14 occ) + AI sparkle decorative hex (~3 occ). Apply universally future raw palette / token migration milestones: budget execution time at 60-70% baseline grep count, not 100%. Pattern reinforce L42 partial coverage + L48 verify-first audit consumer.
+
+**Reinforced patterns**:
+
+- **L42 reinforced lần 8** — Phase A visual coverage acceptable cho design refactor mechanical 1:1 with no business logic. Phase B Cursor self-verify implicit qua typecheck + build PASS cross 14 atomic commits. Pattern proven 8 lần (M-KPI-Mgmt-1 → M-KPI-Restore-1 → M-Design-Tailwind-Cleanup-1 → M-Cleanup-batch-2026-05-09 → M-RateLimit-Generic-1 → M-Design-Tokens-Cleanup-1 → M-Design-Dark-1 → M-Design-Tangential-Cleanup-1).
+- **L48 reinforced lần 11** — Foundation completion check pre consumer migration. Foundation Commit 1 (.card-subtle) + Commit 4 (.input-brutal) BOTH ship FIRST trước 9 consumer buckets. `:root` `--card` token reuse validated (existing shadcn token, NO net-new introduction). Tailwind v4 `@theme inline --color-card` mirror exists pre-milestone.
+- **L50 reinforced lần 6** — Atomic commit boundary discipline per concern. Dashboard 11a/11b/11c sub-split (surface vs KPI status vs discovery decoration) + SWOT 9a/9b/9c sub-split (Workshop+Chat vs Context+Drafts+Canvas vs TOWS+Synthesis+Finalize) proven scalable cho large bucket diff. Per atomic commit ~30-60 min effort, reversibility granular per concern.
+
+**Decision lock summary** (cumulative 7 Q-cases + Task 1.5 + Task 8 + Task 7 mid-task + 5 SWOT sub-bucket pre-locks):
+
+| Q-case | Decision | Apply scope |
+|---|---|---|
+| Q1 | β Commit cadence directory-bucket atomic | Cross 14 commits proven |
+| Q2 | Default mapping table | Cross 9 buckets uniform |
+| Q2-sub-α | Keep-raw white-alpha on dark surface | Layout sidebar + Page footer + Auth dark panel + X-Ray CTA banner |
+| Q2 extended | Keep-raw white text on saturated-brand surface | Layout header brand button + Auth Google btn + X-Ray pills/checkmark |
+| Q2 Ambig 1 C | Keep-raw elevated `bg-white` cards on warm cream | Auth Google btn + X-Ray option pill |
+| Q3 | N/A (0 `dark:*` in repo cross-milestone) | Skip |
+| Q4 | α Skip shadcn primitives backdrop alpha | Cross dialog/sheet/alert-dialog 3 files |
+| Q5 | γ Hybrid Phase A user-facing + Cursor self-verify internal | Manual deferred anh Vũ Hải |
+| Q6 | β Atomic per concern (foundation FIRST + consumer per bucket) | 14 commits proven |
+| Q7 | Effort 5-7h Cursor + 60-90min smoke (actual ~6h Cursor, smoke deferred) | Validated post-ship |
+
+**Methodology source** (cumulative pattern reuse):
+
+- M-Design-Tailwind-Cleanup-1 Q1 β + L48 foundation completion check
+- M-Design-Tokens-Cleanup-1 L50 atomic commit boundary discipline
+- M-Design-Dark-1 L48 foundation parity LITERAL→REFERENCE (collapsed N/A here, REFERENCE form already established)
+- M-Design-Dark-1.5 L57 reversible deprecation (N/A scope, but cross-reference for future re-enable)
+- Verify-first L29/L32/L45/L48/L49 reinforced lần 9 — Task 1.5 corrected re-audit Bug surfaced Commit 3 (`accent-` regex false positive), per-occurrence semantic audit reveal keep-raw justified.
+
+### Constraints cho future AI sessions
+
+- KHÔNG modify foundation tokens (`--card`, `--white`, `--bg`, `--bg-warm`, `--bg-muted`, `--bg-paper`, `--bg-dark`, `--ink`, `--text-2`, `--text-3`, `--brand`, `--accent-*`, `--kpi-*` family) without explicit decision lock — semantic role established cumulative cross M-Design-3a/3b/Tokens-Cleanup-1/Tailwind-Cleanup-1/Dark-1/Tangential-Cleanup-1.
+- KHÔNG re-introduce raw `bg-white` / `bg-gray-*` / `text-gray-*` Tailwind palette utilities cho new code — pattern `bg-card` / `bg-bg-warm` / `text-text-2` token-based class. Anti-pattern: copy-paste from external snippets → future cleanup tốn migration scope.
+- KHÔNG migrate keep-raw white-on-saturated-surface intentional contrast cases (Q2-sub-α + Q2 extended). Anti-pattern: bulk regex replace → break sidebar text contrast + button readability + X-Ray CTA banner.
+- KHÔNG add `dark:*` variant cho new code — defer M-Design-Dark-1 re-enable milestone nếu user complain (M-Design-Dark-1.5 force-light lock 2026-05-11).
+- KHI add new component dùng warm cream + brand red + accent pastel palette, FOLLOW token class pattern cumulative established. KHÔNG invent new `--bg-X` foundation token unless verify-first confirm gap (L48 audit checklist).
+- KHI cleanup milestone large-scope (≥5 sub-buckets), apply L58 pre-decision lock pattern: enumerate ambiguous Q-cases cross sub-buckets + resolve consistent BEFORE start execution.
+- KHI estimate raw palette migration effort, budget 60-70% baseline grep count (L59 pattern) — keep-raw justified majority cases via per-occurrence semantic audit.
+
+### Production verify chain (post-push)
+
+Pending Step 4 close-out: Vercel deploy `<deploy_id_TBD>` state=READY ✓ + githubCommitSha match HEAD close-out + build clean + runtime 30 phút 0 user-facing crash + smoke 3 routes curl production.
