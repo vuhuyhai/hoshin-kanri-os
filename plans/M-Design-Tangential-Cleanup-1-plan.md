@@ -1,10 +1,109 @@
 # M-Design-Tangential-Cleanup-1 Plan
 
-> **Status**: AUDIT-ONLY (Task 1). Code patches deferred to Task 2A+ post-decision-lock.
+> **Status**: IN PROGRESS — 4 commits shipped (`85fbcc5` plan, `b0edc91` Commit 1 `.card-subtle`, `0d220cc` Commit 3 lien-he, `0d6a792` Commit 4 `.input-brutal`). Re-audit Task 1.5 corrected V3 numbers (regex bug surfaced Commit 3). Branch `master` ahead of `origin/master` by 4.
 > **Author**: claude.ai web (Opus 4.7)
-> **Date drafted**: 2026-05-11
-> **HEAD at audit**: `224e5d5` (M-Design-Dark-1.5 close-out, working tree clean, branch `master`)
+> **Date drafted**: 2026-05-11 (initial), 2026-05-11 (Task 1.5 re-audit corrected)
+> **HEAD at audit**: `224e5d5` (Task 1 initial). Current HEAD: `0d6a792`.
 > **Pattern reuse**: M-Design-Tailwind-Cleanup-1 (Q1 β / Q2 α / L48 foundation completion / L42 Phase A partial coverage), M-Design-Tokens-Cleanup-1 (L50 atomic commit boundary), M-Design-Dark-1 (L48 foundation parity), M-Design-Dark-1.5 (L57 reversible deprecation).
+
+---
+
+## ⚠️ Task 1.5 — Re-audit corrected (2026-05-11)
+
+### Audit bug surfaced Commit 3 (Task 2B)
+
+**Original Task 1 V3 regex** included `accent-` as utility prefix:
+```
+\b(bg|text|border|...|accent)-(white|black|gray|...)
+```
+
+This caused **false positive matches** against legit token classes: `bg-accent-yellow`, `text-accent-brand`, `border-accent-cyan`, etc. (Tailwind v4 generates these from `--color-accent-*` `@theme inline` mappings — they ARE the tokens.)
+
+**Corrected regex** (drops `accent-` from prefix list):
+```
+\b(bg|text|border|ring|divide|fill|stroke|placeholder|caret|decoration|outline|from|to|via|shadow)-(white|black|gray|slate|zinc|neutral|stone|red|green|amber|yellow|blue|pink|indigo|purple|orange|emerald|teal|cyan|rose|fuchsia|violet|lime|sky)(-\d+)?(\/\d+)?\b
+```
+
+**Pattern L29/L32/L45/L48/L49 reinforced lần 9**: verify-first invalidates prose claim — including my own. Greps stand, prose doesn't.
+
+### Revised V3 — corrected raw palette consumer audit
+
+**Total**: **306 raw palette occurrences across 72 files** (vs original claim 343/85 — 37 occ / 13 files were false positives, ~11% inflation).
+
+**Plus NEW finding**: arbitrary hex Tailwind classes `bg-[#xxxxxx]`, `text-[#xxx]`, `border-[#xxx]`: **32 occurrences across 17 files** (NOT in original Task 1 audit at all — pattern not grepped). Mostly SWOT (26/14 files).
+
+| Bucket | Files | Real raw occ | Arbitrary hex | Notes |
+|---|---:|---:|---:|---|
+| **Page (`app/page.tsx`)** | 1 | 8 | 0 | All `text-white/N` on `<footer bg-bg-dark>` — Q2 mapping table + Q2-sub-α **keep raw** = 0 changes needed |
+| **Landing components (`components/landing/`)** | 0 | **0** | 0 | ✅ All Task 1 "matches" were `bg-accent-yellow/cyan/pink/lime` legit token classes — false positives |
+| **Static pages (`dieu-khoan`, `chinh-sach-bao-mat`, `invite/`)** | 0 | **0** | 0 | ✅ Clean — token-only |
+| **Misc small (`components/{gemba,hansei,blog,dashboard}/`)** | 0 | **0** | 0 | ✅ All Task 1 hits were false positives |
+| **Auth (`app/(auth)/`)** | 4 | 9 | 0 | login(5), register(1), update-password(2), reset-password(1) |
+| **X-Matrix canvas (`components/x-matrix/canvas/`)** | 3 | 5 | 0 | CenterX(2), HoshinEditModal(2), SubmitBar(1) — far less than Task 1 claim 13/8 |
+| **X-Ray (`app/x-ray/components/`)** | 3 | 10 | 0 | XRayReport(5), QuestionStep(3), EmailCaptureStep(2) |
+| **Annual-review (`components/annual-review/`)** | 5 | 17 | 0 | CarryOverDecisions(6), CompleteButton(4), KpiActualsForm(3), TransitionPreviewModal(2), SaveIndicator(2) |
+| **Admin (`app/admin/`)** | 7 | 20 | 0 | hoshin-explorer dominant: PhaseBlock(7), ConceptSidebar(4), StepsView(4), ConceptPanel(2). Plus 4 small files |
+| **Layout (`components/layout/`)** | 3 | 26 | 0 | sidebar(19 → keep-raw Q2-sub-α dark surface), org-switcher(6 → keep-raw on dark switcher), header(1 → keep-raw on brand surface) → **0 changes net** under decision lock |
+| **Dashboard (`app/dashboard/`)** | 14 | 60 | 6 | report/page(20 biggest), help(7), benchmark(6), synthesis(6), xray-history page(4) + [id](1), swot/guide page(4), HoshinCandidates(3), KpiDashboard(2), dashboard/page(2), swot/strategy page(2) + TowsStrategy(1), VisionGuide(1), VisionEditor(1) |
+| **SWOT (`components/swot/`)** | 32 | **151** | 26 | SwotContextForm(20 biggest), TowsCanvas(13), SwotIngredientCard(11), SwotFinalizeList(11), SwotIngredientPanel(9), SwotFactorInput(8), SwotWorkshopChat(7), 25 other files. **+ 26 arbitrary hex** (XRayPrefillBanner(8), SwotFrameworkPicker(4), 12 others) |
+| **TOTAL (post-shadcn-exclude)** | **72** | **306** | **32** | **= 338 total raw items needing migration scope** |
+
+**SWOT remains dominant**: 151 raw + 26 arbitrary hex = **177 items / 32 files** = **52%** of total work.
+
+### Decision lock keep-raw scope (per Q2 mapping + Q2-sub-α)
+
+| Bucket | Items kept raw | Reason |
+|---|---:|---|
+| Page (`app/page.tsx`) | 8 | All `text-white/N` on `<footer bg-bg-dark>` — Q2 mapping "keep raw text-white on dark" |
+| Layout sidebar | 19 | All `bg-white/N`, `text-white/N`, `border-white/N` on `bg-bg-dark` shell — Q2-sub-α |
+| Layout org-switcher | 6 | All white-alpha on dark switcher (per spot-check earlier) — Q2-sub-α extension |
+| Layout header | 1 | `text-white` on `bg-accent-brand` button (saturated brand surface) — Q2 extended pattern |
+| **TOTAL keep-raw** | **34** | All white-on-saturated-surface intentional contrast |
+
+**Net items needing actual migration**: **306 - 34 = 272 raw + 32 arbitrary hex = 304 items / ~67 files**.
+
+### Lien-he status (already shipped Commit 3, hash `0d220cc`)
+
+- 5 raw `bg-white` on form inputs → migrated to `bg-card` ✓
+- Bonus DRY follow-up flagged: lien-he 5 inline form inputs duplicate `.input-brutal` pattern. Should ideally use `.input-brutal` className post-Commit 4 foundation fix. **Defer to post-milestone Next Steps section** (non-blocking).
+
+### Foundation chain (3 commits) — semantic separation done
+
+| Commit | Hash | Concern |
+|---|---|---|
+| 1 | `b0edc91` | `.card-subtle` `var(--white)` → `var(--card)` |
+| 4 | `0d6a792` | `.input-brutal` `var(--white)` → `var(--card)` (parallel) |
+| (none) | — | `.badge-accent`/`.badge-ink` use `var(--white)` for TEXT (correct per Tokens-Cleanup-1 §17). Don't touch. |
+
+### Recommended bucket order (Task 1.5 output)
+
+**Smallest-first principle** (build confidence + reversibility — precedent M-Design-Tailwind-Cleanup-1):
+
+| # | Bucket | Real items | Effort | Risk | Rationale |
+|---:|---|---:|---|---|---|
+| 1 | **Layout** (3 files / 26 occ) | **0 net change** | 15 min audit + 0-line commit OR skip-with-doc | LOW | All keep-raw per decision lock — produces a **documentation-only** commit recording the explicit Q2-sub-α scope decision OR can be skipped entirely |
+| 2 | **Page footer (`app/page.tsx`)** (1 file / 8 occ) | **0 change** | 10 min verify | LOW | All keep-raw per Q2 mapping — verify-only, no commit needed (or doc-only) |
+| 3 | **X-Matrix canvas** (3 files / 5 occ) | 5 | 15-20 min | LOW | Smallest real-migration bucket |
+| 4 | **Auth** (4 files / 9 occ) | 9 | 20-25 min | MEDIUM (user-facing public) | Quick win + Phase A smoke required (Q5 γ) |
+| 5 | **X-Ray** (3 files / 10 occ) | 10 | 20-25 min | HIGH (public lead gen, FB ads cold traffic) | Phase A smoke required (Q5 γ) |
+| 6 | **Annual-review** (5 files / 17 occ) | 17 | 30-40 min | MEDIUM (internal users) | Cursor self-verify (Q5 γ β-side) |
+| 7 | **Admin** (7 files / 20 occ) | 20 | 30-40 min | LOW (super-admin only) | Cursor self-verify (Q5 γ β-side) |
+| 8 | **Dashboard** (14 files / 60 occ + 6 hex) | 66 | 60-90 min | MEDIUM (user-facing authed) | Phase A smoke (Q5 γ). May split into 2 commits (top-level vs discovery sub-routes) |
+| 9 | **SWOT** (32 files / 151 occ + 26 hex) | 177 | 2-3h | LOW (internal feature) but HIGH usage | **Sub-split recommended**: 9a (workshop / chat), 9b (drafts / canvas / framework), 9c (synthesis + finalize). Phase A smoke 1-2 representative pages (Q5 γ-borderline) |
+| 10 | **Close-out** | — | 30 min | — | Production verify + HANDOFF + ACTIVE_CONTEXT update + plan archive |
+
+**Total revised effort estimate**: **5-7 hours Cursor execution** (vs original 6-7h estimate — about same, scope concentrated more in SWOT than predicted).
+
+### Q7 effort revised
+
+| Metric | Original Task 1 | Task 1.5 corrected |
+|---|---|---|
+| Raw palette occ | 343 | 306 (-37 false +) + 32 arbitrary hex = 338 |
+| Files | 85 | 72 (-13 false-positive-only files) |
+| Estimated commits | ~10 | ~9-11 (4 done, 5-7 remaining: Layout doc-only + Page doc-only + 5 consumer + close-out, possibly 1-2 SWOT sub-splits) |
+| LOC churn | ~400-500 | ~300-400 (272 raw + 32 hex × ~1 line each, accounting for keep-raw 34) |
+| Time | 3-4h + 30-45min smoke | 5-7h + 60-90min smoke (SWOT bigger than originally estimated as raw share) |
+| Risk grade | LOW build / MEDIUM visual | unchanged |
 
 ---
 
@@ -257,3 +356,44 @@ Mapping table required before Task 2A. Proposed mapping (pending Vũ Hải overr
 ## Awaiting Vũ Hải decision lock
 
 Q1 (commit cadence), Q2 (mapping table + Q2-sub-α/β white-alpha + Q2-sub on `--border-subtle` need), Q4 (shadcn skip), Q5 (smoke scope), Q6 (foundation-first ordering). Q3 + Q7 already collapsed/computed.
+
+---
+
+## Post-milestone Next Steps (deferred follow-ups discovered during execution)
+
+### N1 — lien-he DRY refactor (LOW priority)
+
+**Discovery**: Commit 3 Task 2B revealed `app/lien-he/page.tsx` lines 141-201 inline-duplicates the `.input-brutal` design system pattern (5× input/select/textarea elements, each spelling out `border-2 border-ink bg-card px-4 py-3 font-body text-[15px] text-ink shadow-brutal-sm outline-none transition-shadow focus:shadow-brutal-accent`).
+
+**Action**: Replace 5 inline className blocks with `className="input-brutal"`. Now that `.input-brutal` foundation Commit 4 (`0d6a792`) uses `var(--card)` (matching the lien-he Commit 3 `bg-card` migration), the visual will be identical post-refactor. Net: removes ~30 LOC of design system duplication.
+
+**Risk**: LOW. Effort: 10 min. Defer to standalone follow-up commit OR bundle into Task 2L close-out chain.
+
+### N2 — Arbitrary hex audit (MEDIUM priority)
+
+**Discovery**: Task 1.5 surfaced 32 arbitrary hex `bg-[#xxxxxx]` / `text-[#xxx]` classes across 17 files (mostly SWOT 26/14). NOT in Task 1 V3 scope.
+
+**Action**: During SWOT bucket (Task 2I), grep arbitrary hex per file, decide per occurrence: token-mappable (e.g. `bg-[#FFFFFF]` → `bg-card`) vs intentional one-off (e.g. SWOT framework color codes per Porter/PEST/etc.). Bundle into SWOT migration commit if mappable.
+
+**Risk**: MEDIUM (some hex codes may be data-driven from framework definitions). Effort: 30 min audit + per-case decision.
+
+### N3 — Email templates (`lib/email/templates.ts`) (LOW priority, OUT OF SCOPE)
+
+**Discovery**: 42 inline `style=`/`background:`/`color:` HTML email styles. Cannot use Tailwind classes (CSS class refs strip in many email clients).
+
+**Action**: Document in HANDOFF as out-of-scope permanent — email templates use raw HTML inline styles by necessity. No migration planned.
+
+### N4 — `--bg-on-dark-*` token family (NICE-TO-HAVE, NOT NEEDED)
+
+**Discovery**: Q2-sub-α decision lock keeps raw `bg-white/N`, `text-white/N` on dark surface. If a future milestone wants to make dark sidebar themable, introduce `--bg-on-dark-{5,10,20,40}` token family in `:root` + `.dark` override + `@theme inline` mirror. Pattern L48 + L57 reversible deprecation.
+
+**Status**: NOT needed in this milestone. Documented for future reference only.
+
+---
+
+## Audit re-verification log
+
+| Run | Date | HEAD | Findings |
+|---|---|---|---|
+| Initial Task 1 | 2026-05-11 | `224e5d5` | 343 occ / 85 files (regex BUG: `accent-` prefix → ~37 false positives) |
+| Task 1.5 corrected | 2026-05-11 | `0d6a792` | 306 raw + 32 arbitrary hex / 72 files (post-shadcn-exclude) |
