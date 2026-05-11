@@ -12,9 +12,9 @@ import { cn } from '@/lib/utils'
 import { fetchJson } from '@/lib/http/fetch-json'
 
 const LIGHT: Record<string, { emoji: string; class: string }> = {
-  green: { emoji: '🟢', class: 'text-green-600 dark:text-green-400' },
-  yellow: { emoji: '🟡', class: 'text-yellow-600 dark:text-yellow-400' },
-  red: { emoji: '🔴', class: 'text-red-600 dark:text-red-400' },
+  green: { emoji: '🟢', class: 'text-kpi-healthy-strong' },
+  yellow: { emoji: '🟡', class: 'text-kpi-attention-strong' },
+  red: { emoji: '🔴', class: 'text-destructive' },
 }
 
 const TREND: Record<string, string> = {
@@ -53,8 +53,8 @@ function KpiRow({ kpi }: { kpi: MonthlyReportKpi }) {
       <td className="py-2.5 pr-2 text-center text-base">{light.emoji}</td>
       <td
         className={cn('py-2.5 text-center text-sm font-medium', {
-          'text-green-600': kpi.trend === 'up',
-          'text-red-600': kpi.trend === 'down',
+          'text-kpi-healthy-strong': kpi.trend === 'up',
+          'text-destructive': kpi.trend === 'down',
           'text-muted-foreground':
             kpi.trend === 'flat' || kpi.trend === 'no_data',
         })}
@@ -189,14 +189,14 @@ export default function ReportPage() {
 
               {/* Wins */}
               {report.wins.length > 0 && (
-                <div className="card-brutal border-green-600 p-5 space-y-2">
-                  <p className="font-display text-sm font-bold uppercase tracking-wider text-green-700 dark:text-green-300">
+                <div className="card-brutal border-kpi-healthy-strong p-5 space-y-2">
+                  <p className="font-display text-sm font-bold uppercase tracking-wider text-kpi-healthy-strong">
                     Điểm sáng tháng này
                   </p>
                   {report.wins.map((w, i) => (
                     <p
                       key={i}
-                      className="font-body text-sm text-green-600 dark:text-green-400"
+                      className="font-body text-sm text-kpi-healthy-strong"
                     >
                       ▸ {w}
                     </p>
@@ -206,14 +206,14 @@ export default function ReportPage() {
 
               {/* Risks */}
               {report.risks.length > 0 && (
-                <div className="card-brutal border-red-600 p-5 space-y-2">
-                  <p className="font-display text-sm font-bold uppercase tracking-wider text-red-700 dark:text-red-300">
+                <div className="card-brutal border-destructive p-5 space-y-2">
+                  <p className="font-display text-sm font-bold uppercase tracking-wider text-destructive">
                     Cần chú ý tháng tới
                   </p>
                   {report.risks.map((r, i) => (
                     <p
                       key={i}
-                      className="font-body text-sm text-red-600 dark:text-red-400"
+                      className="font-body text-sm text-destructive"
                     >
                       ▸ {r}
                     </p>

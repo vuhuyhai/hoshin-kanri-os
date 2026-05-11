@@ -122,8 +122,8 @@ export function KpiDashboardClient({ userRole }: KpiDashboardClientProps) {
             {kpis.length} KPIs đang theo dõi
           </span>
           {redCount > 0 && (
-            <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="flex items-center gap-1.5 text-destructive font-medium">
+              <span className="w-2 h-2 rounded-full bg-destructive" />
               {redCount} cần chú ý
             </span>
           )}

@@ -14,10 +14,10 @@ function getScoreLabel(score: number): string {
 }
 
 function getBadgeClass(score: number): string {
-  if (score <= 25) return 'border-red-300 text-red-600'
-  if (score <= 50) return 'border-amber-300 text-amber-600'
-  if (score <= 75) return 'border-blue-300 text-blue-600'
-  return 'border-green-300 text-green-600'
+  if (score <= 25) return 'border-destructive text-destructive'
+  if (score <= 50) return 'border-kpi-attention text-kpi-attention-strong'
+  if (score <= 75) return 'border-accent-cyan text-accent-cyan'
+  return 'border-kpi-healthy text-kpi-healthy-strong'
 }
 
 interface ResultRow {

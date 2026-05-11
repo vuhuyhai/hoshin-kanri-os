@@ -14,17 +14,17 @@ const PRIORITY_CONFIG = {
   high: {
     label: 'Ưu tiên cao',
     className:
-      'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+      'bg-accent-pink text-destructive',
   },
   medium: {
     label: 'Trung bình',
     className:
-      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+      'bg-accent-yellow text-kpi-attention-strong',
   },
   low: {
     label: 'Thấp',
     className:
-      'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+      'bg-accent-lime text-kpi-healthy-strong',
   },
 }
 
