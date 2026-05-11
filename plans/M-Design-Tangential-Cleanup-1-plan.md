@@ -1,9 +1,9 @@
 # M-Design-Tangential-Cleanup-1 Plan
 
-> **Status**: IN PROGRESS — 4 commits shipped (`85fbcc5` plan, `b0edc91` Commit 1 `.card-subtle`, `0d220cc` Commit 3 lien-he, `0d6a792` Commit 4 `.input-brutal`). Re-audit Task 1.5 corrected V3 numbers (regex bug surfaced Commit 3). Branch `master` ahead of `origin/master` by 4.
+> **Status**: IN PROGRESS — 7 commits shipped (`85fbcc5` plan, `b0edc91` Commit 1 `.card-subtle`, `0d220cc` Commit 2 lien-he, `0d6a792` Commit 4 `.input-brutal`, `a922ed3` Commit 5 Task 1.5 re-audit, `947a2c4` Commit 6 X-Matrix canvas, `b6846a6` Commit 7 Auth). Branch `master` ahead of `origin/master` by 8 (incl. this doc-only).
 > **Author**: claude.ai web (Opus 4.7)
-> **Date drafted**: 2026-05-11 (initial), 2026-05-11 (Task 1.5 re-audit corrected)
-> **HEAD at audit**: `224e5d5` (Task 1 initial). Current HEAD: `0d6a792`.
+> **Date drafted**: 2026-05-11 (initial), 2026-05-11 (Task 1.5 re-audit corrected), 2026-05-11 (Task 8 X-Ray 0-net-migration discovery).
+> **HEAD at audit**: `224e5d5` (Task 1 initial). Current HEAD: `b6846a6`.
 > **Pattern reuse**: M-Design-Tailwind-Cleanup-1 (Q1 β / Q2 α / L48 foundation completion / L42 Phase A partial coverage), M-Design-Tokens-Cleanup-1 (L50 atomic commit boundary), M-Design-Dark-1 (L48 foundation parity), M-Design-Dark-1.5 (L57 reversible deprecation).
 
 ---
@@ -58,9 +58,29 @@ This caused **false positive matches** against legit token classes: `bg-accent-y
 | Layout sidebar | 19 | All `bg-white/N`, `text-white/N`, `border-white/N` on `bg-bg-dark` shell — Q2-sub-α |
 | Layout org-switcher | 6 | All white-alpha on dark switcher (per spot-check earlier) — Q2-sub-α extension |
 | Layout header | 1 | `text-white` on `bg-accent-brand` button (saturated brand surface) — Q2 extended pattern |
-| **TOTAL keep-raw** | **34** | All white-on-saturated-surface intentional contrast |
+| **Auth dark panel** (login `b6846a6`) | 4 | `bg-white` Google btn (elevated card on warm cream Ambiguous 1 C) + 3× `text-white/N` on `bg-bg-dark` brand panel (Ambiguous 2 A) — audit-fix Task 7 mid-task |
+| **X-Ray bucket** (3 files, Task 8) | 10 | 4× `text-white` on saturated brand `bg-accent-brand` (Q2 extended) + 2× `text-white` on `bg-ink` + dynamic score-color (Q2 extended) + 4× `text-white/N` on `var(--bg-dark)` CTA banner (Q2-sub-α) + 1× `bg-white` elevated option pill on warm cream (Ambiguous 1 C) + 1× `border-white` spinner on brand red btn (Q2 extended) — audit-fix Task 8 |
+| **TOTAL keep-raw** | **48** | All white-on-saturated-surface intentional contrast (Page + Layout + Auth dark + X-Ray) |
 
-**Net items needing actual migration**: **306 - 34 = 272 raw + 32 arbitrary hex = 304 items / ~67 files**.
+**Net items needing actual migration**: **306 - 48 = 258 raw + 32 arbitrary hex = 290 items / ~65 files**.
+
+### Task 8 X-Ray 0-net-migration discovery (2026-05-11)
+
+X-Ray bucket (`app/x-ray/components/`, 3 files / 10 occ per Task 1.5 audit) → **0 occ migrated** post per-occurrence pattern-match against established keep-raw decision lock:
+
+| # | File:Line | Class | Surface | Precedent |
+|---:|---|---|---|---|
+| 1 | QuestionStep.tsx:60 | `text-white` | `bg-accent-brand` SELECTED option pill | Q2 ext (Layout header) |
+| 2 | QuestionStep.tsx:61 | `bg-white` | UNSELECTED option pill elevated on warm cream | Ambiguous 1 C (Auth Google btn) |
+| 3 | QuestionStep.tsx:77 | `text-white` | `bg-ink` SELECTED checkmark circle | Q2-sub-α (dark surface) |
+| 4 | EmailCaptureStep.tsx:157 | `text-white` | `bg-accent-brand` SELECTED headcount pill | Q2 ext |
+| 5 | EmailCaptureStep.tsx:208 | `border-white` | `.btn-brutal-primary` spinner ring (= bg-accent-brand) | Q2 ext (white-on-brand family) |
+| 6 | XRayReport.tsx:400 | `text-white` | `style={background: getScoreColor()}` saturated dynamic | Q2 ext (white-on-saturated-color family) |
+| 7-10 | XRayReport.tsx:663, 666, 679, 682 | `text-white`, `text-white/70` ×2 each variant | `style={background: var(--bg-dark)}` CTA banner | Q2-sub-α + Auth Ambiguous 2 A |
+
+**Pattern lesson reinforced**: Task 1.5 keep-raw scope table missed Auth dark panel + X-Ray entirely. Bucket order Task 1.5 line 88 predicted X-Ray = 10 occ migration; actual = 0. Decision lock precedents (Q2-sub-α + Q2 extended saturated-brand + Ambiguous 1 C) apply consistently across all buckets — bucket-level occ counts ≠ migration counts.
+
+**Implication for remaining buckets**: Annual-review / Admin / Dashboard / SWOT raw palette occ counts likely include more keep-raw cases than Task 1.5 forecasted. Audit per-occurrence at task time, not bucket time.
 
 ### Lien-he status (already shipped Commit 3, hash `0d220cc`)
 
@@ -397,3 +417,5 @@ Q1 (commit cadence), Q2 (mapping table + Q2-sub-α/β white-alpha + Q2-sub on `-
 |---|---|---|---|
 | Initial Task 1 | 2026-05-11 | `224e5d5` | 343 occ / 85 files (regex BUG: `accent-` prefix → ~37 false positives) |
 | Task 1.5 corrected | 2026-05-11 | `0d6a792` | 306 raw + 32 arbitrary hex / 72 files (post-shadcn-exclude) |
+| Task 7 Auth audit-fix | 2026-05-11 | `b6846a6` | 9 occ predicted → 5× text-red-600 → text-destructive + 1× hover:bg-gray-50 → hover:bg-bg-muted. 4 keep-raw (1× bg-white Google btn + 3× text-white/N on dark panel). Net 6 migrations / 4 audit-fix. |
+| Task 8 X-Ray audit-fix | 2026-05-11 | `b6846a6` | 10 occ predicted → **0 migrated**. All 10 fall under keep-raw precedents (Q2-sub-α + Q2 ext saturated brand/dark + Ambiguous 1 C elevated white card). Doc-only commit recording decision. |
