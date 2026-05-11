@@ -104,7 +104,7 @@ export function TowsOrchestrator({ analysisId, orgId, onComplete }: TowsOrchestr
           <div className="mt-4 flex items-center justify-between">
             <button
               onClick={() => setPhase(1)}
-              className="px-4 py-2 text-sm font-display font-bold border-2 border-ink bg-white hover:bg-ink hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-display font-bold border-2 border-ink bg-card hover:bg-ink hover:text-white transition-colors"
             >
               ← Quay lại
             </button>
@@ -149,7 +149,7 @@ export function TowsOrchestrator({ analysisId, orgId, onComplete }: TowsOrchestr
           <div className="mt-4">
             <button
               onClick={() => setPhase(2)}
-              className="px-4 py-2 text-sm font-display font-bold border-2 border-ink bg-white hover:bg-ink hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-display font-bold border-2 border-ink bg-card hover:bg-ink hover:text-white transition-colors"
             >
               ← Quay lại
             </button>

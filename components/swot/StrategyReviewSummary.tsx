@@ -25,7 +25,7 @@ export function StrategyReviewSummary({ strategies }: { strategies: TowsStrategy
     if (s.status === 'in_x_matrix') syncedCount++
   }
   return (
-    <div className="flex flex-wrap gap-3 p-3 border-2 border-ink bg-white" style={{ boxShadow: '4px 4px 0 #2C2B2B' }}>
+    <div className="flex flex-wrap gap-3 p-3 border-2 border-ink bg-card" style={{ boxShadow: '4px 4px 0 #2C2B2B' }}>
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-bold uppercase text-ink/60">TOWS:</span>
         {(Object.keys(towsCounts) as TowsQuadrant[]).map((q) => (
@@ -47,7 +47,7 @@ export function StrategyReviewSummary({ strategies }: { strategies: TowsStrategy
           </span>
         ))}
       </div>
-      <span className="text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink bg-white ml-auto">
+      <span className="text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink bg-card ml-auto">
         Duyệt: {approvedCount} · Đã sync: {syncedCount}
       </span>
     </div>

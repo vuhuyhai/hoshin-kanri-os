@@ -45,7 +45,7 @@ export function SynthesisQuadrantCard({
 
   return (
     <div
-      className="space-y-3 bg-white border-2 border-ink p-4"
+      className="space-y-3 bg-card border-2 border-ink p-4"
       style={{
         boxShadow: '4px 4px 0 #2C2B2B',
         borderLeft: `8px solid ${config.accent}`,
@@ -56,7 +56,7 @@ export function SynthesisQuadrantCard({
         <span className="font-display font-black uppercase text-ink">
           {config.label}
         </span>
-        <span className="ml-auto font-display font-bold text-xs px-2 py-0.5 border-2 border-ink bg-white text-ink">
+        <span className="ml-auto font-display font-bold text-xs px-2 py-0.5 border-2 border-ink bg-card text-ink">
           {items.length}
         </span>
       </h3>
@@ -67,7 +67,7 @@ export function SynthesisQuadrantCard({
           return (
             <div
               key={item.id}
-              className="group relative space-y-2 bg-white border-2 p-3"
+              className="group relative space-y-2 bg-card border-2 p-3"
               style={{
                 borderColor: lowConfidence ? '#f59e0b' : '#2C2B2B',
                 boxShadow: '2px 2px 0 #2C2B2B',
@@ -75,7 +75,7 @@ export function SynthesisQuadrantCard({
             >
               <button
                 onClick={() => onDelete(item.id)}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-text-3 hover:text-[#c73937]"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-text-3 hover:text-destructive"
                 title="Xoá"
               >
                 <X className="w-4 h-4" />
@@ -86,7 +86,7 @@ export function SynthesisQuadrantCard({
                   <textarea
                     value={editText}
                     onChange={(e) => onEditTextChange(e.target.value)}
-                    className="w-full font-body text-sm border-2 border-ink bg-white p-2 resize-none focus:outline-none"
+                    className="w-full font-body text-sm border-2 border-ink bg-card p-2 resize-none focus:outline-none"
                     rows={3}
                     autoFocus
                   />
@@ -117,7 +117,7 @@ export function SynthesisQuadrantCard({
                 → {item.implication}
               </p>
               {lowConfidence && (
-                <span className="inline-block font-display font-bold text-[10px] uppercase px-2 py-0.5 border-2 border-ink bg-[#f59e0b] text-white">
+                <span className="inline-block font-display font-bold text-[10px] uppercase px-2 py-0.5 border-2 border-ink bg-kpi-attention-strong text-white">
                   Cần xác nhận ({Math.round(item.confidence * 100)}%)
                 </span>
               )}

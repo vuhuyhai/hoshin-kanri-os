@@ -132,7 +132,7 @@ export function StrategyReviewTable({
               const st = s.status as StrategyStatus
               const isSynced = st === 'in_x_matrix'
               return (
-                <tr key={s.id} className="border-b border-ink/15 hover:bg-white/60">
+                <tr key={s.id} className="border-b border-ink/15 hover:bg-card/60">
                   <td className="px-2 py-1.5 text-center">{i + 1}</td>
                   <td className="px-2 py-1.5">
                     <span className="px-1.5 py-0.5 text-[10px] font-bold border"
@@ -144,7 +144,7 @@ export function StrategyReviewTable({
                   <td className="px-2 py-1.5">
                     <select value={s.bsc_perspective} onChange={(e) => handleBscChange(s.id, e.target.value as BscPerspective)}
                       disabled={isSynced}
-                      className="text-[10px] border border-ink/40 bg-white px-1 py-0.5 disabled:opacity-50">
+                      className="text-[10px] border border-ink/40 bg-card px-1 py-0.5 disabled:opacity-50">
                       {BSC_KEYS.map((k) => <option key={k} value={k}>{BSC_LABELS[k]}</option>)}
                     </select>
                   </td>
@@ -167,7 +167,7 @@ export function StrategyReviewTable({
       </div>
       <div className="flex gap-3 justify-end">
         <button onClick={handleExportCsv}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-display font-bold border-2 border-ink bg-white hover:bg-ink hover:text-white transition-colors">
+          className="flex items-center gap-2 px-3 py-1.5 text-sm font-display font-bold border-2 border-ink bg-card hover:bg-ink hover:text-white transition-colors">
           <Download className="size-4" /> Xuất CSV
         </button>
         <button onClick={handleSync} disabled={approvedStrategies.length === 0 || isSyncing}

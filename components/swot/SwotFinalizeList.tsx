@@ -15,10 +15,10 @@ interface SwotFinalizeListProps {
 
 const QUADRANTS: SwotQuadrant[] = ['S', 'W', 'O', 'T']
 const QUADRANT_META: Record<SwotQuadrant, { label: string; cls: string }> = {
-  S: { label: 'Điểm mạnh', cls: 'border-green-600 bg-green-50' },
-  W: { label: 'Điểm yếu', cls: 'border-red-600 bg-red-50' },
-  O: { label: 'Cơ hội', cls: 'border-blue-600 bg-blue-50' },
-  T: { label: 'Thách thức', cls: 'border-orange-600 bg-orange-50' },
+  S: { label: 'Điểm mạnh', cls: 'border-ink bg-accent-lime' },
+  W: { label: 'Điểm yếu', cls: 'border-ink bg-accent-yellow' },
+  O: { label: 'Cơ hội', cls: 'border-ink bg-accent-cyan' },
+  T: { label: 'Thách thức', cls: 'border-ink bg-accent-pink' },
 }
 
 function domainOf(url: string): string {
@@ -75,7 +75,7 @@ export function SwotFinalizeList({ analysisId, orgId, onComplete }: SwotFinalize
         </p>
       </header>
 
-      <div className="border-2 border-ink bg-white p-3 shadow-[3px_3px_0_#2C2B2B] flex flex-wrap items-center gap-2">
+      <div className="border-2 border-ink bg-card p-3 shadow-[3px_3px_0_#2C2B2B] flex flex-wrap items-center gap-2">
         {QUADRANTS.map((q) => (
           <button
             key={q}
@@ -112,7 +112,7 @@ export function SwotFinalizeList({ analysisId, orgId, onComplete }: SwotFinalize
                 ) : items.map((ing) => (
                   <label
                     key={ing.id}
-                    className="flex items-start gap-2 border-2 border-ink bg-white p-2 cursor-pointer hover:bg-bg-warm transition-colors"
+                    className="flex items-start gap-2 border-2 border-ink bg-card p-2 cursor-pointer hover:bg-bg-warm transition-colors"
                   >
                     <input
                       type="checkbox"
@@ -148,7 +148,7 @@ export function SwotFinalizeList({ analysisId, orgId, onComplete }: SwotFinalize
         })}
       </div>
 
-      <div className="flex items-center justify-between border-2 border-ink bg-white p-3 shadow-[3px_3px_0_#2C2B2B]">
+      <div className="flex items-center justify-between border-2 border-ink bg-card p-3 shadow-[3px_3px_0_#2C2B2B]">
         <button
           type="button"
           onClick={() => setWorkshopStep('workshop')}

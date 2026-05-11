@@ -50,7 +50,7 @@ export function SynthesisPhase({ orgContext, analysisId, onComplete }: Synthesis
 
       <div className="text-center space-y-2">
         <div
-          className="inline-flex items-center justify-center w-14 h-14 border-2 border-ink bg-white"
+          className="inline-flex items-center justify-center w-14 h-14 border-2 border-ink bg-card"
           style={{ boxShadow: '3px 3px 0 #2C2B2B' }}
         >
           <Target className="w-7 h-7 text-ink" />

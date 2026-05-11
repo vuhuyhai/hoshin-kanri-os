@@ -28,9 +28,9 @@ const BSC_COLORS: Record<string, { color: string; bg: string }> = {
   learning: { color: '#d97706', bg: '#fef3c7' },
 }
 const TIMEFRAME_LABELS: Record<string, { label: string; color: string }> = {
-  '30d': { label: '30 ngày', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-  '60d': { label: '60 ngày', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-  '90d': { label: '90 ngày', color: 'bg-rose-100 text-rose-700 border-rose-300' },
+  '30d': { label: '30 ngày', color: 'bg-accent-yellow text-ink border-accent-yellow' },
+  '60d': { label: '60 ngày', color: 'bg-accent-cyan text-ink border-accent-cyan' },
+  '90d': { label: '90 ngày', color: 'bg-accent-lime text-ink border-accent-lime' },
 }
 const LAYOUT: TowsQuadrant[] = ['SO', 'WO', 'ST', 'WT']
 
@@ -161,7 +161,7 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
             </div>
 
             {isActive && (
-              <div className="p-3 border-b-2 border-ink/30 bg-white/50">
+              <div className="p-3 border-b-2 border-ink/30 bg-card/50">
                 <div className="grid grid-cols-2 gap-3 mb-2">
                   <div>
                     <p className="text-[10px] font-bold uppercase mb-1">{cfg.swQuadrant === 'S' ? 'Điểm mạnh' : 'Điểm yếu'} (key)</p>
@@ -183,7 +183,7 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
                   </div>
                 </div>
                 <button onClick={handleGenerate} disabled={isGenerating || selectedSwIds.size === 0 || selectedOtIds.size === 0}
-                  className="w-full flex items-center justify-center gap-2 py-1.5 text-sm font-bold border-2 border-ink bg-white hover:bg-ink hover:text-white disabled:opacity-40 transition-colors">
+                  className="w-full flex items-center justify-center gap-2 py-1.5 text-sm font-bold border-2 border-ink bg-card hover:bg-ink hover:text-white disabled:opacity-40 transition-colors">
                   {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
                   AI Sinh chiến lược
                 </button>
@@ -251,8 +251,8 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
                           onClick={() => handleStatusToggle(s.id, s.status)}
                           className={`w-4 h-4 border-2 border-ink shrink-0 flex items-center justify-center ${
                             s.status === 'in_x_matrix' || s.status === 'approved'
-                              ? 'bg-blue-400'
-                              : 'bg-white'
+                              ? 'bg-kpi-healthy'
+                              : 'bg-card'
                           }`}
                           title={
                             s.status === 'in_x_matrix'
@@ -273,7 +273,7 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
                       <div className="px-3 pb-2 pt-1 bg-ink/5 border-t border-ink/10 space-y-2">
                         {s.rationale && (
                           <div className="flex gap-1.5">
-                            <Lightbulb className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
+                            <Lightbulb className="w-3 h-3 text-kpi-attention-strong shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold font-display text-ink/80 uppercase tracking-wide">
                                 Vital signal
@@ -287,7 +287,7 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
 
                         {s.actions && s.actions.length > 0 && (
                           <div className="flex gap-1.5">
-                            <Target className="w-3 h-3 text-blue-600 shrink-0 mt-0.5" />
+                            <Target className="w-3 h-3 text-accent-cyan shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold font-display text-ink/80 uppercase tracking-wide mb-0.5">
                                 Hành động
@@ -313,7 +313,7 @@ export function TowsCanvas({ analysisId, factors, onStrategiesChange }: Props) {
 
                         {s.kpi_suggestions && s.kpi_suggestions.length > 0 && (
                           <div className="flex gap-1.5">
-                            <Sparkles className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
+                            <Sparkles className="w-3 h-3 text-kpi-healthy-strong shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold font-display text-ink/80 uppercase tracking-wide mb-0.5">
                                 KPI gợi ý
