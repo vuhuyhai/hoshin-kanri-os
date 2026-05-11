@@ -179,7 +179,7 @@ function FieldGroup({ label, id, error, children }: { label: string; id: string;
     <div className="space-y-1.5">
       <Label htmlFor={id} className="font-display text-sm font-bold uppercase tracking-wider">{label}</Label>
       {children}
-      {error && <p className="font-body text-xs text-red-600">{error}</p>}
+      {error && <p className="font-body text-xs text-destructive">{error}</p>}
     </div>
   )
 }

@@ -115,7 +115,7 @@ function LoginForm() {
           </div>
         </div>
 
-        {error && <p className="font-body text-xs text-red-600">{error}</p>}
+        {error && <p className="font-body text-xs text-destructive">{error}</p>}
 
         <Button type="submit" className="btn-primary w-full justify-center" disabled={isLoading || isGoogleLoading}>
           {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang đăng nhập...</> : 'Đăng nhập'}
@@ -129,7 +129,7 @@ function LoginForm() {
       </div>
 
       {/* Google OAuth */}
-      <button onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading} className="flex w-full items-center justify-center gap-3 min-h-[44px] border-2 border-ink bg-white font-display text-sm font-semibold uppercase tracking-wider text-ink shadow-[4px_4px_0px_var(--ink)] hover:bg-gray-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_var(--ink)] transition-all disabled:opacity-50">
+      <button onClick={handleGoogleLogin} disabled={isLoading || isGoogleLoading} className="flex w-full items-center justify-center gap-3 min-h-[44px] border-2 border-ink bg-white font-display text-sm font-semibold uppercase tracking-wider text-ink shadow-[4px_4px_0px_var(--ink)] hover:bg-bg-muted active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_var(--ink)] transition-all disabled:opacity-50">
         {isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
         Đăng nhập bằng Google
       </button>

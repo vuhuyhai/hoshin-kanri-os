@@ -80,13 +80,13 @@ export default function UpdatePasswordPage() {
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
-            {errors.password && <p className="font-body text-xs text-red-600">{errors.password}</p>}
+            {errors.password && <p className="font-body text-xs text-destructive">{errors.password}</p>}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="confirmPassword" className="font-display text-sm font-bold uppercase tracking-wider">Xác nhận mật khẩu</Label>
             <Input id="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Nhập lại mật khẩu mới" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} autoComplete="new-password" className="min-h-[44px] border-2 border-ink bg-bg-warm font-body text-base" />
-            {errors.confirmPassword && <p className="font-body text-xs text-red-600">{errors.confirmPassword}</p>}
+            {errors.confirmPassword && <p className="font-body text-xs text-destructive">{errors.confirmPassword}</p>}
           </div>
 
           <Button type="submit" className="btn-brutal-primary w-full min-h-[44px] text-sm" disabled={isLoading}>
