@@ -36,7 +36,7 @@ export function TowsStrategyClient({
         <button
           type="button"
           onClick={() => router.push('/dashboard/discovery/swot')}
-          className="inline-flex items-center gap-1 border-2 border-ink bg-white font-body font-bold uppercase text-xs tracking-wider text-ink px-3 py-2 hover:bg-ink hover:text-white transition-colors"
+          className="inline-flex items-center gap-1 border-2 border-ink bg-card font-body font-bold uppercase text-xs tracking-wider text-ink px-3 py-2 hover:bg-ink hover:text-white transition-colors"
         >
           ← Về SWOT
         </button>

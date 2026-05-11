@@ -28,7 +28,7 @@ export default async function SwotStrategyPage() {
     return (
       <div className="w-full min-h-full p-6">
         <div
-          className="max-w-xl mx-auto border-2 border-ink bg-white p-6 shadow-[5px_5px_0_#2C2B2B]"
+          className="max-w-xl mx-auto border-2 border-ink bg-card p-6 shadow-[5px_5px_0_#2C2B2B]"
           style={{ color: '#c73937' }}
         >
           <h1 className="font-body font-black uppercase text-lg mb-2">
