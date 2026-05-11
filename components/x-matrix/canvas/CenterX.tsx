@@ -158,7 +158,7 @@ export function CenterX({ xMatrixId }: CenterXProps) {
               role="columnheader"
               className={cn(
                 'truncate py-1 text-center font-mono text-xs',
-                y.isOrphan && 'text-amber-600',
+                y.isOrphan && 'text-kpi-attention-strong',
               )}
               title={
                 y.isOrphan
@@ -180,7 +180,7 @@ export function CenterX({ xMatrixId }: CenterXProps) {
                 role="rowheader"
                 className={cn(
                   'self-center truncate text-center font-mono text-xs',
-                  isOrphan && 'text-amber-600',
+                  isOrphan && 'text-kpi-attention-strong',
                 )}
                 title={
                   isOrphan

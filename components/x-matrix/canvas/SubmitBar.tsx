@@ -153,7 +153,7 @@ export function SubmitBar({ orgId }: SubmitBarProps) {
               <button
                 type="button"
                 onClick={() => setWarningsExpanded((v) => !v)}
-                className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-amber-600 hover:underline"
+                className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-kpi-attention-strong hover:underline"
                 aria-expanded={warningsExpanded}
               >
                 <AlertTriangle className="h-4 w-4" aria-hidden />
