@@ -264,11 +264,11 @@ function SynthesisResult({ prefill }: { prefill: XMatrixPrefill }) {
                       <Badge
                         variant="outline"
                         className={cn('text-xs', {
-                          'border-orange-300 text-orange-600 dark:text-orange-400':
+                          'border-accent-peach text-accent-peach':
                             hoshin.sourceType === 'pain',
-                          'border-blue-300 text-blue-600 dark:text-blue-400':
+                          'border-accent-cyan text-accent-cyan':
                             hoshin.sourceType === 'swot',
-                          'border-red-300 text-red-600 dark:text-red-400':
+                          'border-accent-pink text-accent-pink':
                             hoshin.sourceType === 'ai',
                         })}
                       >
@@ -292,14 +292,14 @@ function SynthesisResult({ prefill }: { prefill: XMatrixPrefill }) {
 
       {/* Warnings */}
       {(prefill.warnings ?? []).length > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 space-y-2">
-          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+        <div className="bg-accent-yellow border border-kpi-attention-strong rounded-lg p-4 space-y-2">
+          <p className="text-sm font-medium text-ink">
             Lưu ý
           </p>
           {prefill.warnings.map((w, idx) => (
             <p
               key={idx}
-              className="text-xs text-yellow-700 dark:text-yellow-300"
+              className="text-xs text-ink"
             >
               • {w}
             </p>

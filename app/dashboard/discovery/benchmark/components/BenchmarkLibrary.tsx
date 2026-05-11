@@ -95,19 +95,19 @@ function KpiCard({
           <p className="text-xs text-muted-foreground mb-0.5">Trung vị</p>
           <p className="text-sm font-medium">{formatValue(median, unit)}</p>
         </div>
-        <div className="text-center bg-yellow-50 dark:bg-yellow-950/40 rounded-md py-2">
-          <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-0.5">
+        <div className="text-center bg-accent-yellow rounded-md py-2">
+          <p className="text-xs text-text-2 mb-0.5">
             Top 25%
           </p>
-          <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+          <p className="text-sm font-semibold text-ink">
             {formatValue(top25, unit)}
           </p>
         </div>
-        <div className="text-center bg-green-50 dark:bg-green-950/40 rounded-md py-2">
-          <p className="text-xs text-green-600 dark:text-green-400 mb-0.5">
+        <div className="text-center bg-accent-lime rounded-md py-2">
+          <p className="text-xs text-text-2 mb-0.5">
             Top 10%
           </p>
-          <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+          <p className="text-sm font-semibold text-ink">
             {formatValue(top10, unit)}
           </p>
         </div>
