@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +24,9 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Phien cu het han (vd cookie tu ban Vercel) thi ve trang dang nhap thay vi loi 500
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('users')

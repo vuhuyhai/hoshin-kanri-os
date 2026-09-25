@@ -1,3 +1,4 @@
+import { anhToiUu } from '@/lib/blog/anh'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -207,7 +208,7 @@ export default async function BlogPostPage({ params }: Props) {
           {post.cover_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={post.cover_url}
+              src={anhToiUu(post.cover_url, 1200)}
               alt={post.title}
               className="mb-10 w-full border-[3px] border-ink shadow-[5px_5px_0_#2C2B2B]"
             />

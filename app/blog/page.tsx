@@ -1,3 +1,4 @@
+import { anhToiUu } from '@/lib/blog/anh'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -386,7 +387,7 @@ export default async function BlogIndexPage({
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={post.cover_url}
+                          src={anhToiUu(post.cover_url, 640)}
                           alt={post.title}
                           className="aspect-[16/9] w-full object-cover"
                           loading="lazy"
