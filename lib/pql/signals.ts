@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface PqlSignal {
   orgId: string
@@ -13,7 +13,7 @@ export interface PqlSignal {
 }
 
 export async function checkOrgPql(orgId: string): Promise<PqlSignal | null> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Signal 1: Active ≥3 weeks
   const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000)

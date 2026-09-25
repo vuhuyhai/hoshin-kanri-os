@@ -1,3 +1,4 @@
+import { anhToiUu } from '@/lib/blog/anh'
 import Link from 'next/link'
 import type { BlogPostSummary } from '@/lib/blog/queries'
 
@@ -32,7 +33,7 @@ export function RelatedPosts({ posts }: { posts: BlogPostSummary[] }) {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={post.cover_url}
+                  src={anhToiUu(post.cover_url, 640)}
                   alt={post.title}
                   className="aspect-[16/9] w-full object-cover"
                   loading="lazy"
